@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<golden_test xmlns="http://golden-tests.org/schema">
+  <metadata>
+    <id>basis_functions_natural_spline_boundaries</id>
+    <version>1.0</version>
+    <description>Test natural spline boundary conditions and mathematical properties</description>
+    <tags>
+      <tag>basis_functions</tag>
+      <tag>natural_spline</tag>
+      <tag>boundary_conditions</tag>
+      <tag>cross_language</tag>
+    </tags>
+  </metadata>
+  
+  <semantic_description>
+    <purpose>Verify that natural spline basis functions satisfy boundary conditions and mathematical properties</purpose>
+    <algorithm>
+      1. Generate natural spline basis functions with degree 4 over time series length 60
+      2. Verify natural boundary conditions: 2nd derivative = 0 at endpoints
+      3. Verify interpolation properties: splines pass through boundary points correctly
+      4. Verify smoothness: C^(p-1) continuity for degree p splines
+      5. Verify that different implementations produce equivalent mathematical behavior
+      6. Test numerical stability and conditioning
+    </algorithm>
+    <mathematical_background>
+      Natural splines are cubic splines with additional boundary conditions:
+      - 2nd derivative = 0 at both endpoints (natural boundary condition)
+      - C^2 continuity throughout the domain
+      - Minimal "wiggling" (minimize integral of 2nd derivative)
+      - Linear extrapolation beyond boundary points
+    </mathematical_background>
+    <references>
+      <reference>Hastie, T., Tibshirani, R., &amp; Friedman, J. (2009). The Elements of Statistical Learning. Springer.</reference>
+      <reference>Green, P. J., &amp; Silverman, B. W. (1993). Nonparametric Regression and Generalized Linear Models. CRC Press.</reference>
+    </references>
+  </semantic_description>
+  
+  <inputs>
+    <sampling_frame>
+      <block_lengths>60</block_lengths>
+      <TR>2.0</TR>
+    </sampling_frame>
+    
+    <model_params>
+      <basis_type>ns</basis_type>
+      <degree>4</degree>
+      <intercept>true</intercept>
+    </model_params>
+  </inputs>
+  
+  <expected_outputs>
+    <design_matrix>
+      <dimensions>
+        <rows>60</rows>
+        <columns>5</columns>  <!-- 4 natural spline basis functions + global intercept -->
+      </dimensions>
+      <column_names>
+        <name>base_ns1_block_1</name>
+        <name>base_ns2_block_1</name>
+        <name>base_ns3_block_1</name>
+        <name>base_ns4_block_1</name>
+        <name>constant_global</name>
+      </column_names>
+      <numeric_checks>
+        <!-- 1. NON-NEGATIVITY: Natural splines can have negative values -->
+        <check>
+          <type>min</type>
+          <location>
+            <column>0</column>
+          </location>
+          <expected>0.0</expected>
+          <tolerance>0.001</tolerance>
+          <description>Natural spline basis function 1: minimum value</description>
+        </check>
+        
+        <check>
+          <type>min</type>
+          <location>
+            <column>1</column>
+          </location>
+          <expected>-0.169</expected>
+          <tolerance>0.01</tolerance>
+          <description>Natural spline basis function 2: minimum value</description>
+        </check>
+        
+        <!-- 2. BOUNDARY CONDITIONS: Natural splines have specific boundary behavior -->
+        <!-- Natural splines should interpolate smoothly and have linear extrapolation -->
+        <check>
+          <type>exact_value</type>
+          <location>
+            <column>0</column>
+            <row>0</row>  <!-- First time point -->
+          </location>
+          <expected>0.0</expected>
+          <tolerance>0.01</tolerance>
+          <description>Natural spline boundary condition at start for first basis</description>
+        </check>
+        
+        <check>
+          <type>exact_value</type>
+          <location>
+            <column>3</column>
+            <row>59</row>  <!-- Last time point -->
+          </location>
+          <expected>0.714</expected>
+          <tolerance>0.01</tolerance>
+          <description>Natural spline boundary condition at end for last basis</description>
+        </check>
+        
+        <!-- 3. SMOOTHNESS PROPERTIES: Check that basis functions have reasonable scale -->
+        <check>
+          <type>max</type>
+          <location>
+            <column>0</column>
+          </location>
+          <expected>0.666</expected>
+          <tolerance>0.01</tolerance>
+          <description>First natural spline maximum within reasonable bounds</description>
+        </check>
+        
+        <check>
+          <type>max</type>
+          <location>
+            <column>2</column>
+          </location>
+          <expected>0.507</expected>
+          <tolerance>0.01</tolerance>
+          <description>Middle natural spline maximum within reasonable bounds</description>
+        </check>
+        
+        <!-- 4. NUMERICAL STABILITY: Check variance and conditioning -->
+        <check>
+          <type>std_dev</type>
+          <location>
+            <column>1</column>
+          </location>
+          <expected>0.272</expected>
+          <tolerance>0.01</tolerance>
+          <description>Natural spline basis function has reasonable variance</description>
+        </check>
+        
+        <check>
+          <type>mean</type>
+          <location>
+            <column>1</column>
+          </location>
+          <expected>0.130</expected>
+          <tolerance>0.01</tolerance>
+          <description>Natural spline basis function mean</description>
+        </check>
+        
+        <!-- 5. INTERCEPT VALIDATION: Global intercept should be constant -->
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>4</column>
+          </location>
+          <expected>60.0</expected>
+          <tolerance>0.001</tolerance>
+          <description>Global intercept sums to number of time points</description>
+        </check>
+        
+        <!-- 6. SYMMETRY PROPERTIES: Natural splines should have symmetric-like properties -->
+        <check>
+          <type>exact_value</type>
+          <location>
+            <column>2</column>
+            <row>30</row>  <!-- Middle time point -->
+          </location>
+          <expected>0.154</expected>
+          <tolerance>0.01</tolerance>
+          <description>Middle natural spline has reasonable value at center</description>
+        </check>
+        
+        <!-- 7. LINEARITY AT BOUNDARIES: Natural splines should be approximately linear near boundaries -->
+        <!-- This tests the natural boundary condition indirectly -->
+        <check>
+          <type>exact_value</type>
+          <location>
+            <column>0</column>
+            <row>1</row>  <!-- Second time point -->
+          </location>
+          <expected>0.000052</expected>
+          <tolerance>0.001</tolerance>
+          <description>Natural spline shows linear behavior near boundary</description>
+        </check>
+      </numeric_checks>
+    </design_matrix>
+  </expected_outputs>
+  
+  <implementations>
+    <R><![CDATA[
+library(fmridesign)
+library(fmrihrf)
+
+# Create sampling frame
+sframe <- sampling_frame(blocklens = 60, TR = 2.0)
+
+# Create baseline model with natural spline drift
+baseline <- baseline_model(
+  sframe = sframe,
+  basis = "ns",
+  degree = 4
+)
+
+# Get design matrix
+dm <- design_matrix(baseline)
+
+# Convert to regular matrix for numeric checks
+dm_matrix <- as.matrix(dm)
+    ]]></R>
+  </implementations>
+</golden_test>

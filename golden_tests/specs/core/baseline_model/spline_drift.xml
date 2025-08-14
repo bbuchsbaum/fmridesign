@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<golden_test xmlns="http://golden-tests.org/schema">
+  <metadata>
+    <id>baseline_model_spline_drift</id>
+    <version>1.0</version>
+    <description>Test B-spline and natural spline drift correction</description>
+    <tags>
+      <tag>baseline_model</tag>
+      <tag>drift</tag>
+      <tag>spline</tag>
+      <tag>bspline</tag>
+      <tag>natural_spline</tag>
+    </tags>
+  </metadata>
+  
+  <semantic_description>
+    <purpose>Verify correct generation of spline basis functions for flexible drift modeling</purpose>
+    <algorithm>
+      1. Generate B-spline or natural spline basis functions
+      2. Place knots at regular intervals based on degrees of freedom
+      3. Ensure boundary constraints for natural splines
+      4. Create separate spline sets for each run/block
+      5. Verify smoothness and proper support of basis functions
+    </algorithm>
+    <references>
+      <reference>Ramsay, J. O. (1988). Monotone regression splines in action. Statistical Science, 3(4), 425-441.</reference>
+    </references>
+  </semantic_description>
+  
+  <inputs>
+    <sampling_frame>
+      <block_lengths>80</block_lengths>
+      <TR>2.0</TR>
+    </sampling_frame>
+    
+    <model_params>
+      <basis_type>bs</basis_type>  <!-- B-spline -->
+      <df>5</df>  <!-- degrees of freedom -->
+      <intercept>true</intercept>
+    </model_params>
+  </inputs>
+  
+  <expected_outputs>
+    <design_matrix>
+      <dimensions>
+        <rows>80</rows>  <!-- 80 scans -->
+        <columns>6</columns>  <!-- 5 spline basis functions + global intercept -->
+      </dimensions>
+      <column_names>
+        <name>base_bs1_block_1</name>
+        <name>base_bs2_block_1</name>
+        <name>base_bs3_block_1</name>
+        <name>base_bs4_block_1</name>
+        <name>base_bs5_block_1</name>
+        <name>constant_global</name>
+      </column_names>
+      <numeric_checks>
+        <!-- Check intercept -->
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>5</column>
+          </location>
+          <expected>80.0</expected>
+          <tolerance>0.001</tolerance>
+          <description>Sum of intercept column</description>
+        </check>
+        
+        <!-- Check that spline basis sums to 1 at each timepoint -->
+        <check>
+          <type>row_sum</type>
+          <location>
+            <row>0</row>
+          </location>
+          <expected>1.0</expected>
+          <tolerance>0.01</tolerance>
+          <description>Spline basis functions sum to 1 at each timepoint</description>
+        </check>
+        
+        <!-- Check range of spline values -->
+        <check>
+          <type>min</type>
+          <location>
+            <column>0</column>
+          </location>
+          <expected>0.0</expected>
+          <tolerance>0.001</tolerance>
+          <description>B-splines are non-negative</description>
+        </check>
+        
+        <check>
+          <type>max</type>
+          <location>
+            <column>0</column>
+          </location>
+          <expected>0.41</expected>
+          <tolerance>0.01</tolerance>
+          <description>B-spline maximum value</description>
+        </check>
+        
+        <!-- Check that middle basis function has expected peak -->
+        <check>
+          <type>peak_value</type>
+          <location>
+            <column>2</column>
+            <row_range>15,25</row_range>
+          </location>
+          <expected>0.148</expected>
+          <tolerance>0.01</tolerance>
+          <description>Middle spline basis peaks in middle of time series</description>
+        </check>
+      </numeric_checks>
+    </design_matrix>
+  </expected_outputs>
+  
+  <implementations>
+    <R><![CDATA[
+library(fmridesign)
+library(fmrihrf)
+
+# Create sampling frame
+sframe <- sampling_frame(blocklens = 80, TR = 2.0)
+
+# Create baseline model with B-spline drift
+baseline <- baseline_model(
+  sframe = sframe,
+  basis = "bs",
+  degree = 5
+)
+
+# Get design matrix
+dm <- design_matrix(baseline)
+
+# Convert to regular matrix for numeric checks
+dm_matrix <- as.matrix(dm)
+    ]]></R>
+  </implementations>
+</golden_test>

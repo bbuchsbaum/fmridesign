@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<golden_test xmlns="http://golden-tests.org/schema">
+  <metadata>
+    <id>event_model_multiple_conditions</id>
+    <version>1.0</version>
+    <description>Test event model with multiple factorial conditions</description>
+    <tags>
+      <tag>event_model</tag>
+      <tag>factorial</tag>
+      <tag>interaction</tag>
+    </tags>
+  </metadata>
+  
+  <semantic_description>
+    <purpose>Verify correct handling of factorial designs with multiple conditions and their interactions</purpose>
+    <algorithm>
+      1. Create a 2x2 factorial design with factors: task (go/nogo) and stimulus (face/house)
+      2. Generate events for all four combinations
+      3. Model main effects and interaction using separate HRF terms
+      4. Verify that design matrix has correct number of columns
+      5. Verify orthogonality and proper scaling of regressors
+    </algorithm>
+  </semantic_description>
+  
+  <inputs>
+    <sampling_frame>
+      <block_lengths>120</block_lengths>
+      <TR>2.0</TR>
+    </sampling_frame>
+    
+    <events>
+      <!-- go-face -->
+      <event>
+        <onset>5.0</onset>
+        <task>go</task>
+        <stimulus>face</stimulus>
+        <block>1</block>
+        <duration>0.0</duration>
+      </event>
+      <event>
+        <onset>45.0</onset>
+        <task>go</task>
+        <stimulus>face</stimulus>
+        <block>1</block>
+        <duration>0.0</duration>
+      </event>
+      
+      <!-- go-house -->
+      <event>
+        <onset>15.0</onset>
+        <task>go</task>
+        <stimulus>house</stimulus>
+        <block>1</block>
+        <duration>0.0</duration>
+      </event>
+      <event>
+        <onset>55.0</onset>
+        <task>go</task>
+        <stimulus>house</stimulus>
+        <block>1</block>
+        <duration>0.0</duration>
+      </event>
+      
+      <!-- nogo-face -->
+      <event>
+        <onset>25.0</onset>
+        <task>nogo</task>
+        <stimulus>face</stimulus>
+        <block>1</block>
+        <duration>0.0</duration>
+      </event>
+      <event>
+        <onset>65.0</onset>
+        <task>nogo</task>
+        <stimulus>face</stimulus>
+        <block>1</block>
+        <duration>0.0</duration>
+      </event>
+      
+      <!-- nogo-house -->
+      <event>
+        <onset>35.0</onset>
+        <task>nogo</task>
+        <stimulus>house</stimulus>
+        <block>1</block>
+        <duration>0.0</duration>
+      </event>
+      <event>
+        <onset>75.0</onset>
+        <task>nogo</task>
+        <stimulus>house</stimulus>
+        <block>1</block>
+        <duration>0.0</duration>
+      </event>
+    </events>
+    
+    <model_params>
+      <hrf_basis>canonical</hrf_basis>
+      <precision>0.3</precision>
+      <model_formula>onset ~ hrf(task) + hrf(stimulus) + hrf(task:stimulus)</model_formula>
+    </model_params>
+  </inputs>
+  
+  <expected_outputs>
+    <design_matrix>
+      <dimensions>
+        <rows>120</rows>
+        <columns>8</columns>
+      </dimensions>
+      <column_names>
+        <name>task_task.go</name>
+        <name>task_task.nogo</name>
+        <name>stimulus_stimulus.face</name>
+        <name>stimulus_stimulus.house</name>
+        <name>task_stimulus_task.stimulus.go.face</name>
+        <name>task_stimulus_task.stimulus.go.house</name>
+        <name>task_stimulus_task.stimulus.nogo.face</name>
+        <name>task_stimulus_task.stimulus.nogo.house</name>
+      </column_names>
+      <numeric_checks>
+        <!-- Check that each main effect sums to expected value (four events per level) -->
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>0</column>
+          </location>
+          <expected>19.690</expected>
+          <tolerance>0.01</tolerance>
+          <description>Sum of HRF responses for go trials</description>
+        </check>
+        
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>1</column>
+          </location>
+          <expected>19.680</expected>
+          <tolerance>0.01</tolerance>
+          <description>Sum of HRF responses for nogo trials</description>
+        </check>
+        
+        <!-- Check interaction terms sum to expected value (two events per cell) -->
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>4</column>
+          </location>
+          <expected>9.844</expected>
+          <tolerance>0.01</tolerance>
+          <description>Sum of HRF responses for go-face interaction</description>
+        </check>
+        
+        <!-- Verify first peak timing -->
+        <check>
+          <type>peak_value</type>
+          <location>
+            <column>0</column>
+            <row_range>5,7</row_range>
+          </location>
+          <expected>1.576</expected>
+          <tolerance>0.01</tolerance>
+          <description>Peak response for first go event</description>
+        </check>
+      </numeric_checks>
+    </design_matrix>
+  </expected_outputs>
+  
+  <implementations>
+    <R><![CDATA[
+library(fmridesign)
+library(fmrihrf)
+
+# Create sampling frame
+sframe <- sampling_frame(blocklens = 120, TR = 2.0)
+
+# Create event data with factorial design
+event_data <- data.frame(
+  onset = c(5.0, 15.0, 25.0, 35.0, 45.0, 55.0, 65.0, 75.0),
+  task = factor(c("go", "go", "nogo", "nogo", "go", "go", "nogo", "nogo")),
+  stimulus = factor(c("face", "house", "face", "house", "face", "house", "face", "house")),
+  block = rep(1, 8)
+)
+
+# Create event model with main effects and interaction
+ev_model <- event_model(
+  onset ~ hrf(task) + hrf(stimulus) + hrf(task:stimulus),
+  data = event_data,
+  block = ~block,
+  sampling_frame = sframe,
+  precision = 0.3
+)
+
+# Get design matrix
+dm <- design_matrix(ev_model)
+
+# Convert to regular matrix for numeric checks
+dm_matrix <- as.matrix(dm)
+    ]]></R>
+  </implementations>
+</golden_test>

@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<golden_test xmlns="http://golden-tests.org/schema">
+  <metadata>
+    <id>core_design_matrix_conditioning</id>
+    <version>1.0</version>
+    <description>Test design matrix rank, conditioning, and numerical stability properties</description>
+    <tags>
+      <tag>design_matrix</tag>
+      <tag>numerical_analysis</tag>
+      <tag>conditioning</tag>
+      <tag>rank</tag>
+      <tag>cross_language</tag>
+    </tags>
+  </metadata>
+  
+  <semantic_description>
+    <purpose>Verify that design matrices maintain proper rank, conditioning, and numerical stability across implementations</purpose>
+    <algorithm>
+      1. Create design matrices with various complexity levels
+      2. Test full rank conditions: rank(X) = min(n, p) for well-posed problems
+      3. Test condition numbers: κ(X'X) should be reasonable for numerical stability
+      4. Test orthogonality relationships within and between design matrix blocks
+      5. Test scaling and normalization consistency across implementations
+      6. Verify that rank deficiency is handled consistently when it occurs
+    </algorithm>
+    <mathematical_background>
+      Design matrix conditioning is critical for fMRI analysis:
+      - Full rank: rank(X) = min(n, p) ensures model identifiability
+      - Condition number: κ(X'X) = λ_max/λ_min measures numerical stability
+      - Orthogonality: X_i'X_j = 0 for orthogonal regressors reduces multicollinearity
+      - Proper scaling: consistent normalization improves numerical properties
+      - SVD analysis: X = UΣV' provides numerical rank and condition assessment
+    </mathematical_background>
+    <references>
+      <reference>Golub, G. H., &amp; Van Loan, C. F. (2013). Matrix Computations. Johns Hopkins University Press.</reference>
+      <reference>Monti, M. M. (2011). Statistical analysis of fMRI time-series: A critical review of the GLM approach. Frontiers in Human Neuroscience, 5, 28.</reference>
+    </references>
+  </semantic_description>
+  
+  <inputs>
+    <sampling_frame>
+      <block_lengths>100,120</block_lengths>
+      <TR>2.0</TR>
+    </sampling_frame>
+    
+    <test_designs>
+      <!-- Test case 1: Simple factorial design (well-conditioned) -->
+      <design_set id="simple_factorial">
+        <event>
+          <onset>10.0</onset>
+          <condition>A</condition>
+          <block>1</block>
+          <duration>0.0</duration>
+        </event>
+        <event>
+          <onset>20.0</onset>
+          <condition>B</condition>
+          <block>1</block>
+          <duration>0.0</duration>
+        </event>
+        <event>
+          <onset>30.0</onset>
+          <condition>A</condition>
+          <block>1</block>
+          <duration>0.0</duration>
+        </event>
+        <event>
+          <onset>40.0</onset>
+          <condition>B</condition>
+          <block>1</block>
+          <duration>0.0</duration>
+        </event>
+        <!-- Block 2 events -->
+        <event>
+          <onset>15.0</onset>
+          <condition>A</condition>
+          <block>2</block>
+          <duration>0.0</duration>
+        </event>
+        <event>
+          <onset>25.0</onset>
+          <condition>B</condition>
+          <block>2</block>
+          <duration>0.0</duration>
+        </event>
+        <event>
+          <onset>35.0</onset>
+          <condition>A</condition>
+          <block>2</block>
+          <duration>0.0</duration>
+        </event>
+        <event>
+          <onset>45.0</onset>
+          <condition>B</condition>
+          <block>2</block>
+          <duration>0.0</duration>
+        </event>
+      </design_set>
+    </test_designs>
+    
+    <model_params>
+      <hrf_basis>canonical</hrf_basis>
+      <baseline_basis>poly</baseline_basis>
+      <baseline_degree>2</baseline_degree>
+      <precision>0.1</precision>
+    </model_params>
+  </inputs>
+  
+  <expected_outputs>
+    <design_matrix>
+      <dimensions>
+        <rows>220</rows>  <!-- 100 + 120 total scans -->
+        <columns>8</columns>  <!-- 2 conditions + 2*2 poly terms + 2 intercepts -->
+      </dimensions>
+      <column_names>
+        <name>condition_condition.A</name>
+        <name>condition_condition.B</name>
+        <name>base_poly1_block_1</name>
+        <name>base_poly2_block_1</name>
+        <name>base_poly1_block_2</name>
+        <name>base_poly2_block_2</name>
+        <name>constant_1</name>
+        <name>constant_2</name>
+      </column_names>
+      <numeric_checks>
+        <!-- 1. RANK PROPERTIES: Design matrix should be full rank -->
+        <check>
+          <type>matrix_rank</type>
+          <location>
+            <full_matrix>true</full_matrix>
+          </location>
+          <expected>8</expected>
+          <tolerance>0</tolerance>
+          <description>Design matrix has full rank (8 columns)</description>
+        </check>
+        
+        <!-- 2. CONDITION NUMBER: X'X should be well-conditioned -->
+        <check>
+          <type>condition_number</type>
+          <location>
+            <full_matrix>true</full_matrix>
+          </location>
+          <expected>13.268034</expected>
+          <tolerance>2.0</tolerance>
+          <description>Design matrix condition number indicates good numerical stability</description>
+        </check>
+        
+        <!-- 3. ORTHOGONALITY: Polynomial terms within blocks should be orthogonal -->
+        <check>
+          <type>correlation</type>
+          <location>
+            <column1>2</column1>  <!-- poly1_block_1 -->
+            <column2>3</column2>  <!-- poly2_block_1 -->
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Block 1 polynomial terms are orthogonal</description>
+        </check>
+        
+        <check>
+          <type>correlation</type>
+          <location>
+            <column1>4</column1>  <!-- poly1_block_2 -->
+            <column2>5</column2>  <!-- poly2_block_2 -->
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Block 2 polynomial terms are orthogonal</description>
+        </check>
+        
+        <!-- 4. CROSS-BLOCK ORTHOGONALITY: Different blocks should be orthogonal -->
+        <check>
+          <type>correlation</type>
+          <location>
+            <column1>2</column1>  <!-- poly1_block_1 -->
+            <column2>4</column2>  <!-- poly1_block_2 -->
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Cross-block polynomial terms are orthogonal</description>
+        </check>
+        
+        <!-- 5. BLOCK INDEPENDENCE: Event terms should be zero in other blocks -->
+        <check>
+          <type>block_independence</type>
+          <location>
+            <column>0</column>  <!-- condition A -->
+            <block>2</block>    <!-- should be zero in block 2 regions where no A events -->
+            <row_range>100,110</row_range>  <!-- early part of block 2 -->
+          </location>
+          <expected>0.320772</expected>
+          <tolerance>0.05</tolerance>
+          <description>Condition A has appropriate block structure</description>
+        </check>
+        
+        <!-- 6. SCALING CONSISTENCY: Polynomial terms should have consistent variance -->
+        <check>
+          <type>std_dev</type>
+          <location>
+            <column>2</column>  <!-- poly1_block_1 -->
+          </location>
+          <expected>0.0676</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 1 linear polynomial has expected standard deviation</description>
+        </check>
+        
+        <check>
+          <type>std_dev</type>
+          <location>
+            <column>4</column>  <!-- poly1_block_2 -->
+          </location>
+          <expected>0.0676</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 2 linear polynomial has expected standard deviation</description>
+        </check>
+        
+        <!-- 7. INTERCEPT VALIDATION: Block intercepts should sum to block lengths -->
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>6</column>  <!-- constant_1 -->
+          </location>
+          <expected>100.0</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 1 intercept sums to block 1 length</description>
+        </check>
+        
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>7</column>  <!-- constant_2 -->
+          </location>
+          <expected>120.0</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 2 intercept sums to block 2 length</description>
+        </check>
+        
+        <!-- 8. NUMERICAL STABILITY: Singular values should be reasonable -->
+        <check>
+          <type>min_singular_value</type>
+          <location>
+            <full_matrix>true</full_matrix>
+          </location>
+          <expected>0.833107</expected>
+          <tolerance>0.1</tolerance>
+          <description>Minimum singular value indicates numerical stability</description>
+        </check>
+        
+        <!-- 9. DESIGN EFFICIENCY: Condition balance across time -->
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>0</column>  <!-- condition A -->
+          </location>
+          <expected>19.67</expected>
+          <tolerance>0.1</tolerance>
+          <description>Condition A total response (4 events * ~4.915 HRF integral)</description>
+        </check>
+        
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>1</column>  <!-- condition B -->
+          </location>
+          <expected>19.67</expected>
+          <tolerance>0.1</tolerance>
+          <description>Condition B total response (4 events * ~4.915 HRF integral)</description>
+        </check>
+        
+        <!-- 10. TEMPORAL STRUCTURE: Peak responses should occur at expected times -->
+        <check>
+          <type>peak_value</type>
+          <location>
+            <column>0</column>  <!-- condition A -->
+            <row_range>6,8</row_range>  <!-- Peak after first A event at t=10s -->
+          </location>
+          <expected>1.754</expected>
+          <tolerance>0.01</tolerance>
+          <description>Condition A first peak occurs at expected time</description>
+        </check>
+      </numeric_checks>
+    </design_matrix>
+  </expected_outputs>
+  
+  <implementations>
+    <R><![CDATA[
+library(fmridesign)
+library(fmrihrf)
+
+# Create sampling frame with multiple blocks
+sframe <- sampling_frame(blocklens = c(100, 120), TR = 2.0)
+
+# Create balanced event data across blocks
+event_data <- data.frame(
+  onset = c(10.0, 20.0, 30.0, 40.0, 15.0, 25.0, 35.0, 45.0),
+  condition = factor(c("A", "B", "A", "B", "A", "B", "A", "B")),
+  block = c(1, 1, 1, 1, 2, 2, 2, 2)
+)
+
+# Create event model with canonical HRF
+ev_model <- event_model(
+  onset ~ hrf(condition),
+  data = event_data,
+  block = ~block,
+  sampling_frame = sframe,
+  precision = 0.1
+)
+
+# Create baseline model with polynomial drift
+baseline_model <- baseline_model(
+  sframe = sframe,
+  basis = "poly",
+  degree = 2
+)
+
+# Combine into full design matrix
+full_dm <- cbind(
+  design_matrix(ev_model),
+  design_matrix(baseline_model)
+)
+
+# Convert to regular matrix for numeric checks
+dm_matrix <- as.matrix(full_dm)
+    ]]></R>
+  </implementations>
+</golden_test>

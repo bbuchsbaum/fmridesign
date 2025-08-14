@@ -1,0 +1,9 @@
+pandoc: 3.6.4
+pkgdown: 2.1.3
+pkgdown_sha: ~
+articles:
+  a_01_hemodynamic_response: a_01_hemodynamic_response.html
+  a_02_regressor: a_02_regressor.html
+  a_03_baseline_model: a_03_baseline_model.html
+  a_04_event_models: a_04_event_models.html
+last_built: 2025-06-30T23:09Z

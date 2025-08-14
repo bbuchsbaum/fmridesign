@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<golden_test xmlns="http://golden-tests.org/schema">
+  <metadata>
+    <id>basis_functions_orthogonal_polynomials</id>
+    <version>1.0</version>
+    <description>Test orthogonal polynomial mathematical properties and cross-language consistency</description>
+    <tags>
+      <tag>basis_functions</tag>
+      <tag>orthogonal_polynomials</tag>
+      <tag>mathematical_properties</tag>
+      <tag>cross_language</tag>
+    </tags>
+  </metadata>
+  
+  <semantic_description>
+    <purpose>Verify that orthogonal polynomial basis functions satisfy mathematical properties across implementations</purpose>
+    <algorithm>
+      1. Generate orthogonal polynomial basis functions of degree 3 over time series length 100
+      2. Verify orthogonality: dot products between different degree terms ≈ 0
+      3. Verify normalization: consistent scaling and variance across terms
+      4. Verify centering: mean of linear term ≈ 0 (when data is centered)
+      5. Verify symmetry: even/odd polynomial behavior around center
+      6. Verify range preservation: values within expected numerical bounds
+      7. Test numerical stability and conditioning properties
+    </algorithm>
+    <mathematical_background>
+      Orthogonal polynomials have the following key properties:
+      - Orthogonality: ∫ P_i(x) P_j(x) w(x) dx = 0 for i ≠ j
+      - Normalization: Each polynomial has unit variance
+      - Centering: Linear term has zero mean when domain is centered
+      - Symmetry: Even/odd degree terms have specific symmetry properties
+      - Stability: Well-conditioned basis with good numerical properties
+    </mathematical_background>
+    <references>
+      <reference>Abramowitz, M., &amp; Stegun, I. A. (1965). Handbook of Mathematical Functions. Dover Publications.</reference>
+      <reference>Chambers, J. M., &amp; Hastie, T. J. (1992). Statistical Models in S. Wadsworth &amp; Brooks/Cole.</reference>
+    </references>
+  </semantic_description>
+  
+  <inputs>
+    <sampling_frame>
+      <block_lengths>100</block_lengths>
+      <TR>2.0</TR>
+    </sampling_frame>
+    
+    <model_params>
+      <basis_type>poly</basis_type>
+      <degree>3</degree>
+      <intercept>true</intercept>
+    </model_params>
+  </inputs>
+  
+  <expected_outputs>
+    <design_matrix>
+      <dimensions>
+        <rows>100</rows>
+        <columns>4</columns>  <!-- 3 orthogonal polynomial terms + global intercept -->
+      </dimensions>
+      <column_names>
+        <name>base_poly1_block_1</name>  <!-- Linear term -->
+        <name>base_poly2_block_1</name>  <!-- Quadratic term -->
+        <name>base_poly3_block_1</name>  <!-- Cubic term -->
+        <name>constant_global</name>
+      </column_names>
+      <numeric_checks>
+        <!-- 1. ORTHOGONALITY: Different degree polynomials should be orthogonal -->
+        <!-- Compute correlation between polynomial terms (should be ~ 0) -->
+        <check>
+          <type>correlation</type>
+          <location>
+            <column1>0</column1>
+            <column2>1</column2>
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Linear and quadratic polynomials are orthogonal</description>
+        </check>
+        
+        <check>
+          <type>correlation</type>
+          <location>
+            <column1>0</column1>
+            <column2>2</column2>
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Linear and cubic polynomials are orthogonal</description>
+        </check>
+        
+        <check>
+          <type>correlation</type>
+          <location>
+            <column1>1</column1>
+            <column2>2</column2>
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Quadratic and cubic polynomials are orthogonal</description>
+        </check>
+        
+        <!-- 2. NORMALIZATION: Each polynomial should have same variance -->
+        <check>
+          <type>std_dev</type>
+          <location>
+            <column>0</column>
+          </location>
+          <expected>0.1005</expected>
+          <tolerance>1e-5</tolerance>
+          <description>Linear polynomial standard deviation</description>
+        </check>
+        
+        <check>
+          <type>std_dev</type>
+          <location>
+            <column>1</column>
+          </location>
+          <expected>0.1005</expected>
+          <tolerance>1e-5</tolerance>
+          <description>Quadratic polynomial standard deviation</description>
+        </check>
+        
+        <check>
+          <type>std_dev</type>
+          <location>
+            <column>2</column>
+          </location>
+          <expected>0.1005</expected>
+          <tolerance>1e-5</tolerance>
+          <description>Cubic polynomial standard deviation</description>
+        </check>
+        
+        <!-- 3. CENTERING: Each polynomial should have zero mean -->
+        <check>
+          <type>mean</type>
+          <location>
+            <column>0</column>
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Linear polynomial has zero mean</description>
+        </check>
+        
+        <check>
+          <type>mean</type>
+          <location>
+            <column>1</column>
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Quadratic polynomial has zero mean</description>
+        </check>
+        
+        <check>
+          <type>mean</type>
+          <location>
+            <column>2</column>
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Cubic polynomial has zero mean</description>
+        </check>
+        
+        <!-- 4. SYMMETRY PROPERTIES: Check center behavior -->
+        <check>
+          <type>exact_value</type>
+          <location>
+            <column>0</column>
+            <row>49</row>  <!-- Center point (0-indexed) -->
+          </location>
+          <expected>-0.00173</expected>
+          <tolerance>1e-5</tolerance>
+          <description>Linear polynomial value near center point</description>
+        </check>
+        
+        <!-- 5. RANGE PROPERTIES: Polynomials should be within reasonable bounds -->
+        <check>
+          <type>min</type>
+          <location>
+            <column>0</column>
+          </location>
+          <expected>-0.171</expected>
+          <tolerance>0.001</tolerance>
+          <description>Linear polynomial minimum within bounds</description>
+        </check>
+        
+        <check>
+          <type>max</type>
+          <location>
+            <column>0</column>
+          </location>
+          <expected>0.171</expected>
+          <tolerance>0.001</tolerance>
+          <description>Linear polynomial maximum within bounds</description>
+        </check>
+        
+        <!-- 6. INTERCEPT VALIDATION: Global intercept should be constant -->
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>3</column>
+          </location>
+          <expected>100.0</expected>
+          <tolerance>0.001</tolerance>
+          <description>Global intercept sums to number of time points</description>
+        </check>
+      </numeric_checks>
+    </design_matrix>
+  </expected_outputs>
+  
+  <implementations>
+    <R><![CDATA[
+library(fmridesign)
+library(fmrihrf)
+
+# Create sampling frame
+sframe <- sampling_frame(blocklens = 100, TR = 2.0)
+
+# Create baseline model with polynomial drift
+baseline <- baseline_model(
+  sframe = sframe,
+  basis = "poly",
+  degree = 3
+)
+
+# Get design matrix
+dm <- design_matrix(baseline)
+
+# Convert to regular matrix for numeric checks
+dm_matrix <- as.matrix(dm)
+    ]]></R>
+  </implementations>
+</golden_test>

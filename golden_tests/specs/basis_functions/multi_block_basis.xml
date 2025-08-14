@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<golden_test xmlns="http://golden-tests.org/schema">
+  <metadata>
+    <id>basis_functions_multi_block_basis</id>
+    <version>1.0</version>
+    <description>Test basis function behavior across multiple blocks/runs with different lengths</description>
+    <tags>
+      <tag>basis_functions</tag>
+      <tag>multi_block</tag>
+      <tag>cross_language</tag>
+      <tag>block_independence</tag>
+    </tags>
+  </metadata>
+  
+  <semantic_description>
+    <purpose>Verify that basis functions maintain mathematical properties across multiple blocks with different lengths</purpose>
+    <algorithm>
+      1. Create polynomial basis functions across 3 blocks with different lengths (40, 60, 50)
+      2. Verify block independence: no cross-block contamination
+      3. Verify consistent properties within each block
+      4. Test boundary behavior at block transitions
+      5. Verify that mathematical properties are preserved per-block
+      6. Test numerical stability across block-structured design matrices
+    </algorithm>
+    <mathematical_background>
+      Multi-block basis functions must satisfy:
+      - Block independence: basis functions are zero outside their assigned block
+      - Consistent properties: each block maintains the same mathematical properties
+      - Proper scaling: normalization consistent across blocks despite different lengths
+      - Boundary conditions: clean transitions at block boundaries
+      - Matrix structure: block-diagonal structure for basis matrices
+    </mathematical_background>
+    <references>
+      <reference>Woolrich, M. W., et al. (2001). Temporal autocorrelation in univariate linear modeling of fMRI data. NeuroImage, 14(6), 1370-1386.</reference>
+      <reference>Friston, K. J., et al. (1995). Statistical parametric maps in functional imaging. Human Brain Mapping, 2(4), 189-210.</reference>
+    </references>
+  </semantic_description>
+  
+  <inputs>
+    <sampling_frame>
+      <block_lengths>40,60,50</block_lengths>  <!-- Different block lengths -->
+      <TR>2.0</TR>
+    </sampling_frame>
+    
+    <model_params>
+      <basis_type>poly</basis_type>
+      <degree>2</degree>  <!-- Quadratic polynomial -->
+      <intercept>true</intercept>
+    </model_params>
+  </inputs>
+  
+  <expected_outputs>
+    <design_matrix>
+      <dimensions>
+        <rows>150</rows>  <!-- 40+60+50 = 150 total scans -->
+        <columns>9</columns>  <!-- 3 blocks × 2 polynomial terms + 3 block intercepts -->
+      </dimensions>
+      <column_names>
+        <name>base_poly1_block_1</name>
+        <name>base_poly2_block_1</name>
+        <name>base_poly1_block_2</name>
+        <name>base_poly2_block_2</name>
+        <name>base_poly1_block_3</name>
+        <name>base_poly2_block_3</name>
+        <name>constant_1</name>
+        <name>constant_2</name>
+        <name>constant_3</name>
+      </column_names>
+      <numeric_checks>
+        <!-- 1. BLOCK INDEPENDENCE: Check that block 1 polynomials are zero in other blocks -->
+        <check>
+          <type>exact_value</type>
+          <location>
+            <column>0</column>
+            <row>50</row>  <!-- In block 2 -->
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Block 1 polynomial is zero in block 2</description>
+        </check>
+        
+        <check>
+          <type>exact_value</type>
+          <location>
+            <column>1</column>
+            <row>120</row>  <!-- In block 3 -->
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Block 1 polynomial is zero in block 3</description>
+        </check>
+        
+        <!-- 2. CONSISTENT NORMALIZATION: Each block should have same variance scaling -->
+        <check>
+          <type>std_dev</type>
+          <location>
+            <column>0</column>  <!-- Block 1 linear -->
+          </location>
+          <expected>0.082</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 1 linear polynomial standard deviation</description>
+        </check>
+        
+        <check>
+          <type>std_dev</type>
+          <location>
+            <column>2</column>  <!-- Block 2 linear -->
+          </location>
+          <expected>0.082</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 2 linear polynomial standard deviation</description>
+        </check>
+        
+        <check>
+          <type>std_dev</type>
+          <location>
+            <column>4</column>  <!-- Block 3 linear -->
+          </location>
+          <expected>0.082</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 3 linear polynomial standard deviation</description>
+        </check>
+        
+        <!-- 3. CENTERING: Each block polynomial should have zero mean -->
+        <check>
+          <type>mean</type>
+          <location>
+            <column>0</column>
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Block 1 linear polynomial has zero mean</description>
+        </check>
+        
+        <check>
+          <type>mean</type>
+          <location>
+            <column>3</column>  <!-- Block 2 quadratic -->
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Block 2 quadratic polynomial has zero mean</description>
+        </check>
+        
+        <!-- 4. BOUNDARY TRANSITIONS: Clean transitions at block boundaries -->
+        <check>
+          <type>exact_value</type>
+          <location>
+            <column>0</column>
+            <row>39</row>  <!-- Last scan of block 1 -->
+          </location>
+          <expected>0.267</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 1 polynomial at end of block</description>
+        </check>
+        
+        <check>
+          <type>exact_value</type>
+          <location>
+            <column>2</column>
+            <row>40</row>  <!-- First scan of block 2 -->
+          </location>
+          <expected>-0.220</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 2 polynomial at start of block</description>
+        </check>
+        
+        <!-- 5. ORTHOGONALITY WITHIN BLOCKS: Linear and quadratic should be orthogonal -->
+        <check>
+          <type>correlation</type>
+          <location>
+            <column1>0</column1>  <!-- Block 1 linear -->
+            <column2>1</column2>  <!-- Block 1 quadratic -->
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Block 1 linear and quadratic polynomials are orthogonal</description>
+        </check>
+        
+        <check>
+          <type>correlation</type>
+          <location>
+            <column1>2</column1>  <!-- Block 2 linear -->
+            <column2>3</column2>  <!-- Block 2 quadratic -->
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Block 2 linear and quadratic polynomials are orthogonal</description>
+        </check>
+        
+        <!-- 6. CROSS-BLOCK ORTHOGONALITY: Different blocks should be orthogonal -->
+        <check>
+          <type>correlation</type>
+          <location>
+            <column1>0</column1>  <!-- Block 1 linear -->
+            <column2>2</column2>  <!-- Block 2 linear -->
+          </location>
+          <expected>0.0</expected>
+          <tolerance>1e-10</tolerance>
+          <description>Block 1 and Block 2 linear polynomials are orthogonal</description>
+        </check>
+        
+        <!-- 7. INTERCEPT VALIDATION: Block intercepts should sum to their block lengths -->
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>6</column>  <!-- Block 1 intercept -->
+          </location>
+          <expected>40.0</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 1 intercept sums to block 1 length</description>
+        </check>
+        
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>7</column>  <!-- Block 2 intercept -->
+          </location>
+          <expected>60.0</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 2 intercept sums to block 2 length</description>
+        </check>
+        
+        <check>
+          <type>column_sum</type>
+          <location>
+            <column>8</column>  <!-- Block 3 intercept -->
+          </location>
+          <expected>50.0</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 3 intercept sums to block 3 length</description>
+        </check>
+        
+        <!-- 8. BLOCK-SPECIFIC RANGE: Each block should have appropriate range -->
+        <check>
+          <type>max</type>
+          <location>
+            <column>4</column>  <!-- Block 3 linear -->
+          </location>
+          <expected>0.240</expected>
+          <tolerance>0.001</tolerance>
+          <description>Block 3 linear polynomial maximum within bounds</description>
+        </check>
+      </numeric_checks>
+    </design_matrix>
+  </expected_outputs>
+  
+  <implementations>
+    <R><![CDATA[
+library(fmridesign)
+library(fmrihrf)
+
+# Create sampling frame with multiple blocks of different lengths
+sframe <- sampling_frame(blocklens = c(40, 60, 50), TR = 2.0)
+
+# Create baseline model with polynomial drift across blocks
+baseline <- baseline_model(
+  sframe = sframe,
+  basis = "poly",
+  degree = 2
+)
+
+# Get design matrix
+dm <- design_matrix(baseline)
+
+# Convert to regular matrix for numeric checks
+dm_matrix <- as.matrix(dm)
+    ]]></R>
+  </implementations>
+</golden_test>

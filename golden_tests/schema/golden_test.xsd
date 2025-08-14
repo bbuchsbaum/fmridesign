@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           targetNamespace="http://golden-tests.org/schema"
+           xmlns="http://golden-tests.org/schema"
+           elementFormDefault="qualified">
+
+  <!-- Root element -->
+  <xs:element name="golden_test" type="GoldenTestType"/>
+
+  <!-- Main golden test structure -->
+  <xs:complexType name="GoldenTestType">
+    <xs:sequence>
+      <xs:element name="metadata" type="MetadataType"/>
+      <xs:element name="semantic_description" type="SemanticDescriptionType"/>
+      <xs:element name="inputs" type="InputsType"/>
+      <xs:element name="expected_outputs" type="ExpectedOutputsType"/>
+      <xs:element name="implementations" type="ImplementationsType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Metadata section -->
+  <xs:complexType name="MetadataType">
+    <xs:sequence>
+      <xs:element name="id" type="xs:string"/>
+      <xs:element name="version" type="xs:string"/>
+      <xs:element name="description" type="xs:string"/>
+      <xs:element name="tags" type="TagsType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="TagsType">
+    <xs:sequence>
+      <xs:element name="tag" type="xs:string" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Semantic description section -->
+  <xs:complexType name="SemanticDescriptionType">
+    <xs:sequence>
+      <xs:element name="purpose" type="xs:string"/>
+      <xs:element name="algorithm" type="xs:string"/>
+      <xs:element name="references" type="ReferencesType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ReferencesType">
+    <xs:sequence>
+      <xs:element name="reference" type="xs:string" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Inputs section -->
+  <xs:complexType name="InputsType">
+    <xs:sequence>
+      <xs:element name="sampling_frame" type="SamplingFrameType" minOccurs="0"/>
+      <xs:element name="events" type="EventsType" minOccurs="0"/>
+      <xs:element name="model_params" type="ModelParamsType" minOccurs="0"/>
+      <xs:element name="data_matrix" type="DataMatrixType" minOccurs="0"/>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="SamplingFrameType">
+    <xs:sequence>
+      <xs:element name="block_lengths" type="xs:string"/>
+      <xs:element name="TR" type="xs:double"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EventsType">
+    <xs:sequence>
+      <xs:element name="event" type="EventType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="EventType">
+    <xs:sequence>
+      <xs:element name="onset" type="xs:double"/>
+      <xs:element name="condition" type="xs:string" minOccurs="0"/>
+      <xs:element name="block" type="xs:integer"/>
+      <xs:element name="duration" type="xs:double" minOccurs="0"/>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ModelParamsType">
+    <xs:sequence>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DataMatrixType">
+    <xs:sequence>
+      <xs:element name="rows" type="xs:integer"/>
+      <xs:element name="columns" type="xs:integer"/>
+      <xs:element name="values" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Expected outputs section -->
+  <xs:complexType name="ExpectedOutputsType">
+    <xs:sequence>
+      <xs:element name="design_matrix" type="DesignMatrixOutputType" minOccurs="0"/>
+      <xs:element name="numeric_outputs" type="NumericOutputsType" minOccurs="0"/>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DesignMatrixOutputType">
+    <xs:sequence>
+      <xs:element name="dimensions" type="DimensionsType"/>
+      <xs:element name="column_names" type="ColumnNamesType" minOccurs="0"/>
+      <xs:element name="numeric_checks" type="NumericChecksType"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="DimensionsType">
+    <xs:sequence>
+      <xs:element name="rows" type="xs:integer"/>
+      <xs:element name="columns" type="xs:integer"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="ColumnNamesType">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="NumericChecksType">
+    <xs:sequence>
+      <xs:element name="check" type="NumericCheckType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="NumericCheckType">
+    <xs:sequence>
+      <xs:element name="type">
+        <xs:simpleType>
+          <xs:restriction base="xs:string">
+            <xs:enumeration value="exact_value"/>
+            <xs:enumeration value="peak_value"/>
+            <xs:enumeration value="range"/>
+            <xs:enumeration value="column_sum"/>
+            <xs:enumeration value="row_sum"/>
+            <xs:enumeration value="mean"/>
+            <xs:enumeration value="std_dev"/>
+            <xs:enumeration value="max"/>
+            <xs:enumeration value="min"/>
+            <xs:enumeration value="relative"/>
+            <xs:enumeration value="matrix_norm"/>
+          </xs:restriction>
+        </xs:simpleType>
+      </xs:element>
+      <xs:element name="location" type="LocationType" minOccurs="0"/>
+      <xs:element name="expected" type="xs:string"/>
+      <xs:element name="tolerance" type="xs:double"/>
+      <xs:element name="description" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="LocationType">
+    <xs:sequence>
+      <xs:element name="column" type="xs:integer" minOccurs="0"/>
+      <xs:element name="row" type="xs:integer" minOccurs="0"/>
+      <xs:element name="row_range" type="xs:string" minOccurs="0"/>
+      <xs:element name="column_range" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="NumericOutputsType">
+    <xs:sequence>
+      <xs:element name="output" type="NumericOutputType" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="NumericOutputType">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string"/>
+      <xs:element name="value" type="xs:string"/>
+      <xs:element name="tolerance" type="xs:double" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <!-- Implementations section -->
+  <xs:complexType name="ImplementationsType">
+    <xs:sequence>
+      <xs:element name="R" type="xs:string" minOccurs="0"/>
+      <xs:element name="Python" type="xs:string" minOccurs="0"/>
+      <xs:element name="Rust" type="xs:string" minOccurs="0"/>
+      <xs:element name="Julia" type="xs:string" minOccurs="0"/>
+      <xs:element name="MATLAB" type="xs:string" minOccurs="0"/>
+      <xs:any minOccurs="0" maxOccurs="unbounded" processContents="lax"/>
+    </xs:sequence>
+  </xs:complexType>
+
+</xs:schema>

@@ -1,0 +1,60 @@
+Package: fmridesign
+Type: Package
+Title: Design Matrix Construction for fMRI Analysis
+Version: 0.1.0
+Date: 2025-06-28
+Authors@R: person("Bradley", "Buchsbaum", role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
+Description: Provides tools for constructing design matrices for functional magnetic resonance imaging (fMRI) analyses. 
+    Includes facilities for creating event models with flexible hemodynamic response functions (HRFs), 
+    baseline models for nuisance regression, and utilities for handling experimental designs. 
+    This package focuses on the design aspect of fMRI analysis and is intended to be used with 
+    analysis packages like fmrireg.
+License: GPL (>= 2)
+Encoding: UTF-8
+LazyData: false
+Depends:
+    R (>= 4.0.0)
+Imports:
+    fmrihrf (>= 0.1.0),
+    stats,
+    assertthat,
+    rlang,
+    stringr,
+    dplyr,
+    tidyr,
+    purrr,
+    tibble,
+    Matrix,
+    splines,
+    plotly,
+    ggplot2,
+    utils,
+    cli
+Suggests: 
+    testthat,
+    knitr,
+    rmarkdown,
+    covr
+Remotes:
+    bbuchsbaum/fmrihrf
+VignetteBuilder: knitr
+URL: https://github.com/bbuchsbaum/fmridesign
+BugReports: https://github.com/bbuchsbaum/fmridesign/issues
+RoxygenNote: 7.3.2.9000
+Roxygen: list(markdown = TRUE)
+Collate: 
+    'baseline_model.R'
+    'basis.R'
+    'condition_basis_list.R'
+    'contrast.R'
+    'covariate.R'
+    'design_generics.R'
+    'design_map.R'
+    'utils-internal.R'
+    'event-classes.R'
+    'event_model_helpers.R'
+    'event_model.R'
+    'event_vector.R'
+    'fmrihrf-imports.R'
+    'hrf-formula.R'
+    'naming-utils.R'
