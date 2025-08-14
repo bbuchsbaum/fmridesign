@@ -16,8 +16,11 @@ find_and_eval_hrf_calls <- function(expr, data, f_env) {
   if (rlang::is_call(expr)) {
     fun_name <- rlang::call_name(expr)
     
-    # Base case: Found a target function call
-    if (fun_name %in% c("hrf", "trialwise", "afni_hrf", "afni_trialwise", "covariate")) {
+    # Get list of external HRF functions from registry
+    external_funcs <- get_all_external_hrf_functions()
+    
+    # Base case: Found a target function call (built-in or external)
+    if (fun_name %in% c("hrf", "trialwise", "covariate", external_funcs)) {
       # Evaluate the call in the formula env, using data as a mask
       eval_env <- rlang::env_bury(f_env %||% rlang::empty_env(), !!!data)
       evaluated_spec <- try(rlang::eval_tidy(expr, env = eval_env), silent = TRUE)
@@ -235,12 +238,9 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
           return(dm)
       }
       
-      # Check if this is already a convolved term (AFNI only now)
-      if (inherits(term, "afni_hrf_convolved_term") || inherits(term, "afni_trialwise_convolved_term")) {
-          # AFNI terms are already "convolved" and should return NULL
-          # since they are meant to be handled by AFNI's 3dDeconvolve, not R's convolution
-          warning("AFNI terms are not fully supported in the current event_model pipeline. ", 
-                  "They are intended for use with AFNI's 3dDeconvolve.", call. = FALSE)
+      # Check if this term requires external processing (e.g., AFNI)
+      if (requires_external_processing(term)) {
+          # External terms are handled by external tools, not R's convolution
           # Return NULL to indicate this term should not contribute columns to the design matrix
           return(NULL)
       }
@@ -265,14 +265,14 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
       lapply(terms, convolve_one_term)
   }
 
-  # Filter out NULL matrices (from AFNI terms that don't contribute to design matrix)
+  # Filter out NULL matrices (from external terms that don't contribute to design matrix)
   non_null_indices <- which(!sapply(term_matrices, is.null))
   term_matrices_filtered <- term_matrices[non_null_indices]
   terms_filtered <- terms[non_null_indices]
   
-  # Handle case where all terms are NULL (all AFNI terms)
+  # Handle case where all terms are NULL (all external terms)
   if (length(term_matrices_filtered) == 0) {
-    warning("All terms are AFNI terms that don't contribute to the design matrix. Returning empty design matrix.", call. = FALSE)
+    warning("All terms require external processing and don't contribute to the R design matrix. Returning empty design matrix.", call. = FALSE)
     empty_dm <- tibble::tibble(.rows = sum(fmrihrf::blocklens(sampling_frame)))
     attr(empty_dm, "term_spans") <- integer(0)
     attr(empty_dm, "col_indices") <- list()

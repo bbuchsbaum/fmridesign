@@ -1134,20 +1134,6 @@ print.convolved_term <- function(x, ...) {
   cat("  Term Types: ", paste(purrr::map_chr(x$evterm$events, ~ class(.)[[1]])), "\n")
 }
 
-#' Print afni_hrf_convolved_term objects.
-#'
-#' @param x An afni_hrf_convolved_term object.
-#' @param ... Additional arguments.
-#' @export
-#' @rdname print
-print.afni_hrf_convolved_term <- function(x, ...) {
-  cat("fmri_term: ", class(x)[[1]], "\n")
-  cat("  Term Name: ", x$varname, "\n")
-  cat("  Formula:  ", as.character(formula(x$evterm)), "\n")
-  cat("  Num Events: ", nrow(x$evterm$event_table), "\n")
-  cat("  Conditions: ", conditions(x), "\n")
-  cat("  Term Types: ", paste(purrr::map_chr(x$evterm$events, ~ class(.)[[1]])), "\n")
-}
 
 #' Print event_term objects
 #'
