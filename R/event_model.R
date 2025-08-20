@@ -241,8 +241,18 @@ contrast_weights.event_model <- function(x, ...) {
   }
   
   ret <- lapply(seq_along(terms(x)), function(i) {
+    term <- terms(x)[[i]]
+    
+    # Check if this term requires external processing (e.g., AFNI)
+    # If so, skip the standard validation that expects design matrix columns
+    if (requires_external_processing(term)) {
+      # For external terms, we can't map to design matrix columns
+      # Just return NULL - the external tool will handle contrasts
+      return(NULL)
+    }
+    
     # Get contrasts defined *within* the term (from hrfspec)
-    term_contrasts <- attr(terms(x)[[i]], "hrfspec")$contrasts
+    term_contrasts <- attr(term, "hrfspec")$contrasts
     term_indices_vec <- tind[[ names(terms(x))[i] ]]
     
     if (!is.null(term_contrasts) && length(term_contrasts) > 0) {

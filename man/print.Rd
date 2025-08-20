@@ -12,7 +12,6 @@
 \alias{print.event_model}
 \alias{print.fmri_term}
 \alias{print.convolved_term}
-\alias{print.afni_hrf_convolved_term}
 \alias{print.event_term}
 \title{Print a Baseline Model}
 \usage{
@@ -35,8 +34,6 @@
 \method{print}{fmri_term}(x, ...)
 
 \method{print}{convolved_term}(x, ...)
-
-\method{print}{afni_hrf_convolved_term}(x, ...)
 
 \method{print}{event_term}(x, ...)
 }

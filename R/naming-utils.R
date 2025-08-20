@@ -175,6 +175,19 @@ make_term_tag <- function(hrfspec, existing_tags = character()) {
     }
   }
   
+  # Handle vector inputs - collapse to single tag
+  if (length(tag_base) > 1) {
+    # For vector tags, use the first element
+    # This ensures we always have a scalar for comparison
+    tag_base <- tag_base[1]
+  }
+  
+  # Handle NA values that might result from subsetting
+  if (is.na(tag_base)) {
+    tag_base <- "empty_id_tag"
+  }
+  
+  # Now safe to do scalar comparison
   if (tag_base == "") {
       tag_base <- "empty_id_tag" 
   }

@@ -73,24 +73,8 @@ design_matrix <- function(x, ...) { UseMethod("design_matrix") }
 #' @export
 elements <- function(x, ...) UseMethod("elements")
 
-#' Extract onsets from an event object
-#' 
-#' @param x The event object.
-#' @export
-onsets <- function(x) UseMethod("onsets")
-
-#' Extract durations from an event object
-#' 
-#' @param x The event object.
-#' @export
-durations <- function(x) UseMethod("durations")
-
-#' Extract block IDs
-#' 
-#' @param x The object.
-#' @param ... Additional arguments.
-#' @export
-blockids <- function(x, ...) UseMethod("blockids")
+# Note: onsets, durations, and blockids generics are re-exported from fmrihrf
+# See R/fmrihrf-reexports.R for documentation
 
 
 #' Extract term matrices
