@@ -15,10 +15,12 @@ knitr::opts_chunk$set(
   comment = "#>",
   fig.width = 7, 
   fig.height = 5,
+  dev = "svg",
+  fig.retina = 1,
   message = FALSE,
   warning = FALSE
 )
-library(fmrireg)
+library(fmridesign)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
@@ -31,11 +33,11 @@ In fMRI analysis, the BOLD signal contains not only task-related activity but al
 
 These baseline regressors typically model low-frequency scanner drift (using basis functions) and other known sources of noise like head motion parameters or physiological fluctuations.
 
-`fmrireg` uses the `baseline_model()` function to construct this part of the design matrix.
+`fmridesign` uses the `baseline_model()` function to construct this part of the design matrix.
 
 ## Modeling Drift with Basis Functions
 
-A common approach to modeling slow scanner drift is to include a set of basis functions in the model for each run. `fmrireg` supports several basis sets specified via the `basis` argument:
+A common approach to modeling slow scanner drift is to include a set of basis functions in the model for each run. `fmridesign` supports several basis sets specified via the `basis` argument:
 
 *   `"poly"`: Polynomial functions (orthogonalized). Use `degree` or `poly_degree` to specify the order.
 *   `"bs"`: B-spline basis functions. Use `degree` to specify the number of splines.
@@ -47,13 +49,7 @@ These basis functions are generated separately for each scanning run defined in 
 ```{r basis_sets}
 # Define a sampling frame for two runs of 100 scans each, TR=2s
 TR <- 2
-sframe_raw <- sampling_frame(blocklens = c(100, 100), TR = TR)
-
-# Create an extended sampling frame for plotting
-# The baseline_model plot method expects time and blockids fields
-sframe <- sframe_raw
-sframe$time <- fmrihrf::samples(sframe_raw, global = TRUE)
-sframe$blockids <- fmrihrf::blockids(sframe_raw)
+sframe <- sampling_frame(blocklens = c(100, 100), TR = TR)
 
 # 1. Polynomial Basis (degree 5)
 bmodel_poly <- baseline_model(basis = "poly", degree = 5, sframe = sframe)
@@ -61,26 +57,28 @@ print(bmodel_poly)
 
 # 2. B-spline Basis (degree 5)
 bmodel_bs <- baseline_model(basis = "bs", degree = 5, sframe = sframe)
-# print(bmodel_bs)
+print(bmodel_bs)
 
 # 3. Natural Spline Basis (degree 5)
 bmodel_ns <- baseline_model(basis = "ns", degree = 5, sframe = sframe)
-# print(bmodel_ns)
+print(bmodel_ns)
 
 # 4. Constant Basis (Intercept only per run)
 bmodel_const <- baseline_model(basis = "constant", sframe = sframe)
-# print(bmodel_const)
+print(bmodel_const)
 ```
 
 ## Visualizing Baseline Regressors
 
 We can use `plot()` to visualize the generated regressors. The function returns a `ggplot` object.
 
-**Term Naming:** By default, drift terms are named `baseline_<basis>_<degree>` (e.g., `baseline_poly_5`, `baseline_bs_3`). The constant term (if present) is named `constant`, and custom nuisance regressors are grouped under the term name `nuisance`.
+**Term Naming (clarification):**
+- Term keys: drift/block/nuisance (use these with `term_name` when plotting).
+- Column names: typically prefixed by the baseline spec (e.g., `baseline_poly_5_b##`). The constant block term is named `constant_*` when present. Custom nuisance columns use the `nuisance` term key and their internal column labels.
 
 **Plotting Specific Terms:** You can plot specific terms using the `term_name` argument. The plotting function supports partial matching, so you can often use shorter names like `"poly"`, `"bs"`, or `"nuisance"` if they uniquely identify a term.
 
-```{r plot_basis}
+```{r plot_basis, fig.alt="Baseline drift regressors (poly, bs, ns) plotted per run over time."}
 # Plot the polynomial regressors (term is named "drift")
 plot(bmodel_poly, term_name = "drift")
 
@@ -91,10 +89,17 @@ plot(bmodel_bs, term_name = "drift")
 plot(bmodel_ns, term_name = "drift")
 
 # Plotting the Constant (Intercept) term is generally not informative
-# print(bmodel_const) # Shows it has a 'constant' term
+print(bmodel_const) # Shows it has a 'constant' term
 ```
 
 Notice how the regressors are generated independently for each block (run) specified in the `sampling_frame`.
+
+## Intercept Control
+
+The `intercept` argument controls whether additional intercept columns are added beyond the drift term:
+- `"runwise"`: adds one intercept per run (default for non-constant bases).
+- `"global"`: adds a single global intercept across all runs.
+- `"none"`: adds no extra intercepts. Note that the `"constant"` basis already provides a constant drift term.
 
 ## Adding Arbitrary Nuisance Regressors
 
@@ -102,7 +107,7 @@ Beyond structured drift terms, we often want to include other regressors derived
 
 **Important:** The `nuisance_list` must be a *list* where each element corresponds to a scanning run. Each element should be a `data.frame` or `matrix` containing the nuisance regressors for that specific run. These will be grouped under the term name `"nuisance"`.
 
-```{r nuisance_list}
+```{r nuisance_list, fig.alt="Example nuisance regressors (e.g., motion) plotted per run over time."}
 # Simulate nuisance regressors (e.g., 6 motion parameters)
 n_scans_run1 <- blocklens(sframe)[1]
 n_scans_run2 <- blocklens(sframe)[2]
@@ -132,7 +137,7 @@ plot(bmodel_nuis_only, term_name = "nuisance") +
 
 You can include both a structured basis set (like polynomials) and custom nuisance regressors in the same baseline model.
 
-```{r combined_baseline}
+```{r combined_baseline, fig.alt="Combined baseline model plots: polynomial drift and nuisance terms per run."}
 bmodel_combined <- baseline_model(basis = "poly", degree = 5, sframe = sframe, 
                                   nuisance_list = nuisance_regressors)
 print(bmodel_combined)
@@ -140,7 +145,7 @@ print(bmodel_combined)
 # Check the terms included
 term_names <- names(terms(bmodel_combined))
 print(term_names) # e.g., constant, baseline_poly_5, nuisance
-# baseline_terms(bmodel_combined) # Alias for terms()
+terms(bmodel_combined) # List all terms in the model
 
 # Plot the drift terms (polynomial basis)
 plot(bmodel_combined, term_name = "drift") + 
@@ -161,12 +166,10 @@ dmat_baseline <- design_matrix(bmodel_combined)
 cat("Dimensions of baseline design matrix:", dim(dmat_baseline), "\n")
 cat("Column names:", paste(colnames(dmat_baseline)[1:10], "..."), "\n")
 
-# head(dmat_baseline[, 1:8]) # Show first few columns
+head(dmat_baseline[, 1:8]) # Show first few columns
 
 # Visualize the full baseline matrix as a heatmap (optional)
 # design_map.baseline_model(bmodel_combined, rotate_x_text = TRUE)
 ```
 
 This baseline design matrix is combined with the task-related design matrix (from an `event_model`) within functions like `fmri_model` or `fmri_lm` to create the complete design matrix for GLM analysis.
-
-

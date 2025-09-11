@@ -23,6 +23,9 @@ or "labels" for descriptive labels/names.}
 
 \item{transformed}{Logical indicating whether to return transformed values. Default is TRUE.}
 }
+\value{
+Requested elements; structure depends on method (e.g., numeric values or labels).
+}
 \description{
 Extract elements from an object
 }

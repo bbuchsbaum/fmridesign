@@ -26,6 +26,9 @@ cells(x, drop.empty = TRUE, ...)
 
 \item{...}{Additional arguments (e.g., exclude_basis for convolved_term method).}
 }
+\value{
+A data.frame/tibble of cells (categorical combinations) relevant to \code{x}.
+}
 \description{
 Extract cells from a design object
 }

@@ -20,6 +20,9 @@ split_onsets(x, sframe, global = FALSE, blocksplit = FALSE, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A list of onset vectors, one per block (unless \code{global=TRUE}).
+}
 \description{
 Split onsets
 }

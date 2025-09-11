@@ -11,6 +11,9 @@ shortnames(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+Character vector of short names.
+}
 \description{
 Extract shortnames
 }

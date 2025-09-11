@@ -5,6 +5,11 @@
 #'
 
 # Create a private environment to store registered extensions
+#' Internal registry environment for external HRF specs
+#'
+#' Holds registration data for external HRF specification classes.
+#' @keywords internal
+#' @return An environment used internally as a registry.
 .fmridesign_extensions <- new.env(parent = emptyenv())
 
 #' Register an External HRF Specification Type

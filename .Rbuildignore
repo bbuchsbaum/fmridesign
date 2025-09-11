@@ -13,3 +13,10 @@
 ^\.covrignore$
 ^doc$
 ^Meta$
+^CLAUDE\.md$
+^PACKAGE_STATUS\.md$
+^VIGNETTE_FIXES_SUMMARY\.md$
+^figure$
+^golden_tests$
+^vignette_issues\.md$
+.claude

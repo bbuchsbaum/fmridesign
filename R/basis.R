@@ -16,11 +16,11 @@ dctbasis <- function(n, p=n, const=FALSE) {
 
 #' sub_basis
 #' 
-#' subset a parametric basis regressor
-#' 
+#' Subset a parametric basis regressor.
 #' 
 #' @param x the object
-#' @param subset the subset
+#' @param subset the subset (logical or integer indices)
+#' @return An object of the same class as `x` with subset applied.
 #' @export
 sub_basis <-  function(x, subset) UseMethod("sub_basis")
 
@@ -34,6 +34,8 @@ sub_basis <-  function(x, subset) UseMethod("sub_basis")
 #' @param newdata Numeric vector to transform.
 #' @param ... Additional arguments.
 #' @param newgroup Optional factor for group-dependent bases.
+#' @return A numeric matrix with transformed values (one column per basis component).
+#' @method predict ParametricBasis
 #' @rdname predict
 #' @export
 predict.ParametricBasis <- function(object, newdata, ...) {
@@ -205,6 +207,7 @@ BSpline <- function(x, degree) {
 }
 
 
+#' @method predict Poly
 #' @export
 #' @rdname predict
 predict.Poly <- function(object,newdata,...) {
@@ -357,11 +360,6 @@ Scale <- function(x) {
 }
 
 #' @export
-#' @param object ParametricBasis object
-#' @param newdata Numeric vector of new values
-#' @param ... Additional arguments
-#' @name predict.ParametricBasis
-#' @title Predict Method for ParametricBasis Objects
 #' @rdname predict
 predict.Scale <- function(object, newdata, ...) {
   z <- (newdata - object$mean)/object$sd
@@ -407,6 +405,7 @@ columns.Scale <- function(x, ...) {
 #' 
 #' @param x numeric vector
 #' @param g grouping factor / character / integer of same length as x
+#' @return An object of class `ScaleWithin` (a `ParametricBasis`).
 #' @export
 ScaleWithin <- function(x, g) {
   mc <- match.call()
@@ -554,4 +553,3 @@ nbasis.Standardized <- function(x,...) 1L
 #' @rdname nbasis
 #' @export
 nbasis.Ident        <- function(x, ...) ncol(x$y)
-

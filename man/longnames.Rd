@@ -11,6 +11,9 @@ longnames(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+Character vector of long (fully qualified) names.
+}
 \description{
 Extract longnames
 }

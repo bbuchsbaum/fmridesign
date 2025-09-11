@@ -11,6 +11,9 @@ term_matrices(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A list of matrices/tibbles, one per term.
+}
 \description{
 Extract term matrices
 }

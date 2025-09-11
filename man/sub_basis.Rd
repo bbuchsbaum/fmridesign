@@ -18,8 +18,11 @@ sub_basis(x, subset)
 \arguments{
 \item{x}{the object}
 
-\item{subset}{the subset}
+\item{subset}{the subset (logical or integer indices)}
+}
+\value{
+An object of the same class as \code{x} with subset applied.
 }
 \description{
-subset a parametric basis regressor
+Subset a parametric basis regressor.
 }

@@ -11,6 +11,9 @@ ScaleWithin(x, g)
 
 \item{g}{grouping factor / character / integer of same length as x}
 }
+\value{
+An object of class \code{ScaleWithin} (a \code{ParametricBasis}).
+}
 \description{
 Z-score within groups
 }

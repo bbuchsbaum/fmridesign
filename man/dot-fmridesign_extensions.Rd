@@ -10,8 +10,16 @@ An object of class \code{environment} of length 0.
 \usage{
 .fmridesign_extensions
 }
+\value{
+An environment used internally as a registry.
+}
 \description{
 This file provides an extension mechanism for packages to register
 their own HRF specification types with fmridesign.
 }
-\keyword{datasets}
+\details{
+Internal registry environment for external HRF specs
+
+Holds registration data for external HRF specification classes.
+}
+\keyword{internal}

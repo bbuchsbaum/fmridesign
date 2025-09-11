@@ -9,6 +9,9 @@
 \arguments{
 \item{n}{Length of the factor to generate.}
 }
+\value{
+A factor of length \code{n} with zero-padded sequential levels.
+}
 \description{
 Internal helper for generating trial factors
 }

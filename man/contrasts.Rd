@@ -11,6 +11,9 @@ contrasts(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A named list of contrast specifications.
+}
 \description{
 Extract contrasts
 }

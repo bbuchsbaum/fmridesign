@@ -32,8 +32,8 @@ parse_term <- function(vars, ttype) {
 #' The covariate term can be combined with standard HRF-convolved event terms in the 
 #' same model. For example:
 #' ```r
-#' model <- event_model(signal ~ hrf(stimulus) + covariate(motion_x, motion_y), 
-#'                     data = data)
+#' model <- event_model(onset ~ hrf(stimulus) + covariate(motion_x, motion_y, data = cov_data), 
+#'                     data = events, block = ~ 1, sampling_frame = sframe)
 #' ```
 #'
 #' @param ... A variable argument set of covariate names.
@@ -55,15 +55,17 @@ parse_term <- function(vars, ttype) {
 #'
 #' # Combine with event model
 #' sframe <- sampling_frame(blocklens = c(100), TR = 2)
+#' # 50 events, strictly increasing onsets per block
 #' event_data <- data.frame(
-#'   stimulus = factor(rep(c("A", "B"), 50)),
-#'   onset = seq(0, 198, by = 4)
+#'   stimulus = factor(rep(c("A", "B"), 25)),
+#'   onset = seq(0, by = 4, length.out = 50)
 #' )
 #' 
 #' # Full model with both HRF-convolved events and non-convolved covariates
 #' model <- event_model(
-#'   signal ~ hrf(stimulus) + covariate(x, y),
+#'   onset ~ hrf(stimulus) + covariate(x, y, data = motion_data, id = "motion"),
 #'   data = event_data,
+#'   block = ~ 1,
 #'   sampling_frame = sframe
 #' )
 #' 

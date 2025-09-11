@@ -16,6 +16,7 @@
 #' @param durations A numeric vector specifying the duration (in seconds) of each event.
 #' @param ... Additional arguments to be passed to methods.
 #' 
+#' @return An `event_model` object describing the task design.
 #' @export
 event_model <- function(formula_or_list, data, block, sampling_frame, drop_empty=TRUE, durations=0, ...) { 
   UseMethod("event_model") 
@@ -29,6 +30,7 @@ event_model <- function(formula_or_list, data, block, sampling_frame, drop_empty
 #' @param x The object to extract cells from.
 #' @param drop.empty Logical indicating whether to drop empty cells (default: TRUE).
 #' @param ... Additional arguments (e.g., exclude_basis for convolved_term method).
+#' @return A data.frame/tibble of cells (categorical combinations) relevant to `x`.
 #' @export
 cells <- function(x, drop.empty = TRUE, ...) UseMethod("cells")
 
@@ -38,6 +40,7 @@ cells <- function(x, drop.empty = TRUE, ...) UseMethod("cells")
 #' @param drop.empty Logical whether to drop conditions with no events (default: TRUE).
 #' @param expand_basis Logical whether to expand basis functions (default: FALSE).
 #' @param ... Additional arguments.
+#' @return A character vector of condition names.
 #' @export
 conditions <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) UseMethod("conditions")
 
@@ -50,6 +53,7 @@ conditions <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) UseMetho
 #' @param summate Logical indicating whether to sum convolved signals.
 #' @param precision Numeric specifying the temporal precision for convolution.
 #' @param ... Additional arguments.
+#' @return A matrix-like (often tibble) of convolved regressors.
 #' @export
 convolve <- function(x, hrf, sampling_frame, drop.empty = TRUE, summate = TRUE, precision = .1, ...) UseMethod("convolve")
 
@@ -60,6 +64,7 @@ convolve <- function(x, hrf, sampling_frame, drop.empty = TRUE, summate = TRUE, 
 #' @param allrows Whether to return all rows (for baseline_term method).
 #' @param drop.empty Whether to drop empty columns (for event_term method).
 #' @param ... Additional arguments.
+#' @return A matrix-like object (often tibble) with rows = scans, cols = regressors.
 #' @export
 design_matrix <- function(x, ...) { UseMethod("design_matrix") }
 
@@ -70,6 +75,7 @@ design_matrix <- function(x, ...) { UseMethod("design_matrix") }
 #'   or "labels" for descriptive labels/names.
 #' @param transformed Logical indicating whether to return transformed values. Default is TRUE.
 #' @param ... Additional arguments.
+#' @return Requested elements; structure depends on method (e.g., numeric values or labels).
 #' @export
 elements <- function(x, ...) UseMethod("elements")
 
@@ -81,6 +87,7 @@ elements <- function(x, ...) UseMethod("elements")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return A list of matrices/tibbles, one per term.
 #' @export
 term_matrices <- function(x, ...) UseMethod("term_matrices")
 
@@ -88,6 +95,7 @@ term_matrices <- function(x, ...) UseMethod("term_matrices")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return A named list of event term objects.
 #' @export
 event_terms <- function(x, ...) UseMethod("event_terms")
 
@@ -95,6 +103,7 @@ event_terms <- function(x, ...) UseMethod("event_terms")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return A named list of baseline term objects.
 #' @export
 baseline_terms <- function(x, ...) UseMethod("baseline_terms")
 
@@ -103,6 +112,7 @@ baseline_terms <- function(x, ...) UseMethod("baseline_terms")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return A data.frame/tibble of event rows.
 #' @export
 event_table <- function(x, ...) UseMethod("event_table")
 
@@ -110,6 +120,7 @@ event_table <- function(x, ...) UseMethod("event_table")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return Logical scalar indicating whether `x` is categorical.
 #' @export
 is_categorical <- function(x, ...) UseMethod("is_categorical")
 
@@ -117,6 +128,7 @@ is_categorical <- function(x, ...) UseMethod("is_categorical")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return Logical scalar indicating whether `x` is continuous.
 #' @export
 is_continuous <- function(x, ...) UseMethod("is_continuous")
 
@@ -124,6 +136,7 @@ is_continuous <- function(x, ...) UseMethod("is_continuous")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return Character vector of long (fully qualified) names.
 #' @export
 longnames <- function(x, ...) UseMethod("longnames")
 
@@ -131,6 +144,7 @@ longnames <- function(x, ...) UseMethod("longnames")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return Character vector of short names.
 #' @export
 shortnames <- function(x, ...) UseMethod("shortnames")
 
@@ -138,6 +152,7 @@ shortnames <- function(x, ...) UseMethod("shortnames")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return Character vector of column names produced by the object.
 #' @export
 columns <- function(x, ...) UseMethod("columns")
 
@@ -145,6 +160,7 @@ columns <- function(x, ...) UseMethod("columns")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return Integer vector or list mapping term(s) to column indices.
 #' @export
 term_indices <- function(x, ...) UseMethod("term_indices")
 
@@ -155,6 +171,7 @@ term_indices <- function(x, ...) UseMethod("term_indices")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return A constructed object; return type depends on method.
 #' @export
 construct <- function(x, ...) UseMethod("construct")
 
@@ -162,6 +179,7 @@ construct <- function(x, ...) UseMethod("construct")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return A list split by block/run.
 #' @export
 split_by_block <- function(x, ...) UseMethod("split_by_block")
 
@@ -172,6 +190,7 @@ split_by_block <- function(x, ...) UseMethod("split_by_block")
 #' @param global Whether onsets are in global time units (across all runs).
 #' @param blocksplit Whether to split onsets by blocks.
 #' @param ... Additional arguments.
+#' @return A list of onset vectors, one per block (unless `global=TRUE`).
 #' @export
 split_onsets <- function(x, sframe, global = FALSE, blocksplit = FALSE, ...) UseMethod("split_onsets")
 
@@ -179,6 +198,7 @@ split_onsets <- function(x, sframe, global = FALSE, blocksplit = FALSE, ...) Use
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return Character vector of term names.
 #' @export
 term_names <- function(x, ...) UseMethod("term_names")
 
@@ -186,6 +206,7 @@ term_names <- function(x, ...) UseMethod("term_names")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return A named list of contrast specifications.
 #' @export
 contrasts <- function(x, ...) UseMethod("contrasts")
 
@@ -193,6 +214,7 @@ contrasts <- function(x, ...) UseMethod("contrasts")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return A ggplot2 object visualizing regressor correlations.
 #' @export
 correlation_map <- function(x, ...) UseMethod("correlation_map")
 
@@ -200,6 +222,7 @@ correlation_map <- function(x, ...) UseMethod("correlation_map")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return A ggplot2 object visualizing the design matrix.
 #' @export
 design_map <- function(x, ...) UseMethod("design_map")
 
@@ -207,6 +230,7 @@ design_map <- function(x, ...) UseMethod("design_map")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return A named list of matrices with F-contrast weights.
 #' @export
 Fcontrasts <- function(x, ...) UseMethod("Fcontrasts")
 
@@ -214,6 +238,7 @@ Fcontrasts <- function(x, ...) UseMethod("Fcontrasts")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return A named list of contrast weight objects or matrices.
 #' @export
 contrast_weights <- function(x, ...) UseMethod("contrast_weights")
 
@@ -221,6 +246,7 @@ contrast_weights <- function(x, ...) UseMethod("contrast_weights")
 #' 
 #' @param x The object.
 #' @param ... Additional arguments.
+#' @return Character vector of regressor names for `x`.
 #' @export
 regressors <- function(x, ...) UseMethod("regressors")
 

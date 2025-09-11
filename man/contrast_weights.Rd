@@ -17,6 +17,9 @@ contrast_weights(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A named list of contrast weight objects or matrices.
+}
 \description{
 Compute contrast weights
 }

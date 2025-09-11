@@ -11,6 +11,9 @@ split_by_block(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A list split by block/run.
+}
 \description{
 Split by block
 }

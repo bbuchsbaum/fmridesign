@@ -11,6 +11,9 @@ baseline_terms(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A named list of baseline term objects.
+}
 \description{
 Extract baseline terms
 }

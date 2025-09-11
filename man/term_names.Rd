@@ -11,6 +11,9 @@ term_names(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+Character vector of term names.
+}
 \description{
 Extract term names
 }

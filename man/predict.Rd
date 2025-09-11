@@ -11,7 +11,7 @@
 \alias{predict.RobustScale}
 \title{Predict from a ParametricBasis object}
 \usage{
-predict.ParametricBasis(object, newdata, ...)
+\method{predict}{ParametricBasis}(object, newdata, ...)
 
 \method{predict}{Standardized}(object, newdata, ...)
 
@@ -28,13 +28,16 @@ predict.ParametricBasis(object, newdata, ...)
 \method{predict}{RobustScale}(object, newdata, ...)
 }
 \arguments{
-\item{object}{ParametricBasis object}
+\item{object}{ParametricBasis object.}
 
-\item{newdata}{Numeric vector of new values}
+\item{newdata}{Numeric vector to transform.}
 
-\item{...}{Additional arguments}
+\item{...}{Additional arguments.}
 
 \item{newgroup}{Optional factor for group-dependent bases.}
+}
+\value{
+A numeric matrix with transformed values (one column per basis component).
 }
 \description{
 Dispatch to the appropriate method for transforming new data

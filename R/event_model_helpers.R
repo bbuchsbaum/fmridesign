@@ -322,14 +322,27 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
       
       # Only warn if there are actual meaningful duplicates (not just empty string fixes)
       if (length(real_duplicate_indices) > 0) {
-          # Provide a more informative warning about which names were auto-suffixed
-          warning_message <- paste0(
-              "Duplicate column names detected and automatically resolved by appending suffixes (e.g., '.1', '.2'). ",
-              "This typically occurs when multiple terms generate identical column name proposals (e.g., from multiple hrf(Ident(X,Y)) calls where 'X' is repeated, or if term_tags clash in unforeseen ways).",
-              " Review model specification if this is unexpected. Changed names include:\n",
-              paste0("  Original: '", current_colnames[real_duplicate_indices], "' -> Became: '", unique_colnames[real_duplicate_indices], "'", collapse = "\n")
+          # Provide a concise, informative warning about which names were auto-suffixed
+          show_n <- min(5, length(real_duplicate_indices))
+          sample_idx <- real_duplicate_indices[seq_len(show_n)]
+          examples <- paste0(
+            "  ", current_colnames[sample_idx], " -> ", unique_colnames[sample_idx],
+            collapse = "\n"
           )
-          warning(warning_message, call. = FALSE)
+          extra <- length(real_duplicate_indices) - show_n
+          tail_note <- if (extra > 0) paste0("\n  +", extra, " more ...") else ""
+
+          warn_enabled <- getOption("fmridesign.warn_name_clash", TRUE)
+          msg <- paste0(
+            "Duplicate column names detected and automatically resolved by appending suffixes (e.g., '.1', '.2'). ",
+            "If unexpected, set distinct term IDs via id= in hrf().",
+            "\nExamples:\n", examples, tail_note
+          )
+          if (isTRUE(warn_enabled)) {
+            cli::cli_warn(msg, class = "fmridesign_name_clash")
+          } else {
+            cli::cli_inform(msg, class = "fmridesign_name_clash")
+          }
       }
   }
   colnames(dm_mat) <- unique_colnames

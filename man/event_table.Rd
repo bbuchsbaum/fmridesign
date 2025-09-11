@@ -11,6 +11,9 @@ event_table(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A data.frame/tibble of event rows.
+}
 \description{
 Extract event table
 }

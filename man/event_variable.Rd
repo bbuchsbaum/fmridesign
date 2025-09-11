@@ -29,7 +29,9 @@ This is a user-facing wrapper around the internal \code{event()} constructor,
 specifically for creating continuous event sequences from numeric vectors.
 }
 \examples{
-evar <- event_variable(c(1, 2, 3, 4, 5, 6), "example_var", onsets = seq(1, 100, length.out = 6))
+ev_onsets <- seq(1, 100, length.out = 6)
+evar <- event_variable(c(1, 2, 3, 4, 5, 6), "example_var", 
+                       onsets = ev_onsets, blockids = rep(1, length(ev_onsets)))
 print(evar)
 is_continuous(evar)
 

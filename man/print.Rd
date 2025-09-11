@@ -41,23 +41,13 @@
 \item{x}{An event_term object.}
 
 \item{...}{Additional arguments (unused).}
-
-\item{fit}{The fit object.}
-
-\item{indices}{The indices to use.}
 }
 \value{
 The input object, invisibly.
-
-The estimated contrast.
-
-Print Contrast Set
 }
 \description{
 Displays key information about the baseline model components and a preview
 of the design matrix.
-
-Compute the estimated contrast for a given fit and indices.
 
 Print a contrast set.
 

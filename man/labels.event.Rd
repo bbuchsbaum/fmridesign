@@ -7,9 +7,9 @@
 \method{labels}{event}(object, ...)
 }
 \arguments{
-\item{...}{Additional arguments (unused).}
+\item{object}{An object of class \code{event}.}
 
-\item{x}{An object of class \code{event}.}
+\item{...}{Additional arguments (unused).}
 }
 \value{
 A character vector of formatted labels, or \code{character(0)} if not applicable.
@@ -26,15 +26,15 @@ Relies on the internal \code{.level_vector} helper function.
 \examples{
 fac <- factor(rep(c("A", "B"), 3))
 onsets <- 1:6
-ev_fac <- event_factor(fac, "Condition", onsets)
+ev_fac <- event_factor(fac, "Condition", onsets, blockids = rep(1, length(onsets)))
 labels(ev_fac) # Should return c("Condition[A]", "Condition[B]")
 
 vals <- 1:6
-ev_num <- event_variable(vals, "Modulator", onsets)
+ev_num <- event_variable(vals, "Modulator", onsets, blockids = rep(1, length(onsets)))
 labels(ev_num) # Should return "Modulator"
 
 mat <- matrix(1:12, 6, 2)
 colnames(mat) <- c("C1", "C2")
-ev_mat <- event_matrix(mat, "MatrixVar", onsets)
+ev_mat <- event_matrix(mat, "MatrixVar", onsets, blockids = rep(1, length(onsets)))
 labels(ev_mat) # Should return c("MatrixVar[1]", "MatrixVar[2]") 
 }

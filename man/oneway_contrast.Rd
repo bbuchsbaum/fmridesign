@@ -11,7 +11,7 @@ oneway_contrast(A, name, where = NULL)
 
 \item{name}{The name of the contrast}
 
-\item{where}{Optional environment for evaluating the formula}
+\item{where}{An optional formula specifying the subset over which the contrast is computed.}
 }
 \value{
 A oneway_contrast_spec object that can be used to generate contrast weights
@@ -23,9 +23,9 @@ Create a one-way contrast specification
 # Create a one-way contrast for a factor 'basis'
 con <- oneway_contrast(~ basis, name = "Main_basis")
 
-# Create a one-way contrast with a specific environment
+# Create a one-way contrast with a 'where' clause
 con <- oneway_contrast(~ basis, name = "Main_basis",
-                      where = new.env())
+                      where = ~ block == 1)
 
 }
 \seealso{

@@ -133,10 +133,19 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
   
   # Check if any event object creation resulted in zero events after subsetting
   if (length(evs) > 0 && length(evs[[1]]$onsets) == 0) {
-      warning(sprintf("Event term '%s' resulted in zero events after subsetting/processing.", 
-                      paste(vnames, collapse=":")))
-      # Return an empty structure? Or let downstream fail? Let downstream handle for now.
-      # It should have empty onsets, durations, blockids, value matrix. 
+      term_label <- paste(vnames, collapse = ":")
+      n_in <- length(onsets)
+      n_keep <- if (is.null(subset)) n_in else sum(isTRUE(subset))
+      subset_note <- if (!is.null(subset)) paste0(" (kept ", n_keep, "/", n_in, ")") else ""
+      msg <- sprintf("Event term '%s' has zero realized events after processing%s.", term_label, subset_note)
+
+      warn_enabled <- getOption("fmridesign.warn_zero_events", TRUE)
+      if (isTRUE(warn_enabled)) {
+        cli::cli_warn(msg, class = "fmridesign_zero_events")
+      } else {
+        cli::cli_inform(msg, class = "fmridesign_zero_events")
+      }
+      # Proceed with empty structures; downstream code will handle gracefully
   }
   
   # Rebuild event_table based on the *actual* content of the event objects
@@ -546,12 +555,12 @@ elements.event_term <- function(x, what = c("values", "labels"), ...) {
 ## ============================================================================
 
 #' @export
-onsets.convolved_term <- function(x) {
-  onsets(x$evterm)
+onsets.convolved_term <- function(x, ...) {
+  onsets(x$evterm, ...)
 }
 
 #' @export
-onsets.event_term <- function(x) {
+onsets.event_term <- function(x, ...) {
   x$onsets
 }
 
@@ -798,8 +807,9 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   
   # --- Optional Debug Validation --- 
   if (getOption("fmrireg.debug", FALSE)) {
-     if (exists("is_valid_heading", mode="function")){
-        stopifnot(all(is_valid_heading(colnames(cmat))))
+     fn <- get0("is_valid_heading", mode = "function")
+     if (!is.null(fn)){
+        stopifnot(all(fn(colnames(cmat))))
      } else {
         warning("fmrireg.debug=TRUE: is_valid_heading helper not found for validation.")
      }

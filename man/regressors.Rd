@@ -22,6 +22,9 @@ regressors(x, ...)
 
 \item{drop.empty}{Logical; drop empty conditions}
 }
+\value{
+Character vector of regressor names for \code{x}.
+}
 \description{
 Convolve the event-term design matrix with an HRF and return the
 resulting regressors.

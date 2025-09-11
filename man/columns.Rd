@@ -20,6 +20,9 @@ columns(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+Character vector of column names produced by the object.
+}
 \description{
 Extract columns
 }

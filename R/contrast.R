@@ -320,6 +320,60 @@ pairwise_contrasts <- function(levels, facname, where=NULL, name_prefix = "con")
 }
 
 
+#' Sliding-Window Contrasts (Disjoint)
+#'
+#' @description
+#' Generate a set of A-vs-B contrasts where A and B are adjacent, equally sized
+#' and disjoint windows over an ordered factor. For window size k, contrast i
+#' compares A = \code{levels[i:(i+k-1)]} against B = \code{levels[(i+k):(i+2k-1)]}.
+#' This yields \code{length(levels) - 2*k + 1} contrasts that detect local changes
+#' across the sequence without overlapping masks.
+#'
+#' @param levels Character vector of ordered factor levels.
+#' @param facname Name of the factor (column in the design).
+#' @param window_size Positive integer window size (default 2).
+#' @param where Optional formula to subset events used when computing weights.
+#' @param name_prefix Prefix for generated contrast names (default "win").
+#'
+#' @return A `contrast_set` of `pair_contrast` specifications.
+#'
+#' @examples
+#' # For levels 1..5, generate 2 disjoint adjacent-window contrasts (k=2)
+#' sliding_window_contrasts(as.character(1:5), facname = "intensity", window_size = 2)
+#'
+#' # For k=3 with 7 levels (disjoint windows):
+#' # A=[1,2,3] vs B=[4,5,6], then A=[2,3,4] vs B=[5,6,7]
+#' sliding_window_contrasts(LETTERS[1:7], facname = "difficulty", window_size = 3)
+#'
+#' @export
+sliding_window_contrasts <- function(levels, facname, window_size = 2, where = NULL, name_prefix = "win") {
+  assertthat::assert_that(is.character(facname), length(facname) == 1, msg = "'facname' must be a single string.")
+  if (!is.null(where)) {
+    assertthat::assert_that(rlang::is_formula(where))
+  }
+  assertthat::assert_that(is.numeric(window_size) && length(window_size) == 1 && window_size >= 1,
+                          msg = "'window_size' must be a positive integer.")
+  window_size <- as.integer(window_size)
+
+  L <- length(levels)
+  if (L < 2) stop("sliding_window_contrasts requires at least two levels.")
+  if (2 * window_size > L) stop("'window_size' too large: requires 2*window_size <= length(levels).")
+
+  n_con <- L - 2L * window_size + 1L
+  ret <- vector("list", n_con)
+  for (i in seq_len(n_con)) {
+    A_levels <- levels[i:(i + window_size - 1L)]
+    B_levels <- levels[(i + window_size):(i + 2L * window_size - 1L)]
+    A_expr <- paste0(facname, " %in% c(", paste0('"', A_levels, '"', collapse = ","), ")")
+    B_expr <- paste0(facname, " %in% c(", paste0('"', B_levels, '"', collapse = ","), ")")
+    con_name <- paste0(name_prefix, "_", paste(A_levels, collapse = "-"), "_vs_", paste(B_levels, collapse = "-"))
+    ret[[i]] <- pair_contrast(as.formula(paste("~", A_expr)), as.formula(paste("~", B_expr)),
+                              where = where, name = con_name)
+  }
+  do.call(contrast_set, ret)
+}
+
+
 
 
 #' Pair Contrast
@@ -393,15 +447,15 @@ pair_contrast <- function(A, B, name, where = NULL) {
 #'
 #' @param A A formula specifying the contrast
 #' @param name The name of the contrast
-#' @param where Optional environment for evaluating the formula
+#' @param where An optional formula specifying the subset over which the contrast is computed.
 #' @return A oneway_contrast_spec object that can be used to generate contrast weights
 #' @examples
 #' # Create a one-way contrast for a factor 'basis'
 #' con <- oneway_contrast(~ basis, name = "Main_basis")
 #'
-#' # Create a one-way contrast with a specific environment
+#' # Create a one-way contrast with a 'where' clause
 #' con <- oneway_contrast(~ basis, name = "Main_basis",
-#'                       where = new.env())
+#'                       where = ~ block == 1)
 #'
 #' @seealso \code{\link{interaction_contrast}} for testing interactions,
 #'          \code{\link{pair_contrast}} for pairwise comparisons
@@ -434,16 +488,16 @@ oneway_contrast <- function(A, name, where = NULL) {
 #'
 #' @param A A formula specifying the interaction contrast
 #' @param name The name of the contrast
-#' @param where Optional environment for evaluating the formula
+#' @param where An optional formula specifying the subset over which the contrast is computed.
 #' @return An interaction_contrast_spec object containing the specification for
 #'         generating interaction contrast weights
 #' @examples
 #' # Create an interaction contrast for factors A and B
 #' con <- interaction_contrast(~ A * B, name = "A_by_B")
 #'
-#' # Create an interaction contrast with a specific environment
+#' # Create an interaction contrast with a 'where' clause
 #' con <- interaction_contrast(~ A * B, name = "A_by_B",
-#'                           where = new.env())
+#'                           where = ~ block == 1)
 #'
 #' @seealso \code{\link{oneway_contrast}} for main effects,
 #'          \code{\link{pair_contrast}} for pairwise comparisons
@@ -843,6 +897,47 @@ contrast_weights.interaction_contrast_spec <- function(x, term,...) {
   base_class <- if(is.null(ncol(weights_out)) || ncol(weights_out) > 1) "Fcontrast" else "contrast"
   class(ret) <- c("interaction_contrast", base_class, "cell_contrast", "contrast", "list")
   ret
+}
+
+# Internal: build main-effect contrast matrix over cells
+#' @keywords internal
+generate_main_effect_contrast <- function(relevant_cells, fac_name) {
+  f <- factor(relevant_cells[[fac_name]])
+  k <- nlevels(f)
+  if (k < 2) stop("Need at least 2 levels to form a main-effect contrast")
+  G <- model.matrix(~ f - 1)                # n x k indicator for levels
+  H <- stats::contr.helmert(k)              # k x (k-1) Helmert basis
+  W <- G %*% H                              # n x (k-1) weights per cell
+  colnames(W) <- paste0(fac_name, "_h", seq_len(ncol(W)))
+  W
+}
+
+# Internal: build interaction contrast matrix over cells for two+ factors
+#' @keywords internal
+generate_interaction_contrast <- function(relevant_cells, factors) {
+  if (length(factors) < 2) stop("At least two factors required for interaction contrast")
+  # For simplicity, handle the first two factors; extensions can generalize further
+  f1 <- factor(relevant_cells[[factors[1]]])
+  f2 <- factor(relevant_cells[[factors[2]]])
+  k1 <- nlevels(f1); k2 <- nlevels(f2)
+  if (k1 < 2 || k2 < 2) stop("Each factor needs >= 2 levels for interaction")
+  E1 <- model.matrix(~ f1 - 1)              # n x k1
+  E2 <- model.matrix(~ f2 - 1)              # n x k2
+  H1 <- stats::contr.helmert(k1)            # k1 x (k1-1)
+  H2 <- stats::contr.helmert(k2)            # k2 x (k2-1)
+  A <- E1 %*% H1                             # n x (k1-1)
+  B <- E2 %*% H2                             # n x (k2-1)
+  # All pairwise products of columns of A and B
+  cols <- list()
+  for (i in seq_len(ncol(A))) {
+    for (j in seq_len(ncol(B))) {
+      cols[[length(cols) + 1]] <- A[, i] * B[, j]
+    }
+  }
+  W <- do.call(cbind, cols)
+  colnames(W) <- paste0(factors[1], "_h", rep(seq_len(ncol(A)), each = ncol(B)),
+                        ":", factors[2], "_h", rep(seq_len(ncol(B)), times = ncol(A)))
+  W
 }
 
 #' Polynomial Contrast Weights
@@ -1303,20 +1398,20 @@ contrast_weights.contrast_diff_spec <- function(x, term,...) {
   ret  
 }
 
-#' Estimated Contrast
-#'
-#' @description
-#' Compute the estimated contrast for a given fit and indices.
-#'
-#' @param x The contrast to estimate.
-#' @param fit The fit object.
-#' @param indices The indices to use.
-#' @param ... Additional arguments (currently unused).
-#'
-#' @return The estimated contrast.
-#'
-# #' @noRd
-# #' @keywords internal
+# Estimated Contrast (internal function, commented out)
+#
+# @description
+# Compute the estimated contrast for a given fit and indices.
+#
+# @param x The contrast to estimate.
+# @param fit The fit object.
+# @param indices The indices to use.
+# @param ... Additional arguments (currently unused).
+#
+# @return The estimated contrast.
+#
+# @noRd
+# @keywords internal
 # estcon.contrast <- function(x, fit, indices, ...) {
 #   wts <- numeric(length(fit$assign))
 #   wts[indices] <- x$weights
@@ -1702,6 +1797,3 @@ contrast_weights.contrast_set <- function(x, term, ...) {
   
   return(results_list)
 }
-
-
-

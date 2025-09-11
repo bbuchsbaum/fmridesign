@@ -641,10 +641,12 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
     stop("No non-constant baseline terms available for plotting.")
   }
   
-  # Extract the sampling frame.
-  sframe <- x$sampling_frame
-  if (is.null(sframe$time) || is.null(sframe$blockids)) {
-    stop("The sampling_frame in the baseline model must contain 'time' and 'blockids'.")
+  # Derive time and block IDs from the sampling frame without mutating it
+  time_vec    <- tryCatch(fmrihrf::samples(x$sampling_frame, global = TRUE), silent = TRUE)
+  blockids_vec <- tryCatch(fmrihrf::blockids(x$sampling_frame), silent = TRUE)
+  if (inherits(time_vec, "try-error") || inherits(blockids_vec, "try-error") ||
+      is.null(time_vec) || is.null(blockids_vec)) {
+    stop("Could not derive sample times or block IDs from the sampling_frame.", call. = FALSE)
   }
   
   # For each term to plot, convert its design matrix into a long-format tibble.
@@ -652,11 +654,11 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
     dm <- design_matrix(term) # Get matrix for this specific term
     dm_tib <- suppressMessages(tibble::as_tibble(dm, .name_repair = "check_unique"))
     # Add block and time info - ensure dimensions match!
-    if (nrow(dm_tib) != length(sframe$blockids)) {
+    if (nrow(dm_tib) != length(blockids_vec)) {
         stop(paste("Row mismatch between design matrix for term", term$varname, "and sampling frame."))
     }
-    dm_tib$.block <- sframe$blockids
-    dm_tib$.time <- sframe$time
+    dm_tib$.block <- blockids_vec
+    dm_tib$.time  <- time_vec
     tidyr::pivot_longer(dm_tib, cols = -c(.time, .block),
                         names_to = "condition", values_to = "value")
   })
@@ -814,9 +816,11 @@ design_map.baseline_model <- function(x,
   }
   
   # 6) Optionally draw white horizontal lines to separate blocks
-  sframe <- x$sampling_frame
-  if (block_separators && !is.null(sframe$blockids)) {
-    block_ids  <- sframe$blockids
+  if (block_separators) {
+    block_ids  <- tryCatch(fmrihrf::blockids(x$sampling_frame), silent = TRUE)
+    if (inherits(block_ids, "try-error") || is.null(block_ids)) {
+      return(plt)
+    }
     run_info   <- rle(block_ids)             # lengths of each block
     row_breaks <- cumsum(run_info$lengths)   # boundary after each block
     ncols      <- ncol(DM)

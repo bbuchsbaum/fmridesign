@@ -58,5 +58,8 @@ Collate:
     'extension_registry.R'
     'fmrihrf-imports.R'
     'fmrihrf-reexports.R'
+    'globals.R'
     'hrf-formula.R'
+    'namespace-imports.R'
     'naming-utils.R'
+    'validate.R'

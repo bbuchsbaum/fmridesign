@@ -40,6 +40,9 @@ convolve(
 
 \item{...}{Additional arguments.}
 }
+\value{
+A matrix-like (often tibble) of convolved regressors.
+}
 \description{
 Convolve events with a hemodynamic response function
 }

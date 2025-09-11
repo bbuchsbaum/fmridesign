@@ -2,7 +2,7 @@
 % Please edit documentation in R/design_map.R
 \name{design_map.event_model}
 \alias{design_map.event_model}
-\title{Design Matrix Visualization Methods}
+\title{Visualize Event Model Design Matrix}
 \usage{
 \method{design_map}{event_model}(
   x,
@@ -30,10 +30,5 @@
 A ggplot2 object showing the design matrix heatmap.
 }
 \description{
-This file contains methods for visualizing design matrices as heatmaps
-using ggplot2.
-Visualize Event Model Design Matrix
-}
-\details{
 Creates a heatmap visualization of the design matrix for an event_model object.
 }

@@ -11,6 +11,9 @@ design_map(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A ggplot2 object visualizing the design matrix.
+}
 \description{
 Compute design map
 }

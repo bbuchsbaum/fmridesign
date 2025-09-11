@@ -11,6 +11,9 @@ event_terms(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A named list of event term objects.
+}
 \description{
 Extract event terms
 }

@@ -14,6 +14,9 @@ is_continuous(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+Logical scalar indicating whether \code{x} is continuous.
+}
 \description{
 Check if continuous
 }

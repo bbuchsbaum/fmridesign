@@ -172,8 +172,9 @@ event <- function(value, name, onsets, blockids, durations = 0, subset = NULL) {
 #' @return An S3 object of class `event` and `event_seq`.
 #'
 #' @examples
+#' ef_onsets <- seq(1, 100, length.out = 6)
 #' efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", 
-#'         onsets = seq(1, 100, length.out = 6))
+#'         onsets = ef_onsets, blockids = rep(1, length(ef_onsets)))
 #' print(efac)
 #' levels(efac)
 #'
@@ -212,7 +213,9 @@ event_factor <- function(fac, name, onsets, blockids = 1, durations = 0, subset 
 #' @return An S3 object of class `event` and `event_seq`.
 #'
 #' @examples
-#' evar <- event_variable(c(1, 2, 3, 4, 5, 6), "example_var", onsets = seq(1, 100, length.out = 6))
+#' ev_onsets <- seq(1, 100, length.out = 6)
+#' evar <- event_variable(c(1, 2, 3, 4, 5, 6), "example_var", 
+#'                        onsets = ev_onsets, blockids = rep(1, length(ev_onsets)))
 #' print(evar)
 #' is_continuous(evar)
 #'
@@ -606,23 +609,23 @@ print.event <- function(x, ...) {
 #' This is distinct from `levels()` which returns the raw level names or column names.
 #' Relies on the internal `.level_vector` helper function.
 #'
-#' @param x An object of class `event`.
+#' @param object An object of class `event`.
 #' @param ... Additional arguments (unused).
 #' @return A character vector of formatted labels, or `character(0)` if not applicable.
 #' @export
 #' @examples
 #' fac <- factor(rep(c("A", "B"), 3))
 #' onsets <- 1:6
-#' ev_fac <- event_factor(fac, "Condition", onsets)
+#' ev_fac <- event_factor(fac, "Condition", onsets, blockids = rep(1, length(onsets)))
 #' labels(ev_fac) # Should return c("Condition[A]", "Condition[B]")
 #' 
 #' vals <- 1:6
-#' ev_num <- event_variable(vals, "Modulator", onsets)
+#' ev_num <- event_variable(vals, "Modulator", onsets, blockids = rep(1, length(onsets)))
 #' labels(ev_num) # Should return "Modulator"
 #' 
 #' mat <- matrix(1:12, 6, 2)
 #' colnames(mat) <- c("C1", "C2")
-#' ev_mat <- event_matrix(mat, "MatrixVar", onsets)
+#' ev_mat <- event_matrix(mat, "MatrixVar", onsets, blockids = rep(1, length(onsets)))
 #' labels(ev_mat) # Should return c("MatrixVar[1]", "MatrixVar[2]") 
 #' @export
 labels.event <- function(object, ...) {

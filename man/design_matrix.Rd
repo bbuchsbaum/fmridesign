@@ -30,6 +30,9 @@ design_matrix(x, ...)
 
 \item{drop.empty}{Whether to drop empty columns (for event_term method).}
 }
+\value{
+A matrix-like object (often tibble) with rows = scans, cols = regressors.
+}
 \description{
 Extract or construct a design matrix
 }

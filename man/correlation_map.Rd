@@ -11,6 +11,9 @@ correlation_map(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A ggplot2 object visualizing regressor correlations.
+}
 \description{
 Compute correlation map
 }

@@ -11,7 +11,7 @@ interaction_contrast(A, name, where = NULL)
 
 \item{name}{The name of the contrast}
 
-\item{where}{Optional environment for evaluating the formula}
+\item{where}{An optional formula specifying the subset over which the contrast is computed.}
 }
 \value{
 An interaction_contrast_spec object containing the specification for
@@ -24,9 +24,9 @@ Create an interaction contrast specification
 # Create an interaction contrast for factors A and B
 con <- interaction_contrast(~ A * B, name = "A_by_B")
 
-# Create an interaction contrast with a specific environment
+# Create an interaction contrast with a 'where' clause
 con <- interaction_contrast(~ A * B, name = "A_by_B",
-                          where = new.env())
+                          where = ~ block == 1)
 
 }
 \seealso{

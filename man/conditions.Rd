@@ -18,6 +18,9 @@ conditions(x, drop.empty = TRUE, expand_basis = FALSE, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A character vector of condition names.
+}
 \description{
 Extract conditions from a design object
 }

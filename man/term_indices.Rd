@@ -11,6 +11,9 @@ term_indices(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+Integer vector or list mapping term(s) to column indices.
+}
 \description{
 Extract term indices
 }

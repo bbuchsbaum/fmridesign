@@ -17,6 +17,9 @@ Fcontrasts(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A named list of matrices with F-contrast weights.
+}
 \description{
 Compute F-contrasts
 }

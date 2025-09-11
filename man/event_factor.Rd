@@ -34,8 +34,9 @@ This is a user-facing wrapper around the internal \code{event()} constructor,
 specifically for creating categorical event sequences from factors or characters.
 }
 \examples{
+ef_onsets <- seq(1, 100, length.out = 6)
 efac <- event_factor(factor(c("a", "b", "c", "a", "b", "c")), "abc", 
-        onsets = seq(1, 100, length.out = 6))
+        onsets = ef_onsets, blockids = rep(1, length(ef_onsets)))
 print(efac)
 levels(efac)
 

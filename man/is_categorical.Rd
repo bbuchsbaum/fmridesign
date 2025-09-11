@@ -14,6 +14,9 @@ is_categorical(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+Logical scalar indicating whether \code{x} is categorical.
+}
 \description{
 Check if categorical
 }

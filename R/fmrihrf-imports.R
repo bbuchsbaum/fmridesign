@@ -1,5 +1,15 @@
 # Auto-generated file for fmrihrf imports
 
+#' fmrihrf reexports
+#'
+#' Re-exported functions from the fmrihrf package for convenience.
+#' See the upstream fmrihrf documentation for details on usage and return
+#' values of each function.
+#'
+#' @name fmrihrf-reexports
+#' @return See the corresponding fmrihrf function documentation.
+NULL
+
 #' @import fmrihrf
 #' @importFrom fmrihrf HRF as_hrf gen_hrf bind_basis
 #' @importFrom fmrihrf hrf_spmg1 hrf_gamma hrf_gaussian

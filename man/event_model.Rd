@@ -54,6 +54,8 @@ or needed by the \code{hrfspec} objects.}
 \item{...}{Additional arguments (currently unused).}
 }
 \value{
+An \code{event_model} object describing the task design.
+
 An object of class \code{c("event_model", "list")} containing the terms, design matrix,
 sampling frame, and other metadata.
 }

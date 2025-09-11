@@ -3,6 +3,43 @@
 #' This file contains methods for visualizing design matrices as heatmaps
 #' using ggplot2.
 
+# Internal helper used by baseline and event correlation maps
+# Not exported
+#' @keywords internal
+#' @return A ggplot2 heatmap of the correlation matrix.
+.correlation_map_common <- function(DM,
+                                    method = c("pearson", "spearman"),
+                                    half_matrix = FALSE,
+                                    absolute_limits = TRUE,
+                                    ...) {
+  method <- match.arg(method)
+  cor_mat <- stats::cor(DM, method = method, use = "pairwise.complete.obs")
+
+  if (isTRUE(half_matrix)) {
+    cor_mat[upper.tri(cor_mat, diag = FALSE)] <- NA
+  }
+
+  df_long <- as.data.frame(as.table(cor_mat))
+  names(df_long) <- c("Var1", "Var2", "Correlation")
+
+  limits <- if (absolute_limits) c(-1, 1) else range(df_long$Correlation, na.rm = TRUE)
+
+  plt <- ggplot2::ggplot(df_long, ggplot2::aes(x = Var1, y = Var2, fill = Correlation)) +
+    ggplot2::geom_tile(...) +
+    ggplot2::scale_fill_gradient2(
+      midpoint = 0,
+      low = "blue",
+      mid = "white",
+      high = "red",
+      limits = limits
+    ) +
+    ggplot2::theme_minimal(base_size = 14) +
+    ggplot2::labs(x = "", y = "", fill = "Correlation") +
+    ggplot2::theme(panel.grid = ggplot2::element_blank()) +
+    ggplot2::coord_fixed()
+  plt
+}
+
 #' Visualize Event Model Design Matrix
 #' 
 #' Creates a heatmap visualization of the design matrix for an event_model object.

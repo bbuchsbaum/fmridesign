@@ -11,6 +11,9 @@ construct(x, ...)
 
 \item{...}{Additional arguments.}
 }
+\value{
+A constructed object; return type depends on method.
+}
 \description{
 Construct method
 }

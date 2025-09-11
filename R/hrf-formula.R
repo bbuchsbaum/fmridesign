@@ -145,32 +145,51 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
   
   # --- Check contrasts argument --- 
   if (!is.null(contrasts)) {
-    if (!is.list(contrasts)) {
-        if (inherits(contrasts, "contrast_spec")) {
-            contrast_list <- list(contrasts)
-            cname <- contrasts$name %||% "contrast1"
-            names(contrast_list) <- cname
-            contrasts <- contrast_list
-        } else {
-             stop("`contrasts=` argument must be a single contrast_spec object or a list of them.\n",
-                  "  Detected type: ", class(contrasts)[1], "\n",
-                  "  Hint: Use functions like contrast(), pair_contrast(), contrast_set() to define contrasts.", 
-                  call. = FALSE)
+    # Accept a single contrast_spec directly (even though it inherits from list)
+    if (inherits(contrasts, "contrast_spec")) {
+      cs <- contrasts
+      cname <- cs$name %||% "contrast1"
+      contrasts <- list(cs)
+      names(contrasts) <- cname
+    } else if (inherits(contrasts, "contrast_set")) {
+      # Named list of contrast_spec objects; ensure names exist
+      if (is.null(names(contrasts)) || any(names(contrasts) == "")) {
+        cnames <- vapply(contrasts, function(cs) cs$name %||% "", character(1))
+        # Fill blanks with defaults
+        blanks <- which(cnames == "")
+        if (length(blanks) > 0) {
+          cnames[blanks] <- paste0("contrast", blanks)
         }
+        if (any(duplicated(cnames))) {
+          stop("If `contrasts=` is a list, it must be a named list with unique names.", call. = FALSE)
+        }
+        names(contrasts) <- cnames
+      }
+    } else if (is.list(contrasts)) {
+      # Bare list provided; validate elements are contrast_spec
+      is_spec <- vapply(contrasts, function(x) inherits(x, "contrast_spec"), logical(1))
+      if (!all(is_spec)) {
+        stop("If `contrasts=` is a list, all elements must be contrast_spec objects.\n",
+             "  Hint: Use functions like contrast(), pair_contrast(), contrast_set() to define contrasts.", 
+             call. = FALSE)
+      }
+      # Ensure names
+      if (is.null(names(contrasts)) || any(names(contrasts) == "")) {
+        cnames <- vapply(contrasts, function(cs) cs$name %||% "", character(1))
+        blanks <- which(cnames == "")
+        if (length(blanks) > 0) {
+          cnames[blanks] <- paste0("contrast", blanks)
+        }
+        if (any(duplicated(cnames))) {
+          stop("If `contrasts=` is a list, it must be a named list with unique names.", call. = FALSE)
+        }
+        names(contrasts) <- cnames
+      }
     } else {
-        is_spec <- vapply(contrasts, inherits, logical(1), "contrast_spec")
-        if (!all(is_spec)) {
-             stop("If `contrasts=` is a list, all elements must be contrast_spec objects.\n",
-                  "  Hint: Use functions like contrast(), pair_contrast(), contrast_set() to define contrasts.", 
-                  call. = FALSE)
-        }
-        if (is.null(names(contrasts)) || any(names(contrasts) == "")) {
-            cnames <- sapply(contrasts, function(cs) cs$name %||% paste0("contrast", which(sapply(contrasts, identical, cs))))
-             if (any(duplicated(cnames))) {
-                stop("If `contrasts=` is a list, it must be a *named* list (or auto-naming must yield unique names).", call. = FALSE)
-            }
-            names(contrasts) <- cnames
-        }
+      stop("`contrasts=` argument must be a contrast_spec, a contrast_set, or a list of contrast_spec objects.\n",
+           "  Detected type: ", class(contrasts)[1], "\n",
+           "  Hint: Use functions like contrast(), pair_contrast(), contrast_set() to define contrasts.",
+           call. = FALSE)
     }
   }
   # -----------------------------
@@ -333,6 +352,7 @@ evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1, ...
 #' @param add_sum If TRUE, append a column that is the average of all
 #'                trialwise columns (useful as a conventional main effect).
 #' @param label Term label / prefix for the generated columns.
+#' @return An `hrfspec` term to be used on the RHS of an event-model formula.
 #' @export
 trialwise <- function(basis   = "spmg1",
                       lag     = 0,
@@ -357,6 +377,7 @@ trialwise <- function(basis   = "spmg1",
 #' Internal helper for generating trial factors
 #'
 #' @param n Length of the factor to generate.
+#' @return A factor of length `n` with zero-padded sequential levels.
 #' @keywords internal
 .trial_factor <- function(n) {
   pad <- nchar(as.character(n))

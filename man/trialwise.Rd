@@ -20,6 +20,9 @@ trialwise columns (useful as a conventional main effect).}
 
 \item{label}{Term label / prefix for the generated columns.}
 }
+\value{
+An \code{hrfspec} term to be used on the RHS of an event-model formula.
+}
 \description{
 Generate one regressor per trial (plus an optional grand-mean column)
 by delegating everything to \code{hrf()}.
