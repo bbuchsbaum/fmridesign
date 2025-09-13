@@ -278,16 +278,13 @@ contrast_weights.event_model <- function(x, ...) {
                 
                 # If no matches and term_cols have a common prefix, try stripping it
                 if (all(is.na(m)) && length(term_cols) > 0) {
-                    # Check if all term_cols start with the same prefix pattern
-                    first_col <- term_cols[1]
-                    prefix_match <- regexpr("^[^_]+_", first_col)
-                    if (prefix_match > 0) {
-                        prefix <- substr(first_col, 1, attr(prefix_match, "match.length"))
-                        if (all(startsWith(term_cols, prefix))) {
-                            # Strip prefix and try matching again
-                            term_cols_stripped <- sub(paste0("^", gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", prefix)), "", term_cols)
-                            m <- match(rn, term_cols_stripped)
-                        }
+                    # Strip explicit term tag prefix (e.g., "condition_block_") and retry
+                    term_tag <- names(terms(x))[i]
+                    prefix <- paste0(term_tag, "_")
+                    if (all(startsWith(term_cols, prefix))) {
+                        esc <- gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", prefix)
+                        term_cols_stripped <- sub(paste0("^", esc), "", term_cols)
+                        m <- match(rn, term_cols_stripped)
                     }
                 }
                 
@@ -383,6 +380,16 @@ Fcontrasts.event_model <- function(x, ...) {
 
             if (!is.null(rn)) {
                 m <- match(rn, term_cols)
+                if (anyNA(m) && length(term_cols) > 0) {
+                    # Try stripping the explicit term tag prefix
+                    term_tag <- names(terms(x))[i]
+                    prefix <- paste0(term_tag, "_")
+                    if (all(startsWith(term_cols, prefix))) {
+                        esc <- gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", prefix)
+                        term_cols_stripped <- sub(paste0("^", esc), "", term_cols)
+                        m <- match(rn, term_cols_stripped)
+                    }
+                }
                 if (anyNA(m)) {
                     warning(sprintf("F-contrast '%s' for term '%s' has unmatched row names: %s",
                                      con_name, names(terms(x))[i],
