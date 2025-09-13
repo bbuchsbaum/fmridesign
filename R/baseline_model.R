@@ -716,7 +716,9 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
                    plot.title = ggplot2::element_text(face = "bold", hjust = 0.5),
                    axis.title = ggplot2::element_text(face = "bold"))
   
-  p
+  # Explicitly print to ensure rendering on first call
+  print(p)
+  invisible(p)
 }
 
 #' correlation_map.baseline_model

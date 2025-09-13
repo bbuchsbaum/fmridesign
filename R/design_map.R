@@ -249,5 +249,7 @@ plot.event_model <- function(x, term_name = NULL, ...) {
       theme(legend.position = "none")
   }
   
-  plt
+  # Explicitly print to ensure rendering on first call
+  print(plt)
+  invisible(plt)
 }
