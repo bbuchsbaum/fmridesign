@@ -37,3 +37,33 @@ heavy lifting inside \strong{fmrireg} while exposing a minimal, pipe-friendly AP
 that can be used anywhere a condition -> basis split is required (e.g. for
 CFALS).
 }
+\examples{
+# Create sample event data with parametric modulator
+events <- data.frame(
+  onset = c(2, 6, 10, 14, 18),
+  condition = factor(c("A", "B", "A", "B", "C")),
+  rt = c(0.5, 0.8, 0.6, 0.9, 0.7),
+  block = c(1, 1, 2, 2, 2)
+)
+
+# Create sampling frame
+sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
+
+# Create HRF with multiple basis functions
+hrf_spmg3 <- fmrihrf::HRF_SPMG3
+
+# Create event term
+term <- event_term(
+  list(condition = events$condition, rt = events$rt),
+  onsets = events$onset,
+  blockids = events$block
+)
+
+# Convert to condition basis list
+cbl <- condition_basis_list(term, hrf_spmg3, sf, output = "condition_list")
+names(cbl)
+
+# Get as matrix instead
+cbl_matrix <- condition_basis_list(term, hrf_spmg3, sf, output = "matrix")
+dim(cbl_matrix)
+}

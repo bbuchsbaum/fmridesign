@@ -17,3 +17,31 @@ A named list of event term objects.
 \description{
 Extract event terms
 }
+\examples{
+# Create sample event data
+events <- data.frame(
+  onset = c(2, 6, 10, 14, 18),
+  condition = factor(c("A", "B", "A", "B", "A")),
+  rt = c(0.5, 0.8, 0.6, 0.9, 0.7),
+  block = c(1, 1, 2, 2, 2)
+)
+
+# Create sampling frame
+sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
+
+# Create event model with multiple terms
+model <- event_model(
+  onset ~ hrf(condition) + hrf(rt, basis = "spmg2"),
+  data = events,
+  block = ~block,
+  sampling_frame = sf
+)
+
+# Extract all event terms as a list
+all_terms <- event_terms(model)
+names(all_terms)
+
+# Access individual terms
+all_terms[["condition"]]
+all_terms[["rt"]]
+}

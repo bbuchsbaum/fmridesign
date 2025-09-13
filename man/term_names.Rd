@@ -17,3 +17,35 @@ Character vector of term names.
 \description{
 Extract term names
 }
+\examples{
+# Create sample event data
+events <- data.frame(
+  onset = c(2, 6, 10, 14, 18),
+  condition = factor(c("A", "B", "A", "B", "C")),
+  rt = c(0.5, 0.8, 0.6, 0.9, 0.7),
+  block = c(1, 1, 2, 2, 2)
+)
+
+# Create sampling frame
+sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
+
+# Create event model with multiple terms
+model <- event_model(
+  onset ~ hrf(condition, name = "task_condition") + hrf(rt, name = "response_time"),
+  data = events,
+  block = ~block,
+  sampling_frame = sf
+)
+
+# Extract term names
+term_names(model)
+
+# Compare with automatic naming
+auto_model <- event_model(
+  onset ~ hrf(condition) + hrf(rt),
+  data = events,
+  block = ~block,
+  sampling_frame = sf
+)
+term_names(auto_model)
+}

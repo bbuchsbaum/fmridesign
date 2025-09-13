@@ -20,3 +20,26 @@ Logical scalar indicating whether \code{x} is continuous.
 \description{
 Check if continuous
 }
+\examples{
+# Create different types of event data
+events <- data.frame(
+  onset = c(2, 6, 10, 14, 18),
+  condition = factor(c("A", "B", "A", "B", "C")),
+  rt = c(0.5, 0.8, 0.6, 0.9, 0.7),
+  block = c(1, 1, 2, 2, 2)
+)
+
+# Create event term with both categorical and continuous variables
+term <- event_term(
+  list(condition = events$condition, rt = events$rt),
+  onsets = events$onset,
+  blockids = events$block
+)
+
+# Check individual events
+condition_event <- term$events$condition
+rt_event <- term$events$rt
+
+is_continuous(condition_event)  # FALSE - factor variable
+is_continuous(rt_event)         # TRUE - numeric variable
+}

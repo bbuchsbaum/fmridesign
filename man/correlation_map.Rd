@@ -17,3 +17,23 @@ A ggplot2 object visualizing regressor correlations.
 \description{
 Compute correlation map
 }
+\examples{
+# Create an event model
+data <- data.frame(
+  onset = c(5, 15, 25, 35, 45, 55),
+  condition = factor(c("A", "B", "C", "A", "B", "C")),
+  reaction_time = c(0.5, 0.8, 0.6, 0.7, 0.9, 0.4),
+  run = c(1, 1, 1, 2, 2, 2)
+)
+sframe <- fmrihrf::sampling_frame(blocklens = c(40, 40), TR = 2)
+
+# Model with multiple predictors that may be correlated
+emod <- event_model(onset ~ hrf(condition) + hrf(reaction_time), 
+                   data = data, block = ~run, sampling_frame = sframe)
+
+# Create correlation map
+\dontrun{
+p <- correlation_map(emod)
+print(p)
+}
+}

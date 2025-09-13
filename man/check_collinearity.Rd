@@ -19,8 +19,38 @@ offending pairs and their correlations). Invisibly returns the same list.
 Convenience helper to quickly flag highly correlated regressors.
 }
 \examples{
-\dontrun{
-res <- check_collinearity(design_matrix(emodel), threshold = 0.95)
-if (!res$ok) print(res$pairs)
+# Create sample event data that might have correlated regressors
+events <- data.frame(
+  onset = c(2, 6, 10, 14, 18),
+  condition = factor(c("A", "B", "A", "B", "A")),
+  rt = c(0.5, 0.8, 0.6, 0.9, 0.7),
+  rt_slow = c(0.51, 0.79, 0.61, 0.88, 0.72),  # Highly correlated with rt
+  block = c(1, 1, 2, 2, 2)
+)
+
+# Create sampling frame
+sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
+
+# Create event model with potentially correlated regressors
+model <- event_model(
+  onset ~ hrf(rt) + hrf(rt_slow),
+  data = events,
+  block = ~block,
+  sampling_frame = sf
+)
+
+# Check for collinearity in the model
+collin_check <- check_collinearity(model, threshold = 0.9)
+collin_check$ok
+
+# View problematic pairs if any
+if (!collin_check$ok) {
+  print("Highly correlated pairs:")
+  print(collin_check$pairs)
 }
+
+# Check collinearity directly on design matrix with custom threshold
+dm <- design_matrix(model)
+strict_check <- check_collinearity(dm, threshold = 0.8)
+strict_check
 }

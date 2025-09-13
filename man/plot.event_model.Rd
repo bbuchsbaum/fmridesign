@@ -20,3 +20,32 @@ A ggplot2 object showing the predicted BOLD timecourses.
 Creates a line plot visualization of the predicted BOLD response for each
 regressor in an event_model object.
 }
+\examples{
+# Create sample event data
+events <- data.frame(
+  onset = c(5, 15, 25, 35),
+  condition = factor(c("A", "B", "A", "B")),
+  rt = c(0.5, 0.8, 0.6, 0.9),
+  block = rep(1, 4)
+)
+
+# Create sampling frame
+sf <- fmrihrf::sampling_frame(blocklens = 50, TR = 1)
+
+# Create event model
+model <- event_model(
+  onset ~ hrf(condition) + hrf(rt),
+  data = events,
+  block = ~block,
+  sampling_frame = sf
+)
+
+# Plot all terms
+plot(model)
+
+# Plot specific term
+plot(model, term_name = "condition")
+
+# Alternative: use design_map function
+design_map(model)
+}

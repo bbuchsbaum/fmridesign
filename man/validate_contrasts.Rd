@@ -37,17 +37,38 @@ Checks include:
 }
 }
 \examples{
-\dontrun{
-# Validate all attached contrasts on a model
-res <- validate_contrasts(emodel)
+# Create sample event data with contrasts
+events <- data.frame(
+  onset = c(2, 6, 10, 14, 18),
+  condition = factor(c("A", "B", "A", "B", "C")),
+  rt = c(0.5, 0.8, 0.6, 0.9, 0.7),
+  block = c(1, 1, 2, 2, 2)
+)
 
-# Validate a custom vector against a model
-v <- rep(0, ncol(design_matrix(emodel))); v[1] <- 1; v[2] <- -1
-res2 <- validate_contrasts(emodel, weights = v)
+# Create sampling frame
+sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
 
-# Validate a custom matrix against a design matrix
-X <- as.matrix(design_matrix(emodel))
-C <- cbind(c(1,-1,rep(0, ncol(X)-2)), c(0,1,-1,rep(0, ncol(X)-3)))
-res3 <- validate_contrasts(X, weights = C)
-}
+# Create contrast specifications
+con1 <- pair_contrast(~ condition == "A", ~ condition == "B", name = "A_vs_B")
+
+# Create event model with contrasts
+model <- event_model(
+  onset ~ hrf(condition, contrasts = list(con1)),
+  data = events,
+  block = ~block,
+  sampling_frame = sf
+)
+
+# Validate all attached contrasts
+validation_results <- validate_contrasts(model)
+validation_results
+
+# Validate custom contrast vector
+dm <- design_matrix(model)
+custom_contrast <- rep(0, ncol(dm))
+custom_contrast[1] <- 1
+custom_contrast[2] <- -1
+
+custom_validation <- validate_contrasts(dm, weights = custom_contrast)
+custom_validation
 }

@@ -17,3 +17,57 @@ A named list of contrast specifications.
 \description{
 Extract contrasts
 }
+\examples{
+# Create experimental data
+des <- data.frame(onset = seq(0, 90, by=10),
+                  run = rep(1:2, each=5),
+                  condition = factor(rep(c("face", "scene", "object"), length.out = 10)),
+                  valence = factor(rep(c("positive", "negative"), 5)))
+
+# Create sampling frame  
+sframe <- fmrihrf::sampling_frame(blocklens=c(50, 60), TR=2)
+
+# Create event model with contrasts defined in hrf terms
+ev_model <- event_model(onset ~ hrf(condition, 
+                                   contrasts = list(
+                                     face_vs_scene = pair_contrast(~ condition == "face", 
+                                                                  ~ condition == "scene", 
+                                                                  name = "face_vs_scene"),
+                                     main_effect = oneway_contrast(~ condition, 
+                                                                  name = "condition_main")
+                                   )) +
+                               hrf(valence,
+                                   contrasts = list(
+                                     pos_vs_neg = pair_contrast(~ valence == "positive",
+                                                               ~ valence == "negative", 
+                                                               name = "positive_vs_negative")
+                                   )),
+                       data = des, block = ~run, sampling_frame = sframe)
+
+# Extract all contrasts from the model
+all_contrasts <- contrasts(ev_model)
+print(names(all_contrasts))
+
+# Print individual contrast specifications
+print(all_contrasts$condition.face_vs_scene)
+print(all_contrasts$valence.positive_vs_negative)
+
+# Example with interaction contrasts
+des_interact <- data.frame(onset = seq(0, 120, by=10),
+                          run = rep(1, 13),
+                          stimulus = factor(rep(c("A", "B"), length.out = 13)),
+                          task = factor(rep(c("go", "nogo"), length.out = 13)))
+
+ev_model_interact <- event_model(onset ~ hrf(stimulus * task,
+                                             contrasts = list(
+                                               stimulus_main = oneway_contrast(~ stimulus, name = "stim_main"),
+                                               task_main = oneway_contrast(~ task, name = "task_main"),
+                                               interaction = interaction_contrast(~ stimulus * task, 
+                                                                                name = "stim_x_task")
+                                             )),
+                                data = des_interact, block = ~run, sampling_frame = sframe)
+
+# Extract contrasts from interaction model
+interact_contrasts <- contrasts(ev_model_interact)
+print(names(interact_contrasts))
+}

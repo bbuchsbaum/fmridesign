@@ -17,3 +17,28 @@ A list split by block/run.
 \description{
 Split by block
 }
+\examples{
+# Create sample event data across multiple blocks
+events <- data.frame(
+  onset = c(2, 6, 10, 24, 28, 32),
+  condition = factor(c("A", "B", "A", "B", "A", "B")),
+  rt = c(0.5, 0.8, 0.6, 0.9, 0.7, 0.4),
+  block = c(1, 1, 1, 2, 2, 2)
+)
+
+# Create sampling frame with 2 blocks
+sf <- fmrihrf::sampling_frame(blocklens = c(15, 15), TR = 2)
+
+# Create event model
+model <- event_model(
+  onset ~ hrf(condition) + hrf(rt),
+  data = events,
+  block = ~block,
+  sampling_frame = sf
+)
+
+# Split design matrix by block
+split_dm <- split_by_block(model)
+length(split_dm)  # Should be 2 (number of blocks)
+lapply(split_dm, dim)  # Dimensions for each block
+}

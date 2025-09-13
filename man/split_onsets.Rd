@@ -26,3 +26,30 @@ A list of onset vectors, one per block (unless \code{global=TRUE}).
 \description{
 Split onsets
 }
+\examples{
+# Create sample event data across multiple blocks
+events <- data.frame(
+  onset = c(2, 6, 10, 24, 28, 32),
+  condition = factor(c("A", "B", "A", "B", "A", "B")),
+  block = c(1, 1, 1, 2, 2, 2)
+)
+
+# Create sampling frame with 2 blocks
+sf <- fmrihrf::sampling_frame(blocklens = c(15, 15), TR = 2)
+
+# Create event term
+term <- event_term(
+  list(condition = events$condition),
+  onsets = events$onset,
+  blockids = events$block
+)
+
+# Split onsets by block (default)
+onsets_split <- split_onsets(term, sf, blocksplit = TRUE)
+length(onsets_split)  # Number of blocks
+onsets_split
+
+# Global onsets (not split by block)
+onsets_global <- split_onsets(term, sf, global = TRUE)
+onsets_global
+}

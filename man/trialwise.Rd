@@ -33,3 +33,38 @@ Use it \strong{only on the RHS} of an event-model formula:
 \if{html}{\out{<div class="sourceCode">}}\preformatted{onset ~ trialwise(basis = "spmg1", add_sum = TRUE)
 }\if{html}{\out{</div>}}
 }
+\examples{
+# Create sample event data
+events <- data.frame(
+  onset = c(2, 6, 10, 14, 18),
+  block = c(1, 1, 2, 2, 2)
+)
+
+# Create sampling frame
+sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
+
+# Create trialwise model - one regressor per trial
+model_trials <- event_model(
+  onset ~ trialwise(basis = "spmg1", label = "trial"),
+  data = events,
+  block = ~block,
+  sampling_frame = sf
+)
+
+# Check design matrix - should have 5 columns (one per trial)
+dm_trials <- design_matrix(model_trials)
+ncol(dm_trials)
+colnames(dm_trials)
+
+# With additional grand mean column
+model_with_sum <- event_model(
+  onset ~ trialwise(basis = "spmg1", add_sum = TRUE, label = "trial"),
+  data = events,
+  block = ~block,
+  sampling_frame = sf
+)
+
+# Should have 6 columns (5 trials + 1 grand mean)
+dm_with_sum <- design_matrix(model_with_sum)
+ncol(dm_with_sum)
+}

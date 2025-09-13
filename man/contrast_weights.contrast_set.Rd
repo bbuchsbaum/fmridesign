@@ -21,3 +21,25 @@ names of the individual contrasts.
 \description{
 Compute the contrast weights for each contrast specification within a contrast_set object.
 }
+\examples{
+# Create experimental data
+des <- data.frame(onset = c(5, 15, 25, 35),
+                  run = c(1, 1, 1, 1),
+                  condition = factor(c("face", "scene", "object", "face")))
+
+sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 2)
+model <- event_model(onset ~ hrf(condition), data = des, block = ~run, sampling_frame = sframe)
+term <- terms(model)[[1]]
+
+# Create a set of contrast specifications
+c1 <- pair_contrast(~ condition == "face", ~ condition == "scene", name = "face_vs_scene")
+c2 <- pair_contrast(~ condition == "face", ~ condition == "object", name = "face_vs_object")
+c3 <- oneway_contrast(~ condition, name = "condition_main")
+
+contrast_set_obj <- contrast_set(c1, c2, c3)
+
+# Compute weights for all contrasts in the set
+all_weights <- contrast_weights(contrast_set_obj, term)
+print(names(all_weights))
+print(all_weights$face_vs_scene$weights)
+}

@@ -13,3 +13,16 @@ Character vector of function names
 Returns all function names that should be recognized in formulas
 from registered external packages.
 }
+\examples{
+# Get all external HRF function names
+external_funcs <- get_all_external_hrf_functions()
+external_funcs
+
+# Check if any external packages are registered
+if (length(external_funcs) > 0) {
+  cat("External HRF functions available:")
+  cat(paste(external_funcs, collapse = ", "))
+} else {
+  cat("No external HRF functions registered")
+}
+}

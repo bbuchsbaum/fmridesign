@@ -27,3 +27,49 @@ Compute F-contrasts
 Row names of the contrast matrices can specify which levels of the term are
 tested.  Any matching is done against the design matrix column names.
 }
+\examples{
+# Create experimental data with multiple factor levels
+des <- data.frame(onset = seq(5, 50, by = 10),
+                  run = rep(1, 5),
+                  condition = factor(c("A", "B", "C", "A", "B")),
+                  task = factor(c("go", "nogo", "go", "nogo", "go")))
+
+sframe <- fmrihrf::sampling_frame(blocklens = 55, TR = 2)
+
+# Event model with factors suitable for F-contrasts
+ev_model <- event_model(onset ~ hrf(condition, 
+                                   contrasts = list(
+                                     main_effect = oneway_contrast(~ condition, name = "condition_main")
+                                   )) +
+                               hrf(task,
+                                   contrasts = list(
+                                     task_effect = oneway_contrast(~ task, name = "task_main")
+                                   )),
+                       data = des, block = ~run, sampling_frame = sframe)
+
+# Compute F-contrasts for the model (multi-column contrast matrices)
+fcon <- Fcontrasts(ev_model)
+print(names(fcon))
+
+# F-contrasts are suitable for omnibus tests (e.g., any difference among conditions)
+if (length(fcon) > 0) {
+  print(fcon[[1]])  # First F-contrast matrix
+  print(dim(fcon[[1]]))  # Should have multiple columns
+}
+
+# Example with interaction for F-contrast
+des_interact <- data.frame(onset = seq(5, 40, by = 5),
+                          run = rep(1, 8),
+                          stim = factor(rep(c("A", "B"), 4)),
+                          resp = factor(rep(c("left", "right"), each = 4)))
+
+ev_interact <- event_model(onset ~ hrf(stim * resp,
+                                      contrasts = list(
+                                        interaction = interaction_contrast(~ stim * resp, 
+                                                                          name = "stim_x_resp")
+                                      )),
+                          data = des_interact, block = ~run, sampling_frame = sframe)
+
+fcon_interact <- Fcontrasts(ev_interact)
+print(names(fcon_interact))
+}

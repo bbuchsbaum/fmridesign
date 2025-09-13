@@ -40,4 +40,35 @@ fmridesign adds S3 methods for these generics to work with:
 \item event_model objects
 }
 }
+\examples{
+# Create sample event data
+events <- data.frame(
+  onset = c(2, 6, 10, 14, 18),
+  condition = factor(c("A", "B", "A", "B", "C")),
+  block = c(1, 1, 2, 2, 2)
+)
+
+# Create sampling frame
+sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
+
+# Create event model
+model <- event_model(
+  onset ~ hrf(condition),
+  data = events,
+  block = ~block,
+  sampling_frame = sf,
+  durations = c(0.5, 1.0, 0.5, 1.0, 0.8)
+)
+
+# Use re-exported functions to extract information
+onsets(model)      # Extract onset times
+durations(model)   # Extract durations
+blockids(model)    # Extract block identifiers
+
+# These work with event terms as well
+term1 <- terms(model)[[1]]
+onsets(term1)
+durations(term1)
+blockids(term1)
+}
 \keyword{internal}

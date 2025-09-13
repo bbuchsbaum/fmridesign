@@ -17,3 +17,28 @@ A ggplot2 object visualizing the design matrix.
 \description{
 Compute design map
 }
+\examples{
+# Create an event model
+data <- data.frame(
+  onset = c(2, 12, 24, 36, 48),
+  condition = factor(c("A", "B", "A", "B", "A")),
+  run = c(1, 1, 2, 2, 2)
+)
+sframe <- fmrihrf::sampling_frame(blocklens = c(30, 30), TR = 2)
+
+emod <- event_model(onset ~ hrf(condition), data = data, 
+                   block = ~run, sampling_frame = sframe)
+
+# Create design map visualization
+\dontrun{
+p <- design_map(emod)
+print(p)
+}
+
+# Customize the design map
+\dontrun{
+p2 <- design_map(emod, block_separators = FALSE, 
+                rotate_x_text = FALSE, fill_midpoint = 0)
+print(p2)
+}
+}

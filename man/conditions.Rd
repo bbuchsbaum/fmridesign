@@ -24,3 +24,29 @@ A character vector of condition names.
 \description{
 Extract conditions from a design object
 }
+\examples{
+# Create sample event data
+events <- data.frame(
+  onset = c(2, 6, 10, 14, 18),
+  condition = factor(c("A", "B", "A", "B", "A")),
+  block = c(1, 1, 1, 2, 2)
+)
+
+# Create sampling frame (2 blocks of 10 scans each, TR = 2s)
+sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
+
+# Create event model with condition factor
+model <- event_model(
+  onset ~ hrf(condition),
+  data = events,
+  block = ~block,
+  sampling_frame = sf
+)
+
+# Extract conditions from the event model term
+term1 <- terms(model)[[1]]
+conditions(term1)
+
+# With basis expansion
+conditions(term1, expand_basis = TRUE)
+}

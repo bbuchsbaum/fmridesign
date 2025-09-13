@@ -32,3 +32,37 @@ A ggplot2 object showing the design matrix heatmap.
 \description{
 Creates a heatmap visualization of the design matrix for an event_model object.
 }
+\examples{
+# Create a more complex event model
+data <- data.frame(
+  onset = seq(5, 85, by = 10),
+  condition = factor(rep(c("cue", "target", "rest"), 3)),
+  accuracy = c(1, 0, NA, 1, 1, NA, 0, 1, NA),
+  run = rep(1:3, each = 3)
+)
+sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50, 50), TR = 2)
+
+# Event model with categorical and continuous predictors
+emod <- event_model(onset ~ hrf(condition) + hrf(accuracy), 
+                   data = data, block = ~run, sampling_frame = sframe)
+
+# Basic design map
+\dontrun{
+p1 <- design_map(emod)
+print(p1)
+}
+
+# Without block separators and custom color limits
+\dontrun{
+p2 <- design_map(emod, block_separators = FALSE, 
+                fill_limits = c(-0.5, 1.0))
+print(p2)
+}
+
+# With specific midpoint for symmetric color scale
+\dontrun{
+p3 <- design_map(emod, fill_midpoint = 0.5, 
+                rotate_x_text = FALSE)
+print(p3)
+}
+}

@@ -29,3 +29,54 @@ names, these are matched to the column names of the corresponding term in
 the design matrix.  This allows contrasts to target only a subset of term
 levels.
 }
+\examples{
+# Create sample fMRI experimental data
+des <- data.frame(onset = seq(0, 90, by=10),
+                  run = rep(1:2, each=5), 
+                  condition = factor(rep(c("face", "scene"), 5)),
+                  accuracy = c(0.8, 0.9, 0.7, 0.85, 0.95, 0.75, 0.9, 0.8, 0.85, 0.9))
+
+# Create sampling frame
+sframe <- fmrihrf::sampling_frame(blocklens=c(50, 60), TR=2)
+
+# Create event model with contrasts
+ev_model <- event_model(onset ~ hrf(condition, 
+                                   contrasts = list(
+                                     face_vs_scene = pair_contrast(~ condition == "face", 
+                                                                  ~ condition == "scene", 
+                                                                  name = "face_vs_scene"),
+                                     main_condition = oneway_contrast(~ condition, 
+                                                                     name = "main_condition")
+                                   )), 
+                       data = des, block = ~run, sampling_frame = sframe)
+
+# Compute contrast weights for the event model
+cw <- contrast_weights(ev_model)
+print(names(cw))
+print(cw$condition.face_vs_scene)
+
+# Example with multiple contrast types
+des2 <- data.frame(onset = seq(0, 90, by=15),
+                   run = rep(1, 7),
+                   stimulus = factor(c("A", "B", "C", "A", "B", "C", "A")),
+                   intensity = factor(1:7, ordered = TRUE))
+
+ev_model2 <- event_model(onset ~ hrf(stimulus, 
+                                    contrasts = list(
+                                      stim_main = oneway_contrast(~ stimulus, name = "stimulus_main"),
+                                      A_vs_others = pair_contrast(~ stimulus == "A",
+                                                                ~ stimulus != "A", 
+                                                                name = "A_vs_others")
+                                    )) +
+                               hrf(intensity,
+                                   contrasts = list(
+                                     linear_trend = poly_contrast(~ intensity, 
+                                                                name = "intensity_linear", 
+                                                                degree = 1)
+                                   )),
+                        data = des2, block = ~run, sampling_frame = sframe)
+
+# Compute weights for model with multiple terms and contrast types
+cw2 <- contrast_weights(ev_model2)
+print(names(cw2))
+}

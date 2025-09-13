@@ -17,3 +17,37 @@ A constructed object; return type depends on method.
 \description{
 Construct method
 }
+\examples{
+# Create event data
+data <- data.frame(
+  onset = c(10, 30, 50),
+  condition = factor(c("A", "B", "A")),
+  run = c(1, 1, 2)
+)
+sframe <- fmrihrf::sampling_frame(blocklens = c(40, 40), TR = 2)
+
+# Construct hrfspec object
+hrf_spec <- hrf(condition, basis = "canonical")
+
+# Model specification needed for construct
+model_spec <- list(
+  data = data,
+  blockids = data$run,
+  onsets = data$onset,
+  durations = rep(0, nrow(data))
+)
+
+# Construct event term from hrfspec
+\dontrun{
+event_term <- construct(hrf_spec, model_spec)
+class(event_term)
+}
+
+# Construct baseline components
+baseline_spec <- baselinespec("poly", degree = 2)
+\dontrun{
+baseline_term <- construct(baseline_spec, 
+                          list(sampling_frame = sframe))
+class(baseline_term)
+}
+}

@@ -17,3 +17,30 @@ Character vector of long (fully qualified) names.
 \description{
 Extract longnames
 }
+\examples{
+# Create sample event data
+events <- data.frame(
+  onset = c(2, 6, 10, 14, 18),
+  condition = factor(c("A", "B", "A", "B", "C")),
+  rt = c(0.5, 0.8, 0.6, 0.9, 0.7),
+  block = c(1, 1, 2, 2, 2)
+)
+
+# Create sampling frame
+sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
+
+# Create event model with multiple basis functions
+model <- event_model(
+  onset ~ hrf(condition, rt, basis = "spmg2"),
+  data = events,
+  block = ~block,
+  sampling_frame = sf
+)
+
+# Extract long names (fully qualified) from the event term
+term1 <- terms(model)[[1]]
+longnames(term1)
+
+# Compare with short names
+shortnames(term1)
+}

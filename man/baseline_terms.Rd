@@ -17,3 +17,22 @@ A named list of baseline term objects.
 \description{
 Extract baseline terms
 }
+\examples{
+# Create sampling frame for 2 blocks
+sf <- fmrihrf::sampling_frame(blocklens = c(20, 20), TR = 2)
+
+# Create baseline model with multiple terms
+bm <- baseline_model(
+  ~ poly(block, 2) + BSpline(1:40, df = 4),
+  data = data.frame(block = c(rep(1, 20), rep(2, 20))),
+  sampling_frame = sf
+)
+
+# Extract all baseline terms
+all_baseline_terms <- baseline_terms(bm)
+names(all_baseline_terms)
+
+# Access individual baseline terms
+all_baseline_terms[["poly_block"]]
+all_baseline_terms[["BSpline"]]
+}

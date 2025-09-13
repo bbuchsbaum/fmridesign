@@ -24,3 +24,32 @@ A list of regressors (one for each column).
 Convolves a HRF with a design matrix (one column per condition) to produce a
 list of regressors.
 }
+\examples{
+# Create design matrix with categorical conditions
+onsets <- c(5, 15, 25, 35)
+conditions <- factor(c("A", "B", "A", "B"))
+durations <- c(2, 2, 2, 2)
+
+# Create design matrix manually (usually done internally)
+dmat <- model.matrix(~ conditions - 1)
+colnames(dmat) <- levels(conditions)
+
+# Create HRF function
+TR <- 2
+hrf_func <- function(t) fmrihrf::spmhrf(TR)(t)
+
+# Convert to global onsets (assuming single run)
+global_onsets <- onsets
+
+# Convolve design matrix with HRF
+regressors <- convolve_design(hrf_func, dmat, global_onsets, durations)
+length(regressors)
+names(regressors)
+
+# Each regressor is a timecourse
+sapply(regressors, length)
+
+# Without summation (duration effects handled differently)
+regressors_no_sum <- convolve_design(hrf_func, dmat, global_onsets, 
+                                   durations, summate = FALSE)
+}
