@@ -231,10 +231,12 @@ plot.event_model <- function(x, term_name = NULL, ...) {
     names_to = "Regressor",
     values_to = "Response"
   )
+  # Ensure proper ordering and grouping for line drawing
+  df_long <- df_long[order(df_long$Regressor, df_long$Time), ]
   
   # Create the plot
-  plt <- ggplot(df_long, aes(x = Time, y = Response, color = Regressor)) +
-    geom_line(linewidth = 1) +
+  plt <- ggplot(df_long, aes(x = Time, y = Response, color = Regressor, group = Regressor)) +
+    geom_line(linewidth = 0.8, na.rm = TRUE) +
     theme_minimal(base_size = 14) +
     labs(x = "Time (seconds)", y = "Predicted Response")
   
