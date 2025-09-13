@@ -18,25 +18,3 @@ A named list of contrast specifications.
 This function collects the contrast specifications defined for each term
 within the model and returns them as a named list.
 }
-\examples{
-# Create simple experimental design
-des <- data.frame(onset = c(5, 15, 25, 35),
-                  run = c(1, 1, 1, 1),
-                  condition = factor(c("A", "B", "A", "B")))
-
-sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 2)
-
-# Event model with defined contrasts
-model <- event_model(onset ~ hrf(condition, 
-                                contrasts = list(
-                                  A_vs_B = pair_contrast(~ condition == "A",
-                                                        ~ condition == "B", 
-                                                        name = "A_vs_B")
-                                )),
-                    data = des, block = ~run, sampling_frame = sframe)
-
-# Extract contrasts
-model_contrasts <- contrasts(model)
-print(names(model_contrasts))
-print(model_contrasts$condition.A_vs_B)
-}

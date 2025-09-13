@@ -29,37 +29,3 @@ Requested elements; structure depends on method (e.g., numeric values or labels)
 \description{
 Extract elements from an object
 }
-\examples{
-# Create sample event data
-events <- data.frame(
-  onset = c(2, 6, 10, 14, 18),
-  condition = factor(c("A", "B", "A", "B", "C")),
-  rt = c(0.5, 0.8, 0.6, 0.9, 0.7),
-  block = c(1, 1, 2, 2, 2)
-)
-
-# Create sampling frame
-sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
-
-# Create event model
-model <- event_model(
-  onset ~ hrf(condition, rt),
-  data = events,
-  block = ~block,
-  sampling_frame = sf
-)
-
-# Extract elements from event term
-term1 <- terms(model)[[1]]
-
-# Get the values
-elements(term1, what = "values")
-
-# Get the labels/names
-elements(term1, what = "labels")
-
-# For individual events
-condition_event <- term1$events$condition
-elements(condition_event, what = "values")
-elements(condition_event, what = "labels")
-}

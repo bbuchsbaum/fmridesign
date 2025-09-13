@@ -29,32 +29,3 @@ Character vector of regressor names for \code{x}.
 Convolve the event-term design matrix with an HRF and return the
 resulting regressors.
 }
-\examples{
-# Create sample event data
-events <- data.frame(
-  onset = c(2, 6, 10, 14, 18),
-  condition = factor(c("A", "B", "A", "B", "C")),
-  rt = c(0.5, 0.8, 0.6, 0.9, 0.7),
-  block = c(1, 1, 2, 2, 2)
-)
-
-# Create sampling frame
-sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
-
-# Create event term
-term <- event_term(
-  list(condition = events$condition, rt = events$rt),
-  onsets = events$onset,
-  blockids = events$block
-)
-
-# Get regressors with canonical HRF
-hrf_canonical <- fmrihrf::HRF_SPMG1
-regs <- regressors(term, hrf_canonical, sf)
-head(regs)
-dim(regs)
-
-# With summation across conditions
-regs_sum <- regressors(term, hrf_canonical, sf, summate = TRUE)
-dim(regs_sum)
-}

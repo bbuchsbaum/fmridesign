@@ -17,30 +17,3 @@ The number of basis functions
 \description{
 Get number of basis functions from hrfspec
 }
-\examples{
-# Canonical HRF (single basis function)
-hrf1 <- hrf(~ condition, basis = "canonical")
-nbasis(hrf1)  # Should be 1
-
-# SPM HRF with derivatives (3 basis functions)
-hrf2 <- hrf(~ condition, basis = "spmg3")
-nbasis(hrf2)  # Should be 3
-
-# Finite Impulse Response with 8 time bins
-hrf3 <- hrf(~ condition, basis = "fir", duration = 16, nbasis = 8)
-nbasis(hrf3)  # Should be 8
-
-# B-spline basis with 5 basis functions
-hrf4 <- hrf(~ condition, basis = "bs", degree = 3, df = 5)
-nbasis(hrf4)  # Should be 5
-
-# Polynomial basis (degree 2 = 2 basis functions)
-hrf5 <- hrf(~ condition, basis = "poly", degree = 2)
-nbasis(hrf5)  # Should be 2
-
-# Gamma basis set with 3 functions
-\dontrun{
-hrf6 <- hrf(~ condition, basis = "gamma", nbasis = 3)
-nbasis(hrf6)  # Should be 3
-}
-}

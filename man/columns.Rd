@@ -26,25 +26,3 @@ Character vector of column names produced by the object.
 \description{
 Extract columns
 }
-\examples{
-# Create sample data with numeric variable
-events <- data.frame(
-  onset = c(1, 5, 9, 13, 17),
-  rt = c(0.5, 0.8, 0.6, 0.9, 0.7),
-  block = rep(1, 5)
-)
-
-# Create different scaling basis objects
-scale_obj <- Scale(events$rt)
-robust_scale_obj <- RobustScale(events$rt)
-scale_within_obj <- ScaleWithin(events$rt, factor(c("A", "A", "B", "B", "A")))
-
-# Extract column names from basis objects
-columns(scale_obj)
-columns(robust_scale_obj)
-columns(scale_within_obj)
-
-# Show how columns work with polynomial basis
-poly_obj <- Poly(events$rt, degree = 3)
-columns(poly_obj)
-}

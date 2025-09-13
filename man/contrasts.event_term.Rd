@@ -18,23 +18,3 @@ A list of contrast specifications or \code{NULL} when none are defined.
 This accessor returns the list of contrast specifications attached to the
 term's originating hrfspec, if any.
 }
-\examples{
-# Create experimental design
-des <- data.frame(onset = c(5, 15, 25),
-                  run = c(1, 1, 1),
-                  condition = factor(c("A", "B", "A")))
-
-sframe <- fmrihrf::sampling_frame(blocklens = 30, TR = 2)
-
-# Create event model and extract term
-model <- event_model(onset ~ hrf(condition, 
-                                contrasts = list(
-                                  main_effect = oneway_contrast(~ condition, name = "condition_main")
-                                )),
-                    data = des, block = ~run, sampling_frame = sframe)
-
-# Get the first term and its contrasts
-first_term <- terms(model)[[1]]
-term_contrasts <- contrasts(first_term)
-print(names(term_contrasts))
-}

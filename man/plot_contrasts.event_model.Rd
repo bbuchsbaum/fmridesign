@@ -35,33 +35,3 @@ Produces a heatmap of all contrasts defined for an \code{event_model}.
 Rows = each contrast (or column of an F-contrast), columns = each regressor in
 the full design matrix, and the fill color = the contrast weight.
 }
-\examples{
-# Create experimental data
-des <- data.frame(onset = c(5, 15, 25, 35, 45),
-                  run = rep(1, 5),
-                  condition = factor(c("A", "B", "C", "A", "B")))
-
-sframe <- fmrihrf::sampling_frame(blocklens = 50, TR = 2)
-
-# Event model with contrasts 
-model <- event_model(onset ~ hrf(condition, 
-                                contrasts = list(
-                                  A_vs_B = pair_contrast(~ condition == "A",
-                                                        ~ condition == "B", 
-                                                        name = "A_vs_B"),
-                                  main = oneway_contrast(~ condition, name = "main_effect")
-                                )),
-                    data = des, block = ~run, sampling_frame = sframe)
-
-# Create contrast heatmap
-if (requireNamespace("ggplot2", quietly = TRUE)) {
-  p1 <- plot_contrasts(model)
-  
-  # Customize the plot
-  p2 <- plot_contrasts(model, 
-                      absolute_limits = TRUE,
-                      scale_mode = "diverging",
-                      rotate_x_text = FALSE)
-  print(p1)
-}
-}

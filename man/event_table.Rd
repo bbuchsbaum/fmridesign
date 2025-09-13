@@ -17,31 +17,3 @@ A data.frame/tibble of event rows.
 \description{
 Extract event table
 }
-\examples{
-# Create sample event data
-events <- data.frame(
-  onset = c(2, 6, 10, 14, 18),
-  condition = factor(c("A", "B", "A", "B", "C")),
-  stimulus = factor(c("Face", "House", "Face", "House", "Word")),
-  rt = c(0.5, 0.8, 0.6, 0.9, 0.7),
-  block = c(1, 1, 2, 2, 2)
-)
-
-# Create sampling frame
-sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
-
-# Create event model with factorial design
-model <- event_model(
-  onset ~ hrf(condition, stimulus) + hrf(rt),
-  data = events,
-  block = ~block,
-  sampling_frame = sf
-)
-
-# Extract event table from event terms
-term1 <- terms(model)[[1]]  # condition * stimulus interaction
-term2 <- terms(model)[[2]]  # rt modulator
-
-event_table(term1)
-event_table(term2)
-}

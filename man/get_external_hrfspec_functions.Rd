@@ -16,18 +16,3 @@ Character vector of function names, or NULL if not registered
 Returns the function name(s) that should be recognized in formulas
 for a given external HRF specification class.
 }
-\examples{
-# Get all registered external HRF specifications
-external_info <- get_external_hrfspec_info()
-if (nrow(external_info) > 0) {
-  # Try to get functions for the first registered class
-  first_class <- external_info$spec_class[1]
-  functions <- get_external_hrfspec_functions(first_class)
-  cat("Functions for", first_class, ":", paste(functions, collapse = ", "))
-} else {
-  cat("No external HRF specifications registered")
-}
-
-# Example with hypothetical external class
-get_external_hrfspec_functions("afni_hrfspec")  # Returns NULL if not registered
-}

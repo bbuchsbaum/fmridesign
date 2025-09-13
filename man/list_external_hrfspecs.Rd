@@ -12,22 +12,3 @@ A character vector of registered class names
 \description{
 List All Registered External HRF Specifications
 }
-\examples{
-# List all registered external HRF specifications
-external_specs <- list_external_hrfspecs()
-external_specs
-
-# Check if any are registered
-if (length(external_specs) > 0) {
-  cat("External HRF specs registered:")
-  cat(paste(external_specs, collapse = ", "))
-} else {
-  cat("No external HRF specifications are currently registered")
-}
-
-# Get detailed information for each
-for (spec in external_specs) {
-  info <- get_external_hrfspec_info(spec)
-  cat("Spec:", spec, "- Functions:", paste(info$functions, collapse = ", "))
-}
-}

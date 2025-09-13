@@ -17,18 +17,3 @@ The list of contrast specifications attached to the hrfspec, or \code{NULL}.
 \description{
 Retrieve contrast specifications from an hrfspec
 }
-\examples{
-# Create hrfspec with contrasts
-spec <- hrf(condition, 
-           contrasts = list(
-             A_vs_B = pair_contrast(~ condition == "A", 
-                                   ~ condition == "B", 
-                                   name = "A_vs_B"),
-             main_effect = oneway_contrast(~ condition, name = "main_effect")
-           ))
-
-# Extract contrasts from the hrfspec
-spec_contrasts <- contrasts(spec)
-print(names(spec_contrasts))
-print(spec_contrasts$A_vs_B)
-}

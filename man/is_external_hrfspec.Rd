@@ -15,19 +15,3 @@ Logical indicating if the class is registered as an external HRF spec
 \description{
 Check if a Class is a Registered External HRF Specification
 }
-\examples{
-# Check if specific classes are registered as external HRF specs
-is_external_hrfspec("afni_hrfspec")
-is_external_hrfspec("regular_hrfspec")
-
-# Check using class names
-is_external_hrfspec(class("some_object"))
-
-# This will typically return FALSE unless external packages are loaded
-# and have registered their HRF specification classes
-current_external <- get_external_hrfspec_info()
-if (nrow(current_external) > 0) {
-  # Test with actual registered classes
-  sapply(current_external$spec_class, is_external_hrfspec)
-}
-}

@@ -16,27 +16,3 @@ Logical indicating if external processing is required
 Determines if an HRF specification or convolved term should be
 handled by external tools rather than R's standard convolution.
 }
-\examples{
-# Create regular HRF specification (fmrihrf package)
-events <- data.frame(
-  onset = c(2, 6, 10),
-  condition = factor(c("A", "B", "A")),
-  block = rep(1, 3)
-)
-
-# Regular hrfspec - processed by R
-regular_spec <- hrf(condition)
-requires_external_processing(regular_spec)  # FALSE
-
-# Regular event_term - processed by R
-term <- event_term(
-  list(condition = events$condition),
-  onsets = events$onset,
-  blockids = events$block
-)
-attr(term, "hrfspec") <- regular_spec
-requires_external_processing(term)  # FALSE
-
-# External specifications would return TRUE
-# (requires external package registration)
-}

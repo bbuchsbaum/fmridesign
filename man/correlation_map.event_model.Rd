@@ -20,38 +20,3 @@ A ggplot2 object showing the correlation matrix heatmap.
 Creates a heatmap visualization of the correlation matrix between regressors
 in an event_model object.
 }
-\examples{
-# Create event model with potentially correlated regressors
-data <- data.frame(
-  onset = seq(10, 100, by = 10),
-  task = factor(rep(c("go", "nogo"), 5)),
-  difficulty = rep(c("easy", "hard"), 5),
-  RT = c(0.4, NA, 0.6, NA, 0.5, NA, 0.7, NA, 0.3, NA),
-  run = rep(1:2, each = 5)
-)
-sframe <- fmrihrf::sampling_frame(blocklens = c(60, 60), TR = 2)
-
-# Complex model with interactions
-emod <- event_model(onset ~ hrf(task) + hrf(difficulty) + 
-                          hrf(task:difficulty) + hrf(RT), 
-                   data = data, block = ~run, sampling_frame = sframe)
-
-# Standard correlation map  
-\dontrun{
-p1 <- correlation_map(emod)
-print(p1)
-}
-
-# Without rotated labels for cleaner view
-\dontrun{
-p2 <- correlation_map(emod, rotate_x_text = FALSE)
-print(p2)
-}
-
-# Example with baseline model correlation
-bmod <- baseline_model(basis = "poly", degree = 3, sframe = sframe)
-\dontrun{
-p3 <- correlation_map(bmod)
-print(p3)
-}
-}

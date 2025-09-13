@@ -1,40 +1,4 @@
-url: https://bbuchsbaum.github.io/fmridesign
-
+url: https://bbuchsbaum.github.io/fmridesign/
 template:
   bootstrap: 5
 
-home:
-  title: fmridesign
-  description: Design Matrix Construction for fMRI Analysis
-  links:
-    - text: Get started
-      href: articles/a_01_introduction.html
-
-navbar:
-  structure:
-    left: [reference, articles]
-    right: [search, github]
-  components:
-    articles:
-      text: Articles
-      menu:
-        - text: Introduction to fmridesign
-          href: articles/a_01_introduction.html
-        - text: Modeling Baseline and Nuisance Effects
-          href: articles/a_03_baseline_model.html
-        - text: Building Event-Related fMRI Models
-          href: articles/a_04_event_models.html
-        - text: Contrasts in fmridesign
-          href: articles/a_05_contrasts.html
-    github:
-      icon: fa-github
-      aria-label: GitHub
-      href: https://github.com/bbuchsbaum/fmridesign
-
-articles:
-  - title: Vignettes
-    contents:
-      - a_01_introduction
-      - a_03_baseline_model
-      - a_04_event_models
-      - a_05_contrasts

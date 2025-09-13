@@ -15,20 +15,3 @@ A list with registration information, or NULL if not registered
 \description{
 Get Information About a Registered External HRF Specification
 }
-\examples{
-# Get information for all registered external HRF specs
-all_info <- get_external_hrfspec_info()
-all_info
-
-# Get information for specific spec class (returns NULL if not registered)
-specific_info <- get_external_hrfspec_info("afni_hrfspec")
-if (!is.null(specific_info)) {
-  print("AFNI HRF spec is registered")
-  print(specific_info)
-} else {
-  print("AFNI HRF spec is not registered")
-}
-
-# Check the structure of registration info
-str(all_info)
-}

@@ -46,36 +46,3 @@ A matrix-like (often tibble) of convolved regressors.
 \description{
 Convolve events with a hemodynamic response function
 }
-\examples{
-# Create event data and event term
-data <- data.frame(
-  onset = c(5, 25, 45),
-  condition = factor(c("A", "B", "A")),
-  run = rep(1, 3)
-)
-sframe <- fmrihrf::sampling_frame(blocklens = 60, TR = 2)
-
-# Create an event term
-ev_term <- event_term(condition, 
-                     onsets = data$onset,
-                     durations = rep(2, 3), 
-                     data = data)
-
-# Create HRF basis
-hrf_basis <- fmrihrf::spmhrf(fmrihrf::TR(sframe))
-
-# Convolve events with HRF
-convolved <- convolve(ev_term, hrf_basis, sframe, precision = 0.1)
-dim(convolved)
-head(convolved, 10)
-
-# With different precision
-convolved_fine <- convolve(ev_term, hrf_basis, sframe, precision = 0.05)
-dim(convolved_fine)
-
-# Without summation (if applicable)
-\dontrun{
-convolved_no_sum <- convolve(ev_term, hrf_basis, sframe, 
-                            summate = FALSE, precision = 0.1)
-}
-}

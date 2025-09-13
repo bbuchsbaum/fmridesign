@@ -17,31 +17,3 @@ Integer vector or list mapping term(s) to column indices.
 \description{
 Extract term indices
 }
-\examples{
-# Create sample event data
-events <- data.frame(
-  onset = c(2, 6, 10, 14, 18),
-  condition = factor(c("A", "B", "A", "B", "C")),
-  rt = c(0.5, 0.8, 0.6, 0.9, 0.7),
-  block = c(1, 1, 2, 2, 2)
-)
-
-# Create sampling frame
-sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
-
-# Create event model with multiple terms
-model <- event_model(
-  onset ~ hrf(condition) + hrf(rt, basis = "spmg2"),
-  data = events,
-  block = ~block,
-  sampling_frame = sf
-)
-
-# Extract term indices showing which design matrix columns belong to each term
-term_indices(model)
-
-# Get design matrix to see total columns
-dm <- design_matrix(model)
-ncol(dm)
-colnames(dm)
-}

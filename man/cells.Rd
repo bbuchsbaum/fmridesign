@@ -32,37 +32,3 @@ A data.frame/tibble of cells (categorical combinations) relevant to \code{x}.
 \description{
 Extract cells from a design object
 }
-\examples{
-# Create sample event data with multiple factors
-events <- data.frame(
-  onset = c(2, 6, 10, 14, 18, 22),
-  stimulus = factor(c("Face", "House", "Face", "House", "Face", "House")),
-  emotion = factor(c("Happy", "Sad", "Happy", "Sad", "Neutral", "Neutral")),
-  block = c(1, 1, 1, 2, 2, 2)
-)
-
-# Create sampling frame
-sf <- fmrihrf::sampling_frame(blocklens = c(12, 12), TR = 2)
-
-# Create event model with factorial design
-model <- event_model(
-  onset ~ hrf(stimulus, emotion),
-  data = events,
-  block = ~block,
-  sampling_frame = sf
-)
-
-# Extract cells (factor level combinations) from event term
-term1 <- terms(model)[[1]]
-cells(term1)
-
-# Create baseline model
-bm <- baseline_model(
-  ~ poly(block, 2) + Poly(1:24, 2),
-  data = data.frame(block = c(rep(1, 12), rep(2, 12))),
-  sampling_frame = sf
-)
-
-# Extract cells from baseline model
-cells(bm)
-}
