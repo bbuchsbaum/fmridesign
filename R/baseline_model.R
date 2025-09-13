@@ -696,7 +696,12 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   # Get the data for the selected term and ensure stable ordering
   dfx <- dflist[[plot_term]]
   dfx <- dfx[order(dfx$.block, dfx$condition, dfx$.time), ]
-  n_cond <- length(unique(dfx$condition))
+  # Coerce types explicitly to avoid downstream surprises
+  dfx$.block    <- factor(dfx$.block)
+  dfx$condition <- as.factor(dfx$condition)
+  dfx$value     <- as.numeric(dfx$value)
+  dfx$.time     <- as.numeric(dfx$.time)
+  n_cond <- length(levels(dfx$condition))
   # Ensure block is a factor for facetting stability
   dfx$.block <- as.factor(dfx$.block)
   
@@ -704,17 +709,29 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   # Use a robust default color scale that supports many categories
   scale_fn <- function(...) ggplot2::scale_color_hue(...)
   
-  # Create the ggplot.
-  p <- ggplot2::ggplot(dfx, ggplot2::aes_string(x = ".time", y = "value", colour = "condition", group = "condition")) +
-    ggplot2::geom_line(size = line_size, na.rm = TRUE, ...) +
-    ggplot2::facet_wrap(~ .block, ncol = 1, scales = "free_x") + # Use scales="free_x"
-    ggplot2::labs(title = if (!is.null(title)) title else paste("Baseline Model:", plot_term),
-                  x = xlab, y = ylab, colour = "Condition") +
-    scale_fn() + # Apply the chosen scale function
-    ggplot2::theme_minimal(base_size = 14) +
-    ggplot2::theme(legend.position = "bottom",
-                   plot.title = ggplot2::element_text(face = "bold", hjust = 0.5),
-                   axis.title = ggplot2::element_text(face = "bold"))
+  # Create the ggplot (handle single vs multi condition for robust legends/scales).
+  if (n_cond <= 1) {
+    p <- ggplot2::ggplot(dfx, ggplot2::aes(x = .time, y = value, group = 1)) +
+      ggplot2::geom_line(size = line_size, na.rm = TRUE, colour = "#2c7fb8", ...) +
+      ggplot2::facet_wrap(ggplot2::vars(.block), ncol = 1, scales = "free_x") +
+      ggplot2::labs(title = if (!is.null(title)) title else paste("Baseline Model:", plot_term),
+                    x = xlab, y = ylab) +
+      ggplot2::theme_minimal(base_size = 14) +
+      ggplot2::theme(legend.position = "none",
+                     plot.title = ggplot2::element_text(face = "bold", hjust = 0.5),
+                     axis.title = ggplot2::element_text(face = "bold"))
+  } else {
+    p <- ggplot2::ggplot(dfx, ggplot2::aes(x = .time, y = value, colour = condition, group = condition)) +
+      ggplot2::geom_line(size = line_size, na.rm = TRUE, ...) +
+      ggplot2::facet_wrap(ggplot2::vars(.block), ncol = 1, scales = "free_x") +
+      ggplot2::labs(title = if (!is.null(title)) title else paste("Baseline Model:", plot_term),
+                    x = xlab, y = ylab, colour = "Condition") +
+      scale_fn() +
+      ggplot2::theme_minimal(base_size = 14) +
+      ggplot2::theme(legend.position = "bottom",
+                     plot.title = ggplot2::element_text(face = "bold", hjust = 0.5),
+                     axis.title = ggplot2::element_text(face = "bold"))
+  }
   
   # Explicitly print to ensure rendering on first call
   print(p)
