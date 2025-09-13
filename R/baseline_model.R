@@ -696,13 +696,12 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   dfx <- dflist[[plot_term]]
   dfx <- dfx[order(dfx$.block, dfx$condition, dfx$.time), ]
   n_cond <- length(unique(dfx$condition))
+  # Ensure block is a factor for facetting stability
+  dfx$.block <- as.factor(dfx$.block)
   
   # Define scale function outside the pipe
-  scale_fn <- if (n_cond > 9) { 
-                  ggplot2::scale_color_viridis_d 
-              } else { 
-                  function(...) ggplot2::scale_color_brewer(palette = color_palette, ...) 
-              }
+  # Use a robust default color scale that supports many categories
+  scale_fn <- function(...) ggplot2::scale_color_hue(...)
   
   # Create the ggplot.
   p <- ggplot2::ggplot(dfx, ggplot2::aes_string(x = ".time", y = "value", colour = "condition", group = "condition")) +
