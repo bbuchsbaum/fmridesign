@@ -692,8 +692,9 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
     }
   }
   
-  # Get the data for the selected term
+  # Get the data for the selected term and ensure stable ordering
   dfx <- dflist[[plot_term]]
+  dfx <- dfx[order(dfx$.block, dfx$condition, dfx$.time), ]
   n_cond <- length(unique(dfx$condition))
   
   # Define scale function outside the pipe
@@ -704,8 +705,8 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
               }
   
   # Create the ggplot.
-  p <- ggplot2::ggplot(dfx, ggplot2::aes_string(x = ".time", y = "value", colour = "condition")) +
-    ggplot2::geom_line(size = line_size, ...) +
+  p <- ggplot2::ggplot(dfx, ggplot2::aes_string(x = ".time", y = "value", colour = "condition", group = "condition")) +
+    ggplot2::geom_line(size = line_size, na.rm = TRUE, ...) +
     ggplot2::facet_wrap(~ .block, ncol = 1, scales = "free_x") + # Use scales="free_x"
     ggplot2::labs(title = if (!is.null(title)) title else paste("Baseline Model:", plot_term),
                   x = xlab, y = ylab, colour = "Condition") +
