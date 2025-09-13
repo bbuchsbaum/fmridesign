@@ -246,9 +246,11 @@ n_cols <- ncol(design_mat)
 # Create a custom contrast vector
 custom_contrast <- rep(0, n_cols)
 # Find columns for condition A and B
+# Note: column names use dot notation for factor levels (e.g., "stim.A")
 col_names <- colnames(design_mat)
-a_cols <- grep("stim_A", col_names)
-b_cols <- grep("stim_B", col_names)
+# Match by suffix to handle term-tag prefixes like "stim_stim.A"
+a_cols <- grep("stim\\.A$", col_names)
+b_cols <- grep("stim\\.B$", col_names)
 
 # A > B contrast
 custom_contrast[a_cols] <- 1/length(a_cols)
