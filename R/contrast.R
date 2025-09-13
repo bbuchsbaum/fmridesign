@@ -669,6 +669,7 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL) {
 #'
 #' @return A list containing the term, name, weights, condition names, and contrast specification.
 #'
+#' @rdname contrast_weights
 #' @export
 contrast_weights.unit_contrast_spec <- function(x, term,...) {
   # All possible condition names (pre-basis expansion)
@@ -751,6 +752,7 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
 #'
 #' @return A list containing the term, name, weights, condition names, and contrast specification.
 #'
+#' @rdname contrast_weights
 #' @export
 contrast_weights.oneway_contrast_spec <- function(x, term,...) {
   # Get cells (categorical only)
@@ -832,6 +834,7 @@ contrast_weights.oneway_contrast_spec <- function(x, term,...) {
 #'
 #' @return A list containing the term, name, weights, condition names, and contrast specification.
 #'
+#' @rdname contrast_weights
 #' @export
 contrast_weights.interaction_contrast_spec <- function(x, term,...) {
   # Get cells (categorical only)
@@ -951,6 +954,7 @@ generate_interaction_contrast <- function(relevant_cells, factors) {
 #'
 #' @return A list containing the term, name, weights, condition names, and contrast specification.
 #'
+#' @rdname contrast_weights
 #' @export
 contrast_weights.poly_contrast_spec <- function(x, term,...) {
   all_condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = FALSE), silent = TRUE)
@@ -1041,6 +1045,7 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
 #'
 #' @return A list containing the term, name, weights, condition names, and contrast specification.
 #'
+#' @rdname contrast_weights
 #' @export
 contrast_weights.pair_contrast_spec <- function(x, term,...) {
   # Get cells (only categorical combinations) for evaluating formulas A & B
@@ -1219,6 +1224,7 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
 #'   \item{condnames}{Character vector of all potential *expanded* condition names from `term`.}
 #'   \item{contrast_spec}{The original `column_contrast_spec` object.}
 #'
+#' @rdname contrast_weights
 #' @export
 #' @import assertthat
 contrast_weights.column_contrast_spec <- function(x, term, ...) {
@@ -1312,6 +1318,7 @@ contrast_weights.column_contrast_spec <- function(x, term, ...) {
 #'
 #' @return A list containing the term, name, weights, condition names, and contrast specification.
 #'
+#' @rdname contrast_weights
 #' @export
 contrast_weights.contrast_formula_spec <- function(x, term,...) {
 
@@ -1380,6 +1387,7 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
 #'
 #' @return A list containing the term, name, weights, condition names, and contrast specification.
 #'
+#' @rdname contrast_weights
 #' @export
 contrast_weights.contrast_diff_spec <- function(x, term,...) {
   wts1 <- contrast_weights(x$con1, term)
@@ -1769,6 +1777,7 @@ ReorderFactor <- function(x, reverse=FALSE) {
 #'         on the corresponding contrast_spec in the set. The list names are the 
 #'         names of the individual contrasts.
 #'
+#' @rdname contrast_weights
 #' @export
 #' @importFrom purrr map set_names
 contrast_weights.contrast_set <- function(x, term, ...) {
