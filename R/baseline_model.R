@@ -642,7 +642,8 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   }
   
   # Derive time and block IDs from the sampling frame without mutating it
-  time_vec    <- tryCatch(fmrihrf::samples(x$sampling_frame, global = TRUE), silent = TRUE)
+  # Use run-relative sample times so each facet starts at 0 per block
+  time_vec    <- tryCatch(fmrihrf::samples(x$sampling_frame, global = FALSE), silent = TRUE)
   blockids_vec <- tryCatch(fmrihrf::blockids(x$sampling_frame), silent = TRUE)
   if (inherits(time_vec, "try-error") || inherits(blockids_vec, "try-error") ||
       is.null(time_vec) || is.null(blockids_vec)) {

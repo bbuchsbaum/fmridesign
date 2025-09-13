@@ -205,7 +205,8 @@ plot.event_model <- function(x, term_name = NULL, ...) {
   
   # Create time variable based on sampling frame
   if (!is.null(x$sampling_frame)) {
-    time_var <- fmrihrf::samples(x$sampling_frame, global = TRUE)
+    # Use run-relative time (restarts each block) for clearer per-block plots
+    time_var <- fmrihrf::samples(x$sampling_frame, global = FALSE)
   } else {
     time_var <- seq_len(nrow(DM))
   }
