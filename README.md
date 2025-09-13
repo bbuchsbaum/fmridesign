@@ -64,18 +64,19 @@ baseline_dm <- design_matrix(base_model)
 - `fmrihrf`: Hemodynamic response functions
 - `fmridataset`: fMRI dataset structures
 
-## Vignettes
+## Documentation & Vignettes
 
-- Introduction: vignette("a_01_introduction", package = "fmridesign")
-- Baseline and nuisance modeling: vignette("a_03_baseline_model", package = "fmridesign")
-- Event models and HRFs: vignette("a_04_event_models", package = "fmridesign")
-- Contrasts: vignette("a_05_contrasts", package = "fmridesign")
+- Online site (pkgdown): https://bbuchsbaum.github.io/fmridesign/
+- Articles index: https://bbuchsbaum.github.io/fmridesign/articles/
 
-Website articles (pkgdown):
-- https://bbuchsbaum.github.io/fmridesign/articles/a_01_introduction.html
-- https://bbuchsbaum.github.io/fmridesign/articles/a_03_baseline_model.html
-- https://bbuchsbaum.github.io/fmridesign/articles/a_04_event_models.html
-- https://bbuchsbaum.github.io/fmridesign/articles/a_05_contrasts.html
+From R, you can also open installed vignettes:
+
+```r
+vignette("a_01_introduction", package = "fmridesign")
+vignette("a_03_baseline_model", package = "fmridesign")
+vignette("a_04_event_models", package = "fmridesign")
+vignette("a_05_contrasts", package = "fmridesign")
+```
 
 ## License
 
