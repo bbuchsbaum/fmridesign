@@ -35,7 +35,7 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/a_01_introduction.html">Introduction to fmridesign</a></li>
     <li><a class="dropdown-item" href="../articles/a_03_baseline_model.html">Modeling Baseline and Nuisance Effects</a></li>
-    <li><a class="dropdown-item" href="../articles/a_04_event_models.html">Building Event-Related fMRI Models</a></li>
+    <li><a class="dropdown-item" href="../articles/a_04_event_models.html">Building Event Models</a></li>
     <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts in fmridesign</a></li>
   </ul>
 </li>
@@ -44,7 +44,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/bbuchsbaum/fmridesign" aria-label="GitHub"><span class="fa fa-github"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/bbuchsbaum/fmridesign/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -397,16 +397,18 @@ and continuous effects:</p>
 <span><span class="co"># Create a custom contrast vector</span></span>
 <span><span class="va">custom_contrast</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">n_cols</span><span class="op">)</span></span>
 <span><span class="co"># Find columns for condition A and B</span></span>
+<span><span class="co"># Note: column names use dot notation for factor levels (e.g., "stim.A")</span></span>
 <span><span class="va">col_names</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">design_mat</span><span class="op">)</span></span>
-<span><span class="va">a_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"stim_A"</span>, <span class="va">col_names</span><span class="op">)</span></span>
-<span><span class="va">b_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"stim_B"</span>, <span class="va">col_names</span><span class="op">)</span></span>
+<span><span class="co"># Match by suffix to handle term-tag prefixes like "stim_stim.A"</span></span>
+<span><span class="va">a_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"stim\\.A$"</span>, <span class="va">col_names</span><span class="op">)</span></span>
+<span><span class="va">b_cols</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"stim\\.B$"</span>, <span class="va">col_names</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># A &gt; B contrast</span></span>
 <span><span class="va">custom_contrast</span><span class="op">[</span><span class="va">a_cols</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">/</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">a_cols</span><span class="op">)</span></span>
 <span><span class="va">custom_contrast</span><span class="op">[</span><span class="va">b_cols</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="fl">1</span><span class="op">/</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">b_cols</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">custom_contrast</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 0 0</span></span></code></pre></div>
+<span><span class="co">#&gt; [1]  1 -1</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="contrast-validation">Contrast Validation<a class="anchor" aria-label="anchor" href="#contrast-validation"></a>
@@ -420,7 +422,7 @@ using <code><a href="../reference/validate_contrasts.html">validate_contrasts()<
 <span><span class="co">#&gt;       name type estimable sum_to_zero orthogonal_to_intercept full_rank</span></span>
 <span><span class="co">#&gt; 1 contrast    t      TRUE        TRUE                    TRUE        NA</span></span>
 <span><span class="co">#&gt;   nonzero_weights</span></span>
-<span><span class="co">#&gt; 1               0</span></span></code></pre></div>
+<span><span class="co">#&gt; 1               2</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -454,15 +456,6 @@ within-run or across-run effects:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">multirun_contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">emodel_multirun</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Contrast 'overall' for term 'condition_block' has unmatched row names:</span></span>
-<span><span class="co">#&gt; condition.control_block.1, condition.stim_block.1, condition.control_block.2,</span></span>
-<span><span class="co">#&gt; condition.stim_block.2</span></span>
-<span><span class="co">#&gt; Warning: Contrast 'run1' for term 'condition_block' has unmatched row names:</span></span>
-<span><span class="co">#&gt; condition.control_block.1, condition.stim_block.1, condition.control_block.2,</span></span>
-<span><span class="co">#&gt; condition.stim_block.2</span></span>
-<span><span class="co">#&gt; Warning: Contrast 'run2' for term 'condition_block' has unmatched row names:</span></span>
-<span><span class="co">#&gt; condition.control_block.1, condition.stim_block.1, condition.control_block.2,</span></span>
-<span><span class="co">#&gt; condition.stim_block.2</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">multirun_contrasts</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "condition:block.overall" "condition:block.run1"   </span></span>
 <span><span class="co">#&gt; [3] "condition:block.run2"</span></span></code></pre></div>

@@ -15,7 +15,6 @@ knitr::opts_chunk$set(
   comment = "#>",
   fig.width = 7, 
   fig.height = 5,
-  dev = "svg",
   fig.retina = 1,
   message = FALSE,
   warning = FALSE
