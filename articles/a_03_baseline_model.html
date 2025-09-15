@@ -338,7 +338,7 @@ grouped under the term name <code>"nuisance"</code>.</p>
 <span><span class="co"># Plot the nuisance regressors (term_name = "nuisance")</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel_nuis_only</span>, term_name <span class="op">=</span> <span class="st">"nuisance"</span><span class="op">)</span> <span class="op">+</span> </span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Nuisance Regressors Only (e.g., Motion)"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_03_baseline_model_files/figure-html/nuisance_list-1.png" alt="Example nuisance regressors (e.g., motion) plotted per run over time."><img src="a_03_baseline_model_files/figure-html/nuisance_list-2.png" alt="Example nuisance regressors (e.g., motion) plotted per run over time."></p>
+<p><img src="a_03_baseline_model_files/figure-html/nuisance_list-1.png" alt="Example nuisance regressors (e.g., motion) plotted per run over time."></p>
 </div>
 <div class="section level2">
 <h2 id="combining-basis-sets-and-nuisance-regressors">Combining Basis Sets and Nuisance Regressors<a class="anchor" aria-label="anchor" href="#combining-basis-sets-and-nuisance-regressors"></a>
@@ -397,13 +397,13 @@ custom nuisance regressors in the same baseline model.</p>
 <span><span class="co"># Plot the drift terms (polynomial basis)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel_combined</span>, term_name <span class="op">=</span> <span class="st">"drift"</span><span class="op">)</span> <span class="op">+</span> </span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Polynomial Drift Terms (from Combined Model)"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_03_baseline_model_files/figure-html/combined_baseline-1.png" alt="Combined baseline model plots: polynomial drift and nuisance terms per run."><img src="a_03_baseline_model_files/figure-html/combined_baseline-2.png" alt="Combined baseline model plots: polynomial drift and nuisance terms per run."></p>
+<p><img src="a_03_baseline_model_files/figure-html/combined_baseline-1.png" alt="Combined baseline model plots: polynomial drift and nuisance terms per run."></p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Plot the nuisance terms (using exact match "nuisance")</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel_combined</span>, term_name <span class="op">=</span> <span class="st">"nuisance"</span><span class="op">)</span> <span class="op">+</span> </span>
 <span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Nuisance Terms (from Combined Model)"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_03_baseline_model_files/figure-html/combined_baseline-3.png" alt="Combined baseline model plots: polynomial drift and nuisance terms per run."><img src="a_03_baseline_model_files/figure-html/combined_baseline-4.png" alt="Combined baseline model plots: polynomial drift and nuisance terms per run."></p>
+<p><img src="a_03_baseline_model_files/figure-html/combined_baseline-2.png" alt="Combined baseline model plots: polynomial drift and nuisance terms per run."></p>
 </div>
 <div class="section level2">
 <h2 id="accessing-the-design-matrix">Accessing the Design Matrix<a class="anchor" aria-label="anchor" href="#accessing-the-design-matrix"></a>
