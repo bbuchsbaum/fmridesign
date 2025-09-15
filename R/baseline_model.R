@@ -733,9 +733,7 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
                      axis.title = ggplot2::element_text(face = "bold"))
   }
   
-  # Explicitly print to ensure rendering on first call
-  print(p)
-  invisible(p)
+  p
 }
 
 #' correlation_map.baseline_model
