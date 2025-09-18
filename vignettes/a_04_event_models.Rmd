@@ -13,9 +13,10 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.width = 7, 
+  fig.width = 7,
   fig.height = 5,
-  dev = "svg",
+  dev = "png",
+  dpi = 72,
   fig.retina = 1,
   message = FALSE,
   warning = FALSE
@@ -109,8 +110,10 @@ We can plot the generated regressors using `plot()` (which uses `ggplot2`) or `p
 # Static plot (ggplot2)
 plot(emodel_simple)
 
-# Interactive plot via plotly
-plotly::ggplotly(plot(emodel_simple))
+# Interactive plot via plotly (skipped in non-interactive builds)
+if (interactive()) {
+  plotly::ggplotly(plot(emodel_simple))
+}
 ```
 
 The plot shows the predicted BOLD timecourse for each condition (`stim` level) convolved with the default HRF.
@@ -193,7 +196,9 @@ print(emodel_two_factor)
 
 # Plotting all interaction terms can be busy; consider plotly
 plot(emodel_two_factor)
-plotly::ggplotly(plot(emodel_two_factor))
+if (interactive()) {
+  plotly::ggplotly(plot(emodel_two_factor))
+}
 ```
 
 ## Amplitude Modulation (Parametric Regressors)
@@ -221,7 +226,9 @@ print(emodel_pmod)
 
 # Plot the RT parametric modulator term (using its term tag)
 plot(emodel_pmod, term_name = "RT_centered") 
-plotly::ggplotly(plot(emodel_pmod, term_name = "RT_centered"))
+if (interactive()) {
+  plotly::ggplotly(plot(emodel_pmod, term_name = "RT_centered"))
+}
 ```
 
 ## Interaction Between Factors and Amplitude Modulation
@@ -240,7 +247,9 @@ print(emodel_pmod_int)
 
 # Plot the interaction term (using its term tag)
 plot(emodel_pmod_int, term_name = "stim_RT_centered")
-plotly::ggplotly(plot(emodel_pmod_int, term_name = "stim_RT_centered"))
+if (interactive()) {
+  plotly::ggplotly(plot(emodel_pmod_int, term_name = "stim_RT_centered"))
+}
 ```
 
 ## Specifying Different HRFs
@@ -294,7 +303,9 @@ emodel_spmg3 <- event_model(onset ~ hrf(stim, basis=HRF_SPMG3),
 print(emodel_spmg3) # Note nbasis=3 for the hrf
 # Columns: stim_stim.face_b01, stim_stim.face_b02, ...
 plot(emodel_spmg3, term_name = "stim") # Plotting shows the 3 basis functions for one condition
-plotly::ggplotly(plot(emodel_spmg3)) # Better for exploring many conditions
+if (interactive()) {
+  plotly::ggplotly(plot(emodel_spmg3)) # Better for exploring many conditions interactively
+}
 
 # Example 3: Using a custom function (simple linear ramp)
 # Term tag: "stim"
@@ -333,7 +344,9 @@ print(emodel_trialwise)
 # Plotting trialwise models can be very dense!
 # It generates one condition per trial.
 plot(emodel_trialwise)
-plotly::ggplotly(plot(emodel_trialwise)) # Use plotly to explore
+if (interactive()) {
+  plotly::ggplotly(plot(emodel_trialwise)) # Use plotly to explore interactively
+}
 ```
 
 ## Covariates (Non-convolved Regressors)

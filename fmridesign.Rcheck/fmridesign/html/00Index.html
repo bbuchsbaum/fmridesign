@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+<head><title>R: Design Matrix Construction for fMRI Analysis</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+<link rel="stylesheet" type="text/css" href="R.css" />
+</head><body><div class="container">
+<h1> Design Matrix Construction for fMRI Analysis
+<img class="toplogo" src="../../../doc/html/Rlogo.svg" alt="[R logo]" />
+</h1>
+<hr/>
+<div style="text-align: center;">
+<a href="../../../doc/html/packages.html"><img class="arrow" src="../../../doc/html/left.jpg" alt="[Up]" /></a>
+<a href="../../../doc/html/index.html"><img class="arrow" src="../../../doc/html/up.jpg" alt="[Top]" /></a>
+</div><h2>Documentation for package &lsquo;fmridesign&rsquo; version 0.1.0</h2>
+
+<ul><li><a href="../DESCRIPTION">DESCRIPTION file</a>.</li>
+<li><a href="../doc/index.html">User guides, package vignettes and other documentation.</a></li>
+</ul>
+
+<h2>Help Pages</h2>
+
+
+<p style="text-align: center;">
+<a href="#B">B</a>
+<a href="#C">C</a>
+<a href="#D">D</a>
+<a href="#E">E</a>
+<a href="#F">F</a>
+<a href="#G">G</a>
+<a href="#H">H</a>
+<a href="#I">I</a>
+<a href="#L">L</a>
+<a href="#N">N</a>
+<a href="#O">O</a>
+<a href="#P">P</a>
+<a href="#R">R</a>
+<a href="#S">S</a>
+<a href="#T">T</a>
+<a href="#U">U</a>
+<a href="#V">V</a>
+</p>
+
+
+<h2><a id="B">-- B --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="baseline.html">baseline</a></td>
+<td>Create a Baseline Specification</td></tr>
+<tr><td style="width: 25%;"><a href="baseline_model.html">baseline_model</a></td>
+<td>Construct a Baseline Model</td></tr>
+<tr><td style="width: 25%;"><a href="baseline_terms.html">baseline_terms</a></td>
+<td>Extract baseline terms</td></tr>
+<tr><td style="width: 25%;"><a href="baseline_terms.html">baseline_terms.baseline_model</a></td>
+<td>Extract baseline terms</td></tr>
+<tr><td style="width: 25%;"><a href="basis_suffix.html">basis_suffix</a></td>
+<td>Create Basis Function Suffix</td></tr>
+<tr><td style="width: 25%;"><a href="block.html">block</a></td>
+<td>Create a Block Variable</td></tr>
+<tr><td style="width: 25%;"><a href="BSpline.html">BSpline</a></td>
+<td>B-spline basis</td></tr>
+</table>
+
+<h2><a id="C">-- C --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="cells.html">cells</a></td>
+<td>Extract cells from a design object</td></tr>
+<tr><td style="width: 25%;"><a href="cells.html">cells.baseline_model</a></td>
+<td>Extract cells from a design object</td></tr>
+<tr><td style="width: 25%;"><a href="cells.html">cells.covariate_convolved_term</a></td>
+<td>Extract cells from a design object</td></tr>
+<tr><td style="width: 25%;"><a href="cells.html">cells.event</a></td>
+<td>Extract cells from a design object</td></tr>
+<tr><td style="width: 25%;"><a href="cells.html">cells.event_term</a></td>
+<td>Extract cells from a design object</td></tr>
+<tr><td style="width: 25%;"><a href="check_collinearity.html">check_collinearity</a></td>
+<td>Check design matrix for multicollinearity</td></tr>
+<tr><td style="width: 25%;"><a href="columns.html">columns</a></td>
+<td>Extract columns</td></tr>
+<tr><td style="width: 25%;"><a href="levels.event.html">columns.event</a></td>
+<td>Extract Levels from fmrireg Objects</td></tr>
+<tr><td style="width: 25%;"><a href="columns.html">columns.RobustScale</a></td>
+<td>Extract columns</td></tr>
+<tr><td style="width: 25%;"><a href="columns.html">columns.Scale</a></td>
+<td>Extract columns</td></tr>
+<tr><td style="width: 25%;"><a href="columns.html">columns.ScaleWithin</a></td>
+<td>Extract columns</td></tr>
+<tr><td style="width: 25%;"><a href="column_contrast.html">column_contrast</a></td>
+<td>Column Contrast Specification</td></tr>
+<tr><td style="width: 25%;"><a href="column_groups_by_condition.html">column_groups_by_condition</a></td>
+<td>Group column indices by condition for a term/basis pair</td></tr>
+<tr><td style="width: 25%;"><a href="conditions.html">conditions</a></td>
+<td>Extract conditions from a design object</td></tr>
+<tr><td style="width: 25%;"><a href="conditions.html">conditions.event_term</a></td>
+<td>Extract conditions from a design object</td></tr>
+<tr><td style="width: 25%;"><a href="condition_basis_list.html">condition_basis_list</a></td>
+<td>Convert an 'event_term' to a per-condition basis list</td></tr>
+<tr><td style="width: 25%;"><a href="construct.html">construct</a></td>
+<td>Construct method</td></tr>
+<tr><td style="width: 25%;"><a href="construct.html">construct.baselinespec</a></td>
+<td>Construct method</td></tr>
+<tr><td style="width: 25%;"><a href="construct.html">construct.covariatespec</a></td>
+<td>Construct method</td></tr>
+<tr><td style="width: 25%;"><a href="contrast.html">contrast</a></td>
+<td>Contrast Specification</td></tr>
+<tr><td style="width: 25%;"><a href="contrasts.html">contrasts</a></td>
+<td>Extract contrasts</td></tr>
+<tr><td style="width: 25%;"><a href="contrasts.event_model.html">contrasts.event_model</a></td>
+<td>Retrieve contrast definitions for an event model</td></tr>
+<tr><td style="width: 25%;"><a href="contrasts.event_term.html">contrasts.event_term</a></td>
+<td>Retrieve contrast definitions for an event term</td></tr>
+<tr><td style="width: 25%;"><a href="contrasts.hrfspec.html">contrasts.hrfspec</a></td>
+<td>Retrieve contrast specifications from an hrfspec</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_set.html">contrast_set</a></td>
+<td>Create a Set of Contrasts</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_weights.html">contrast_weights</a></td>
+<td>Unit Contrast Weights</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_weights.html">contrast_weights.column_contrast_spec</a></td>
+<td>Unit Contrast Weights</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_weights.html">contrast_weights.contrast_diff_spec</a></td>
+<td>Unit Contrast Weights</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_weights.html">contrast_weights.contrast_formula_spec</a></td>
+<td>Unit Contrast Weights</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_weights.html">contrast_weights.contrast_set</a></td>
+<td>Unit Contrast Weights</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_weights.html">contrast_weights.convolved_term</a></td>
+<td>Unit Contrast Weights</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_weights.html">contrast_weights.event_model</a></td>
+<td>Unit Contrast Weights</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_weights.html">contrast_weights.interaction_contrast_spec</a></td>
+<td>Unit Contrast Weights</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_weights.html">contrast_weights.oneway_contrast_spec</a></td>
+<td>Unit Contrast Weights</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_weights.html">contrast_weights.pair_contrast_spec</a></td>
+<td>Unit Contrast Weights</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_weights.html">contrast_weights.poly_contrast_spec</a></td>
+<td>Unit Contrast Weights</td></tr>
+<tr><td style="width: 25%;"><a href="contrast_weights.html">contrast_weights.unit_contrast_spec</a></td>
+<td>Unit Contrast Weights</td></tr>
+<tr><td style="width: 25%;"><a href="convolve.html">convolve</a></td>
+<td>Convolve events with a hemodynamic response function</td></tr>
+<tr><td style="width: 25%;"><a href="convolve.html">convolve.event_term</a></td>
+<td>Convolve events with a hemodynamic response function</td></tr>
+<tr><td style="width: 25%;"><a href="convolve_design.html">convolve_design</a></td>
+<td>Convolve HRF with Design Matrix.</td></tr>
+<tr><td style="width: 25%;"><a href="correlation_map.html">correlation_map</a></td>
+<td>Compute correlation map</td></tr>
+<tr><td style="width: 25%;"><a href="correlation_map.baseline_model.html">correlation_map.baseline_model</a></td>
+<td>correlation_map.baseline_model</td></tr>
+<tr><td style="width: 25%;"><a href="correlation_map.event_model.html">correlation_map.event_model</a></td>
+<td>Visualize Regressor Correlations</td></tr>
+<tr><td style="width: 25%;"><a href="covariate.html">covariate</a></td>
+<td>Construct a Covariate Term</td></tr>
+</table>
+
+<h2><a id="D">-- D --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="design_map.html">design_map</a></td>
+<td>Compute design map</td></tr>
+<tr><td style="width: 25%;"><a href="design_map.baseline_model.html">design_map.baseline_model</a></td>
+<td>Heatmap visualization of the baseline_model design matrix</td></tr>
+<tr><td style="width: 25%;"><a href="design_map.event_model.html">design_map.event_model</a></td>
+<td>Visualize Event Model Design Matrix</td></tr>
+<tr><td style="width: 25%;"><a href="design_matrix.html">design_matrix</a></td>
+<td>Extract or construct a design matrix</td></tr>
+<tr><td style="width: 25%;"><a href="design_matrix.html">design_matrix.baseline_model</a></td>
+<td>Extract or construct a design matrix</td></tr>
+<tr><td style="width: 25%;"><a href="design_matrix.html">design_matrix.baseline_term</a></td>
+<td>Extract or construct a design matrix</td></tr>
+<tr><td style="width: 25%;"><a href="design_matrix.html">design_matrix.event_model</a></td>
+<td>Extract or construct a design matrix</td></tr>
+<tr><td style="width: 25%;"><a href="design_matrix.html">design_matrix.event_term</a></td>
+<td>Extract or construct a design matrix</td></tr>
+</table>
+
+<h2><a id="E">-- E --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="elements.html">elements</a></td>
+<td>Extract elements from an object</td></tr>
+<tr><td style="width: 25%;"><a href="elements.html">elements.event</a></td>
+<td>Extract elements from an object</td></tr>
+<tr><td style="width: 25%;"><a href="elements.html">elements.event_term</a></td>
+<td>Extract elements from an object</td></tr>
+<tr><td style="width: 25%;"><a href="events.html">events</a></td>
+<td>Retrieve canonical event information</td></tr>
+<tr><td style="width: 25%;"><a href="event_basis.html">event_basis</a></td>
+<td>Create an event set from a ParametricBasis object.</td></tr>
+<tr><td style="width: 25%;"><a href="event_conditions.html">event_conditions</a></td>
+<td>Retrieve per-event condition assignments</td></tr>
+<tr><td style="width: 25%;"><a href="event_factor.html">event_factor</a></td>
+<td>Create a categorical event sequence from a factor.</td></tr>
+<tr><td style="width: 25%;"><a href="event_matrix.html">event_matrix</a></td>
+<td>Create a continuous event set from a matrix.</td></tr>
+<tr><td style="width: 25%;"><a href="event_model.html">event_model</a></td>
+<td>Generic functions for fmridesign package</td></tr>
+<tr><td style="width: 25%;"><a href="event_table.html">event_table</a></td>
+<td>Extract event table</td></tr>
+<tr><td style="width: 25%;"><a href="event_term.html">event_term</a></td>
+<td>Create an event model term from a named list of variables.</td></tr>
+<tr><td style="width: 25%;"><a href="event_terms.html">event_terms</a></td>
+<td>Extract event terms</td></tr>
+<tr><td style="width: 25%;"><a href="event_variable.html">event_variable</a></td>
+<td>Create a continuous event sequence from a numeric vector.</td></tr>
+</table>
+
+<h2><a id="F">-- F --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="Fcontrasts.html">Fcontrasts</a></td>
+<td>Compute F-contrasts</td></tr>
+<tr><td style="width: 25%;"><a href="Fcontrasts.html">Fcontrasts.convolved_term</a></td>
+<td>Compute F-contrasts</td></tr>
+<tr><td style="width: 25%;"><a href="Fcontrasts.html">Fcontrasts.event_model</a></td>
+<td>Compute F-contrasts</td></tr>
+<tr><td style="width: 25%;"><a href="feature_suffix.html">feature_suffix</a></td>
+<td>Create Feature Suffix</td></tr>
+</table>
+
+<h2><a id="G">-- G --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="get_all_external_hrf_functions.html">get_all_external_hrf_functions</a></td>
+<td>Get All External HRF Function Names</td></tr>
+<tr><td style="width: 25%;"><a href="get_external_hrfspec_functions.html">get_external_hrfspec_functions</a></td>
+<td>Get the HRF Function Name for External Specifications</td></tr>
+<tr><td style="width: 25%;"><a href="get_external_hrfspec_info.html">get_external_hrfspec_info</a></td>
+<td>Get Information About a Registered External HRF Specification</td></tr>
+</table>
+
+<h2><a id="H">-- H --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="hrf.html">hrf</a></td>
+<td>hemodynamic regressor specification function for model formulas.</td></tr>
+</table>
+
+<h2><a id="I">-- I --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="Ident.html">Ident</a></td>
+<td>Ident</td></tr>
+<tr><td style="width: 25%;"><a href="interaction_contrast.html">interaction_contrast</a></td>
+<td>Interaction Contrast</td></tr>
+<tr><td style="width: 25%;"><a href="is_categorical.html">is_categorical</a></td>
+<td>Check if categorical</td></tr>
+<tr><td style="width: 25%;"><a href="is_categorical.html">is_categorical.event</a></td>
+<td>Check if categorical</td></tr>
+<tr><td style="width: 25%;"><a href="is_continuous.html">is_continuous</a></td>
+<td>Check if continuous</td></tr>
+<tr><td style="width: 25%;"><a href="is_continuous.html">is_continuous.event</a></td>
+<td>Check if continuous</td></tr>
+<tr><td style="width: 25%;"><a href="is_external_hrfspec.html">is_external_hrfspec</a></td>
+<td>Check if a Class is a Registered External HRF Specification</td></tr>
+</table>
+
+<h2><a id="L">-- L --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="labels.event.html">labels.event</a></td>
+<td>Get Formatted Labels for a Single Event</td></tr>
+<tr><td style="width: 25%;"><a href="levels.event.html">levels.event</a></td>
+<td>Extract Levels from fmrireg Objects</td></tr>
+<tr><td style="width: 25%;"><a href="levels.event.html">levels.RobustScale</a></td>
+<td>Extract Levels from fmrireg Objects</td></tr>
+<tr><td style="width: 25%;"><a href="levels.event.html">levels.Scale</a></td>
+<td>Extract Levels from fmrireg Objects</td></tr>
+<tr><td style="width: 25%;"><a href="levels.event.html">levels.ScaleWithin</a></td>
+<td>Extract Levels from fmrireg Objects</td></tr>
+<tr><td style="width: 25%;"><a href="list_external_hrfspecs.html">list_external_hrfspecs</a></td>
+<td>List All Registered External HRF Specifications</td></tr>
+<tr><td style="width: 25%;"><a href="longnames.html">longnames</a></td>
+<td>Extract longnames</td></tr>
+</table>
+
+<h2><a id="N">-- N --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="nbasis.html">nbasis</a></td>
+<td>Number of Basis Functions</td></tr>
+<tr><td style="width: 25%;"><a href="nbasis.html">nbasis.BSpline</a></td>
+<td>Number of Basis Functions</td></tr>
+<tr><td style="width: 25%;"><a href="nbasis.html">nbasis.covariate_convolved_term</a></td>
+<td>Number of Basis Functions</td></tr>
+<tr><td style="width: 25%;"><a href="nbasis.hrfspec.html">nbasis.hrfspec</a></td>
+<td>Get number of basis functions from hrfspec</td></tr>
+<tr><td style="width: 25%;"><a href="nbasis.html">nbasis.Ident</a></td>
+<td>Number of Basis Functions</td></tr>
+<tr><td style="width: 25%;"><a href="nbasis.html">nbasis.Poly</a></td>
+<td>Number of Basis Functions</td></tr>
+<tr><td style="width: 25%;"><a href="nbasis.html">nbasis.RobustScale</a></td>
+<td>Number of Basis Functions</td></tr>
+<tr><td style="width: 25%;"><a href="nbasis.html">nbasis.Scale</a></td>
+<td>Number of Basis Functions</td></tr>
+<tr><td style="width: 25%;"><a href="nbasis.html">nbasis.ScaleWithin</a></td>
+<td>Number of Basis Functions</td></tr>
+<tr><td style="width: 25%;"><a href="nbasis.html">nbasis.Standardized</a></td>
+<td>Number of Basis Functions</td></tr>
+<tr><td style="width: 25%;"><a href="nuisance.html">nuisance</a></td>
+<td>Create a Nuisance Specification</td></tr>
+</table>
+
+<h2><a id="O">-- O --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="oneway_contrast.html">oneway_contrast</a></td>
+<td>One-way Contrast</td></tr>
+<tr><td style="width: 25%;"><a href="one_against_all_contrast.html">one_against_all_contrast</a></td>
+<td>One Against All Contrast</td></tr>
+</table>
+
+<h2><a id="P">-- P --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="pairwise_contrasts.html">pairwise_contrasts</a></td>
+<td>Pairwise Contrasts</td></tr>
+<tr><td style="width: 25%;"><a href="pair_contrast.html">pair_contrast</a></td>
+<td>Pair Contrast</td></tr>
+<tr><td style="width: 25%;"><a href="plot.event_model.html">plot.event_model</a></td>
+<td>Plot Event Model</td></tr>
+<tr><td style="width: 25%;"><a href="plot_contrasts.html">plot_contrasts</a></td>
+<td>plot_contrasts</td></tr>
+<tr><td style="width: 25%;"><a href="plot_contrasts.event_model.html">plot_contrasts.event_model</a></td>
+<td>plot_contrasts.event_model</td></tr>
+<tr><td style="width: 25%;"><a href="Poly.html">Poly</a></td>
+<td>Polynomial basis</td></tr>
+<tr><td style="width: 25%;"><a href="poly_contrast.html">poly_contrast</a></td>
+<td>Polynomial Contrast</td></tr>
+<tr><td style="width: 25%;"><a href="predict.html">predict.BSpline</a></td>
+<td>Predict from a ParametricBasis object</td></tr>
+<tr><td style="width: 25%;"><a href="predict.html">predict.Ident</a></td>
+<td>Predict from a ParametricBasis object</td></tr>
+<tr><td style="width: 25%;"><a href="predict.html">predict.ParametricBasis</a></td>
+<td>Predict from a ParametricBasis object</td></tr>
+<tr><td style="width: 25%;"><a href="predict.html">predict.Poly</a></td>
+<td>Predict from a ParametricBasis object</td></tr>
+<tr><td style="width: 25%;"><a href="predict.html">predict.RobustScale</a></td>
+<td>Predict from a ParametricBasis object</td></tr>
+<tr><td style="width: 25%;"><a href="predict.html">predict.Scale</a></td>
+<td>Predict from a ParametricBasis object</td></tr>
+<tr><td style="width: 25%;"><a href="predict.html">predict.ScaleWithin</a></td>
+<td>Predict from a ParametricBasis object</td></tr>
+<tr><td style="width: 25%;"><a href="predict.html">predict.Standardized</a></td>
+<td>Predict from a ParametricBasis object</td></tr>
+<tr><td style="width: 25%;"><a href="print.html">print.baseline_model</a></td>
+<td>Print a Baseline Model</td></tr>
+<tr><td style="width: 25%;"><a href="print.html">print.contrast</a></td>
+<td>Print a Baseline Model</td></tr>
+<tr><td style="width: 25%;"><a href="print.html">print.contrast_diff_spec</a></td>
+<td>Print a Baseline Model</td></tr>
+<tr><td style="width: 25%;"><a href="print.html">print.contrast_set</a></td>
+<td>Print a Baseline Model</td></tr>
+<tr><td style="width: 25%;"><a href="print.html">print.contrast_spec</a></td>
+<td>Print a Baseline Model</td></tr>
+<tr><td style="width: 25%;"><a href="print.html">print.convolved_term</a></td>
+<td>Print a Baseline Model</td></tr>
+<tr><td style="width: 25%;"><a href="print.html">print.event</a></td>
+<td>Print a Baseline Model</td></tr>
+<tr><td style="width: 25%;"><a href="print.html">print.event_model</a></td>
+<td>Print a Baseline Model</td></tr>
+<tr><td style="width: 25%;"><a href="print.html">print.event_term</a></td>
+<td>Print a Baseline Model</td></tr>
+<tr><td style="width: 25%;"><a href="print.html">print.fmri_term</a></td>
+<td>Print a Baseline Model</td></tr>
+<tr><td style="width: 25%;"><a href="print.html">print.poly_contrast_spec</a></td>
+<td>Print a Baseline Model</td></tr>
+</table>
+
+<h2><a id="R">-- R --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="register_hrfspec_extension.html">register_hrfspec_extension</a></td>
+<td>Register an External HRF Specification Type</td></tr>
+<tr><td style="width: 25%;"><a href="regressors.html">regressors</a></td>
+<td>Extract regressors</td></tr>
+<tr><td style="width: 25%;"><a href="regressors.html">regressors.event_term</a></td>
+<td>Extract regressors</td></tr>
+<tr><td style="width: 25%;"><a href="requires_external_processing.html">requires_external_processing</a></td>
+<td>Check if an Object Requires External Processing</td></tr>
+<tr><td style="width: 25%;"><a href="RobustScale.html">RobustScale</a></td>
+<td>Robust Scaling (Median/MAD)</td></tr>
+</table>
+
+<h2><a id="S">-- S --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="sanitize.html">sanitize</a></td>
+<td>Sanitize Strings for Use in R Names</td></tr>
+<tr><td style="width: 25%;"><a href="Scale.html">Scale</a></td>
+<td>Z-score (global) basis</td></tr>
+<tr><td style="width: 25%;"><a href="ScaleWithin.html">ScaleWithin</a></td>
+<td>Z-score within groups</td></tr>
+<tr><td style="width: 25%;"><a href="shortnames.html">shortnames</a></td>
+<td>Extract shortnames</td></tr>
+<tr><td style="width: 25%;"><a href="sliding_window_contrasts.html">sliding_window_contrasts</a></td>
+<td>Sliding-Window Contrasts (Disjoint)</td></tr>
+<tr><td style="width: 25%;"><a href="split_by_block.html">split_by_block</a></td>
+<td>Split by block</td></tr>
+<tr><td style="width: 25%;"><a href="split_onsets.html">split_onsets</a></td>
+<td>Split onsets</td></tr>
+<tr><td style="width: 25%;"><a href="split_onsets.html">split_onsets.event_term</a></td>
+<td>Split onsets</td></tr>
+<tr><td style="width: 25%;"><a href="Standardized.html">Standardized</a></td>
+<td>Standardized basis</td></tr>
+<tr><td style="width: 25%;"><a href="sub_basis.html">sub_basis</a></td>
+<td>sub_basis</td></tr>
+<tr><td style="width: 25%;"><a href="sub_basis.html">sub_basis.RobustScale</a></td>
+<td>sub_basis</td></tr>
+<tr><td style="width: 25%;"><a href="sub_basis.html">sub_basis.Scale</a></td>
+<td>sub_basis</td></tr>
+<tr><td style="width: 25%;"><a href="sub_basis.html">sub_basis.ScaleWithin</a></td>
+<td>sub_basis</td></tr>
+</table>
+
+<h2><a id="T">-- T --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="term_indices.html">term_indices</a></td>
+<td>Extract term indices</td></tr>
+<tr><td style="width: 25%;"><a href="term_indices.html">term_indices.default</a></td>
+<td>Extract term indices</td></tr>
+<tr><td style="width: 25%;"><a href="term_matrices.html">term_matrices</a></td>
+<td>Extract term matrices</td></tr>
+<tr><td style="width: 25%;"><a href="term_names.html">term_names</a></td>
+<td>Extract term names</td></tr>
+<tr><td style="width: 25%;"><a href="trialwise.html">trialwise</a></td>
+<td>trialwise</td></tr>
+</table>
+
+<h2><a id="U">-- U --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="unit_contrast.html">unit_contrast</a></td>
+<td>Unit Contrast</td></tr>
+</table>
+
+<h2><a id="V">-- V --</a></h2>
+
+<table style="width: 100%;">
+<tr><td style="width: 25%;"><a href="validate_contrasts.html">validate_contrasts</a></td>
+<td>Validate contrast weights against a design matrix or event model</td></tr>
+</table>
+</div></body></html>
