@@ -66,6 +66,29 @@
     <p>The list of contrast specifications attached to the hrfspec, or <code>NULL</code>.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">condition</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">cset</span> <span class="op">&lt;-</span> <span class="fu"><a href="contrast_set.html">contrast_set</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  diff <span class="op">=</span> <span class="fu"><a href="column_contrast.html">column_contrast</a></span><span class="op">(</span>pattern_A <span class="op">=</span> <span class="st">"condition.A"</span>, pattern_B <span class="op">=</span> <span class="st">"condition.B"</span>, name <span class="op">=</span> <span class="st">"diff"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">spec</span> <span class="op">&lt;-</span> <span class="fu"><a href="hrf.html">hrf</a></span><span class="op">(</span><span class="va">condition</span>, contrasts <span class="op">=</span> <span class="va">cset</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="contrasts.html">contrasts</a></span><span class="op">(</span><span class="va">spec</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> === Contrast Set ===</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Overview:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   * Number of contrasts: 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   * Types of contrasts:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     - column_contrast_spec : 1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Individual Contrasts:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] diff (column_contrast_spec)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Formula: </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

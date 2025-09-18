@@ -74,6 +74,36 @@
     <p>An object of the same class as <code>x</code> with subset applied.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Create some sample data</span></span></span>
+<span class="r-in"><span><span class="va">x_vals</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">10</span></span></span>
+<span class="r-in"><span><span class="va">rt_vals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">500</span>, <span class="fl">50</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Create different basis objects</span></span></span>
+<span class="r-in"><span><span class="va">poly_basis</span> <span class="op">&lt;-</span> <span class="fu"><a href="Poly.html">Poly</a></span><span class="op">(</span><span class="va">x_vals</span>, degree <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">scale_basis</span> <span class="op">&lt;-</span> <span class="fu"><a href="Scale.html">Scale</a></span><span class="op">(</span><span class="va">rt_vals</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">bspline_basis</span> <span class="op">&lt;-</span> <span class="fu"><a href="BSpline.html">BSpline</a></span><span class="op">(</span><span class="va">x_vals</span>, degree <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Subset with integer indices</span></span></span>
+<span class="r-in"><span><span class="va">poly_sub</span> <span class="op">&lt;-</span> <span class="fu">sub_basis</span><span class="op">(</span><span class="va">poly_basis</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">scale_sub</span> <span class="op">&lt;-</span> <span class="fu">sub_basis</span><span class="op">(</span><span class="va">scale_basis</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">3</span>, <span class="fl">5</span>, <span class="fl">7</span>, <span class="fl">9</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Subset with logical indices</span></span></span>
+<span class="r-in"><span><span class="va">logical_idx</span> <span class="op">&lt;-</span> <span class="va">x_vals</span> <span class="op">&lt;=</span> <span class="fl">5</span></span></span>
+<span class="r-in"><span><span class="va">bspline_sub</span> <span class="op">&lt;-</span> <span class="fu">sub_basis</span><span class="op">(</span><span class="va">bspline_basis</span>, <span class="va">logical_idx</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Check dimensions</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">poly_basis</span><span class="op">$</span><span class="va">y</span><span class="op">)</span>  <span class="co"># 10</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 10</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">poly_sub</span><span class="op">$</span><span class="va">y</span><span class="op">)</span>    <span class="co"># 5</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 5</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">scale_sub</span><span class="op">$</span><span class="va">y</span><span class="op">)</span>   <span class="co"># 5</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 5</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">bspline_sub</span><span class="op">$</span><span class="va">y</span><span class="op">)</span> <span class="co"># 5</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 5</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

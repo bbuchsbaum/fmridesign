@@ -84,6 +84,94 @@ trialwise columns (useful as a conventional main effect).</p></dd>
 <p></p><div class="sourceCode"><pre><code><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>onset <span class="sc">~</span> <span class="fu">trialwise</span>(<span class="at">basis =</span> <span class="st">"spmg1"</span>, <span class="at">add_sum =</span> <span class="cn">TRUE</span>)</span></code></pre><p></p></div>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Create example trial data for beta-series analysis</span></span></span>
+<span class="r-in"><span><span class="va">trial_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">8</span>, <span class="fl">14</span>, <span class="fl">20</span>, <span class="fl">26</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  run <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Create sampling frame (30 TRs, TR=2s)</span></span></span>
+<span class="r-in"><span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu">fmrihrf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">30</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Basic trialwise model - creates one regressor per trial</span></span></span>
+<span class="r-in"><span><span class="va">emod_trials</span> <span class="op">&lt;-</span> <span class="fu"><a href="event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu">trialwise</span><span class="op">(</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                          data <span class="op">=</span> <span class="va">trial_data</span>,</span></span>
+<span class="r-in"><span>                          block <span class="op">=</span> <span class="op">~</span><span class="va">run</span>,</span></span>
+<span class="r-in"><span>                          sampling_frame <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emod_trials</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">fMRI Event Model</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────────</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Number of Terms:</span> 1</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Number of Events:</span> 5</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Number of Blocks:</span> 1</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Total Scans:</span> 30</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Design Matrix Dimensions:</span> 30 x 5</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ── <span style="font-weight: bold;">Terms</span> ──</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> • <span style="color: #00BB00;">trial</span> (<span style="color: #0000BB;">&lt;event_term&gt;</span>)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ── <span style="font-weight: bold;">Design Matrix Preview</span> ──</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           trial_.trial_factor.length.onsets...1</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.000                              </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   0.048                              </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   1.073                              </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           trial_.trial_factor.length.onsets...2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.000                              </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   0.000                              </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   0.000                              </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           trial_.trial_factor.length.onsets...3</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.000                              </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   0.000                              </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   0.000                              </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           trial_.trial_factor.length.onsets...4</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.000                              </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   0.000                              </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   0.000                              </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #B2B2B2;">...</span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Trialwise with different basis and grand mean</span></span></span>
+<span class="r-in"><span><span class="va">emod_trials_mean</span> <span class="op">&lt;-</span> <span class="fu"><a href="event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu">trialwise</span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"spmg2"</span>, add_sum <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                               data <span class="op">=</span> <span class="va">trial_data</span>,</span></span>
+<span class="r-in"><span>                               block <span class="op">=</span> <span class="op">~</span><span class="va">run</span>,</span></span>
+<span class="r-in"><span>                               sampling_frame <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emod_trials_mean</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">fMRI Event Model</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────────</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Number of Terms:</span> 1</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Number of Events:</span> 5</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Number of Blocks:</span> 1</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Total Scans:</span> 30</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Design Matrix Dimensions:</span> 30 x 11</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ── <span style="font-weight: bold;">Terms</span> ──</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> • <span style="color: #00BB00;">trial</span> (<span style="color: #0000BB;">&lt;event_term&gt;</span>)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ── <span style="font-weight: bold;">Design Matrix Preview</span> ──</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           trial_.trial_factor.length.onsets...1_b01</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.000                                  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   0.048                                  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   1.073                                  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           trial_.trial_factor.length.onsets...2_b01</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.000                                  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   0.162                                  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   0.654                                  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           trial_.trial_factor.length.onsets...3_b01</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.000                                  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   0.000                                  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   0.000                                  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           trial_.trial_factor.length.onsets...4_b01</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.000                                  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   0.000                                  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   0.000                                  </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #B2B2B2;">...</span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

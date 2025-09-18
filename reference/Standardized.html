@@ -70,6 +70,24 @@ The returned basis matrix has one column with this standardized name.</p>
     <p>an instance of class <code>Standardized</code> extending <code>ParametricBasis</code></p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Standardize a numeric vector</span></span></span>
+<span class="r-in"><span><span class="va">x_vals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">20</span>, <span class="fl">30</span>, <span class="fl">40</span>, <span class="fl">50</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">std_basis</span> <span class="op">&lt;-</span> <span class="fu">Standardized</span><span class="op">(</span><span class="va">x_vals</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">std_basis</span><span class="op">$</span><span class="va">y</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      std_x_vals</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] -1.2649111</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.6324555</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]  0.0000000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [4,]  0.6324555</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [5,]  1.2649111</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">std_basis</span><span class="op">$</span><span class="va">mean</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 30</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">std_basis</span><span class="op">$</span><span class="va">sd</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 15.81139</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

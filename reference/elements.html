@@ -80,6 +80,46 @@ or "labels" for descriptive labels/names.</p></dd>
     <p>Requested elements; structure depends on method (e.g., numeric values or labels).</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Create an event term with mixed categorical and continuous events</span></span></span>
+<span class="r-in"><span><span class="va">term</span> <span class="op">&lt;-</span> <span class="fu"><a href="event_term.html">event_term</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    condition <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"A"</span>, <span class="st">"B"</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    intensity <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.2</span>, <span class="fl">0.8</span>, <span class="fl">1.5</span>, <span class="fl">0.9</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span>,</span></span>
+<span class="r-in"><span>  onsets <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">10</span>, <span class="fl">20</span>, <span class="fl">30</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  blockids <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Extract values (actual numeric/factor codes)</span></span></span>
+<span class="r-in"><span><span class="fu">elements</span><span class="op">(</span><span class="va">term</span>, what <span class="op">=</span> <span class="st">"values"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $condition</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      condition</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]         1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,]         2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]         1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [4,]         2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $intensity</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      intensity</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]       1.2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,]       0.8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]       1.5</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [4,]       0.9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Extract labels (descriptive names/levels)</span></span></span>
+<span class="r-in"><span><span class="fu">elements</span><span class="op">(</span><span class="va">term</span>, what <span class="op">=</span> <span class="st">"labels"</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $condition</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] A B A B</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Levels: A B</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $intensity</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "intensity" "intensity" "intensity" "intensity"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

@@ -80,6 +80,36 @@
     <p>A list of onset vectors, one per block (unless <code>global=TRUE</code>).</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Create an event term with mixed conditions across blocks</span></span></span>
+<span class="r-in"><span><span class="va">conditions</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"A"</span>, <span class="st">"B"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5</span>, <span class="fl">15</span>, <span class="fl">25</span>, <span class="fl">105</span>, <span class="fl">115</span>, <span class="fl">125</span><span class="op">)</span>  <span class="co"># Events in blocks 1 and 2</span></span></span>
+<span class="r-in"><span><span class="va">blockids</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">term</span> <span class="op">&lt;-</span> <span class="fu"><a href="event_term.html">event_term</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>condition <span class="op">=</span> <span class="va">conditions</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  onsets <span class="op">=</span> <span class="va">onsets</span>,</span></span>
+<span class="r-in"><span>  blockids <span class="op">=</span> <span class="va">blockids</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Create sampling frame for two blocks of 50 TRs each</span></span></span>
+<span class="r-in"><span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu">fmrihrf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">50</span>, <span class="fl">50</span><span class="op">)</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Split onsets by condition (default behavior)</span></span></span>
+<span class="r-in"><span><span class="va">onset_list</span> <span class="op">&lt;-</span> <span class="fu">split_onsets</span><span class="op">(</span><span class="va">term</span>, <span class="va">sframe</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">onset_list</span><span class="op">)</span>  <span class="co"># Shows condition names</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "condition.A" "condition.B"</span>
+<span class="r-in"><span><span class="va">onset_list</span><span class="op">$</span><span class="va">condition.A</span>  <span class="co"># Onsets for condition A</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1]   5  25 115</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Split with global timing (onsets relative to start of experiment)</span></span></span>
+<span class="r-in"><span><span class="va">global_onsets</span> <span class="op">&lt;-</span> <span class="fu">split_onsets</span><span class="op">(</span><span class="va">term</span>, <span class="va">sframe</span>, global <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Split by both condition and block</span></span></span>
+<span class="r-in"><span><span class="va">block_split</span> <span class="op">&lt;-</span> <span class="fu">split_onsets</span><span class="op">(</span><span class="va">term</span>, <span class="va">sframe</span>, blocksplit <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

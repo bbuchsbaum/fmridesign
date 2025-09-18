@@ -1,7 +1,6 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/404.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/CLAUDE.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmridesign/PACKAGE_STATUS.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/articles/a_01_introduction.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/articles/a_03_baseline_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/articles/a_04_event_models.html</loc></url>
@@ -25,6 +24,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/cells.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/check_collinearity.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/column_groups_by_condition.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/columns.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/condition_basis_list.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/conditions.html</loc></url>
@@ -46,11 +46,11 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_map.event_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_map.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/dot-correlation_map_common.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/dot-fmridesign_extensions.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/dot-trial_factor.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/elements.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/event_basis.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/event_conditions.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/event_factor.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/event_matrix.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/event_model.html</loc></url>
@@ -58,6 +58,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/event_term.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/event_terms.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/event_variable.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/events.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/feature_suffix.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-reexports.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/get_all_external_hrf_functions.html</loc></url>
