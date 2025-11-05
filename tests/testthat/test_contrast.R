@@ -415,3 +415,484 @@ test_that("poly_contrast respects where clause", {
   expect_equal(as.vector(cw$weights[idx_A,1]), poly_vals)
   expect_true(all(cw$weights[idx_B,1] == 0))
 })
+
+# ====================================================================
+# Basis filtering tests
+# ====================================================================
+
+test_that("pair_contrast with basis filtering - single basis", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B", "C"), 10),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Test filtering to basis 1 only
+  con <- pair_contrast(~ condition == "A", ~ condition == "B", basis = 1, name = "A_vs_B_b1")
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+
+  # Should only have basis 1 conditions
+  expect_true(all(grepl("_b01$", cw$condnames)))
+  expect_equal(length(cw$condnames), 3)  # A_b01, B_b01, C_b01
+
+  # Check that weights are non-zero only for A_b01 and B_b01
+  wvec <- as.vector(cw$weights)
+  nonzero_idx <- which(wvec != 0)
+  expect_equal(length(nonzero_idx), 2)
+  expect_equal(wvec[grepl("condition\\.A_b01", rownames(cw$weights))], 1)
+  expect_equal(wvec[grepl("condition\\.B_b01", rownames(cw$weights))], -1)
+})
+
+test_that("pair_contrast with basis filtering - multiple basis", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("Face", "Scene"), 15),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Test filtering to basis 2-3
+  con <- pair_contrast(~ condition == "Face", ~ condition == "Scene",
+                      basis = 2:3, name = "Face_vs_Scene_b23")
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+
+  # Should only have basis 2 and 3 conditions
+  expect_true(all(grepl("_b0[23]$", cw$condnames)))
+  expect_equal(length(cw$condnames), 4)  # Face_b02, Scene_b02, Face_b03, Scene_b03
+
+  # Check non-zero weights
+  wvec <- as.vector(cw$weights)
+  nonzero_idx <- which(wvec != 0)
+  expect_equal(length(nonzero_idx), 4)  # 2 conditions × 2 basis functions
+})
+
+test_that("oneway_contrast with basis filtering", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B", "C"), 10),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Test oneway with basis 1 only
+  con <- oneway_contrast(~ condition, basis = 1, name = "Main_b1")
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+
+  # Should only have basis 1 conditions
+  expect_true(all(grepl("_b01$", cw$condnames)))
+  expect_equal(length(cw$condnames), 3)  # A_b01, B_b01, C_b01
+
+  # Oneway produces F-contrast, so check matrix dimensions
+  expect_equal(nrow(cw$weights), 15)  # Total expanded conditions
+  expect_equal(ncol(cw$weights), 2)   # Degrees of freedom for 3-level factor
+
+  # Check that non-zero weights are only in basis 1 rows
+  nonzero_rows <- apply(cw$weights, 1, function(x) any(x != 0))
+  nonzero_conds <- rownames(cw$weights)[nonzero_rows]
+  expect_true(all(grepl("_b01$", nonzero_conds)))
+})
+
+test_that("oneway_contrast with basis filtering - multiple basis", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B", "C"), 10),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Test oneway with basis 1-3 (early response)
+  con <- oneway_contrast(~ condition, basis = 1:3, name = "Main_early")
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+
+  # Should have basis 1, 2, and 3 conditions
+  expect_true(all(grepl("_b0[123]$", cw$condnames)))
+  expect_equal(length(cw$condnames), 9)  # 3 conditions × 3 basis functions
+})
+
+test_that("poly_contrast with basis filtering", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    intensity = rep(c("low", "medium", "high"), 10),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(intensity, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Test poly with basis 1 only
+  con <- poly_contrast(~ intensity, degree = 1, basis = 1,
+                      value_map = list(low = 1, medium = 2, high = 3),
+                      name = "Linear_b1")
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+
+  # Should only have basis 1 conditions
+  expect_true(all(grepl("_b01$", cw$condnames)))
+  expect_equal(length(cw$condnames), 3)  # low_b01, medium_b01, high_b01
+
+  # Check polynomial weights are applied correctly
+  nonzero_rows <- apply(cw$weights, 1, function(x) any(x != 0))
+  nonzero_conds <- rownames(cw$weights)[nonzero_rows]
+  expect_true(all(grepl("_b01$", nonzero_conds)))
+})
+
+test_that("basis filtering with FIR HRF", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B"), 15),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "fir", nbasis = 10),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Test filtering to peak response window (bins 3-5)
+  con <- pair_contrast(~ condition == "A", ~ condition == "B",
+                      basis = 3:5, name = "A_vs_B_peak")
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+
+  # Should only have basis 3, 4, 5 conditions
+  expect_true(all(grepl("_b0[345]$", cw$condnames)))
+  expect_equal(length(cw$condnames), 6)  # 2 conditions × 3 basis functions
+})
+
+test_that("basis filtering handles edge cases", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B"), 15),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+
+  # Test with basis = NULL (should use all basis functions)
+  espec_multi <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                            data = des, block = ~run, sampling_frame = sframe)
+  con_null <- pair_contrast(~ condition == "A", ~ condition == "B",
+                           basis = NULL, name = "A_vs_B_all")
+  term2 <- terms(espec_multi)[[1]]
+  cw_null <- contrast_weights(con_null, term2)
+
+  # Should have all 10 conditions (2 conditions × 5 basis)
+  expect_equal(length(cw_null$condnames), 10)
+
+  # Test with basis = "all" (should use all basis functions)
+  con_all <- pair_contrast(~ condition == "A", ~ condition == "B",
+                          basis = "all", name = "A_vs_B_all2")
+  cw_all <- contrast_weights(con_all, term2)
+  expect_equal(length(cw_all$condnames), 10)
+})
+
+test_that("basis filtering validates input", {
+  # Test invalid basis index (negative)
+  expect_error(
+    pair_contrast(~ condition == "A", ~ condition == "B",
+                 basis = -1, name = "invalid"),
+    "basis must be NULL, 'all', or a positive integer vector"
+  )
+
+  # Test invalid basis type (not numeric)
+  expect_error(
+    pair_contrast(~ condition == "A", ~ condition == "B",
+                 basis = "invalid", name = "invalid"),
+    "basis must be NULL, 'all', or a positive integer vector"
+  )
+
+  # Test that basis indices beyond nbasis are caught at weight computation time
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B"), 15),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Basis index 10 is beyond nbasis=5, so it should throw an error
+  con <- pair_contrast(~ condition == "A", ~ condition == "B",
+                      basis = 10, name = "invalid_index")
+  term1 <- terms(espec)[[1]]
+
+  # This should generate an error about basis index being beyond nbasis
+  expect_error(
+    cw <- contrast_weights(con, term1),
+    "basis must be NULL, 'all', or integer vector with values in 1:5"
+  )
+})
+
+test_that("basis filtering preserves sum-to-zero property", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B"), 15),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Test that filtered weights still sum to zero
+  con <- pair_contrast(~ condition == "A", ~ condition == "B",
+                      basis = 2:4, name = "A_vs_B_mid")
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+
+  # For pair_contrast, weights should sum to zero
+  expect_equal(sum(cw$weights), 0, tolerance = 1e-8)
+
+  # Check only non-zero weights (filtered basis functions)
+  nonzero_weights <- cw$weights[cw$weights != 0]
+  expect_equal(sum(nonzero_weights), 0, tolerance = 1e-8)
+})
+
+# ====================================================================
+# Tests for basis_weights functionality
+# ====================================================================
+
+test_that("pair_contrast with basis_weights - basic functionality", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B", "C"), 10),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Test with Gaussian-like weighting emphasizing middle basis
+  con <- pair_contrast(~ condition == "A", ~ condition == "B",
+                      basis = 1:3,
+                      basis_weights = c(0.1, 0.8, 0.1),
+                      name = "A_vs_B_weighted")
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+
+  # Should have filtered to 3 basis functions for each condition
+  expect_true(all(grepl("_b0[123]$", cw$condnames)))
+  expect_equal(length(cw$condnames), 9)  # 3 conditions × 3 bases
+
+  # Weights should still sum to zero (contrast property)
+  expect_equal(sum(cw$weights), 0, tolerance = 1e-8)
+
+  # Check that basis 2 has higher weight magnitude than basis 1 and 3
+  # Extract weights for condition A (note: rownames use "condition.A" with dot)
+  A_b01_weight <- abs(cw$weights[rownames(cw$weights) == "condition.A_b01", 1])
+  A_b02_weight <- abs(cw$weights[rownames(cw$weights) == "condition.A_b02", 1])
+  A_b03_weight <- abs(cw$weights[rownames(cw$weights) == "condition.A_b03", 1])
+
+  # Verify that the weighted basis 2 has the highest magnitude
+  expect_true(A_b02_weight > A_b01_weight,
+              info = sprintf("b02 (%.4f) should be > b01 (%.4f)", A_b02_weight, A_b01_weight))
+  expect_true(A_b02_weight > A_b03_weight,
+              info = sprintf("b02 (%.4f) should be > b03 (%.4f)", A_b02_weight, A_b03_weight))
+
+  # The ratio should be approximately 0.1 : 0.8 : 0.1 = 1 : 8 : 1
+  expect_equal(A_b02_weight / A_b01_weight, 8, tolerance = 0.1)
+  expect_equal(A_b02_weight / A_b03_weight, 8, tolerance = 0.1)
+})
+
+test_that("basis_weights auto-normalization with warning", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B"), 15),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Weights that sum to 2 should trigger normalization warning
+  con <- pair_contrast(~ condition == "A", ~ condition == "B",
+                      basis = 1:2,
+                      basis_weights = c(1, 1),
+                      name = "A_vs_B_norm")
+  term1 <- terms(espec)[[1]]
+
+  expect_warning(
+    cw <- contrast_weights(con, term1),
+    "basis_weights sum to 2.000000, normalizing to sum to 1.0"
+  )
+
+  # After normalization, should work correctly
+  expect_equal(sum(cw$weights), 0, tolerance = 1e-8)
+})
+
+test_that("basis_weights validation - length mismatch", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B"), 15),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # 3 bases selected but only 2 weights provided
+  con <- pair_contrast(~ condition == "A", ~ condition == "B",
+                      basis = 1:3,
+                      basis_weights = c(0.5, 0.5),
+                      name = "A_vs_B_mismatch")
+  term1 <- terms(espec)[[1]]
+
+  expect_error(
+    cw <- contrast_weights(con, term1),
+    "basis_weights length \\(2\\) must match number of selected basis functions \\(3\\)"
+  )
+})
+
+test_that("basis_weights validation - negative weights", {
+  # Should fail at construction time
+  expect_error(
+    pair_contrast(~ condition == "A", ~ condition == "B",
+                 basis = 1:2,
+                 basis_weights = c(0.5, -0.5),
+                 name = "A_vs_B_neg"),
+    "basis_weights must be non-negative"
+  )
+})
+
+test_that("basis_weights validation - NA values", {
+  # Should fail at construction time
+  expect_error(
+    pair_contrast(~ condition == "A", ~ condition == "B",
+                 basis = 1:2,
+                 basis_weights = c(0.5, NA),
+                 name = "A_vs_B_na"),
+    "basis_weights must be a numeric vector without NAs"
+  )
+})
+
+test_that("basis_weights validation - non-numeric", {
+  # Should fail at construction time
+  expect_error(
+    pair_contrast(~ condition == "A", ~ condition == "B",
+                 basis = 1:2,
+                 basis_weights = c("0.5", "0.5"),
+                 name = "A_vs_B_char"),
+    "basis_weights must be a numeric vector without NAs"
+  )
+})
+
+test_that("oneway_contrast with basis_weights", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B", "C"), 10),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Test with weighted early response
+  con <- oneway_contrast(~ condition,
+                        basis = 1:3,
+                        basis_weights = c(0.5, 0.3, 0.2),
+                        name = "Main_weighted")
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+
+  # Should filter to 3 bases per condition
+  expect_true(all(grepl("_b0[123]$", cw$condnames)))
+  expect_equal(length(cw$condnames), 9)  # 3 conditions × 3 bases
+
+  # This is an F-contrast, so multiple columns
+  expect_equal(ncol(cw$weights), 2)  # 3 conditions - 1 = 2 df
+})
+
+test_that("poly_contrast with basis_weights", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    intensity = rep(c("low", "med", "high"), 10),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(intensity, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Test linear trend with weighted bases
+  con <- poly_contrast(~ intensity,
+                      degree = 1,
+                      value_map = list(low = 1, med = 2, high = 3),
+                      basis = 1:2,
+                      basis_weights = c(0.7, 0.3),
+                      name = "Linear_weighted")
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+
+  # Should filter to 2 bases per level
+  expect_true(all(grepl("_b0[12]$", cw$condnames)))
+  expect_equal(length(cw$condnames), 6)  # 3 levels × 2 bases
+
+  # Polynomial contrast returns single column
+  expect_equal(ncol(cw$weights), 1)
+})
+
+test_that("basis_weights with basis = NULL (all bases)", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B"), 15),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # When basis = NULL, basis_weights should apply to all 5 bases
+  con <- pair_contrast(~ condition == "A", ~ condition == "B",
+                      basis = NULL,
+                      basis_weights = c(0.1, 0.2, 0.3, 0.25, 0.15),
+                      name = "A_vs_B_all_weighted")
+  term1 <- terms(espec)[[1]]
+  cw <- contrast_weights(con, term1)
+
+  # Should have all 5 bases (2 conditions × 5 bases = 10)
+  expect_equal(length(cw$condnames), 10)  # 2 conditions × 5 bases
+  expect_true(any(grepl("_b05$", cw$condnames)))
+})
+
+test_that("basis_weights preserves sum-to-zero property", {
+  des <- data.frame(
+    onset = seq(2, 120, by = 4),
+    condition = rep(c("A", "B", "C", "D"), length.out = 30),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                      data = des, block = ~run, sampling_frame = sframe)
+
+  # Test with various weight patterns
+  weight_patterns <- list(
+    c(0.2, 0.8),           # Emphasize late
+    c(0.9, 0.1),           # Emphasize early
+    c(0.33, 0.34, 0.33),   # Uniform-ish
+    c(0.1, 0.6, 0.3)       # Middle emphasis
+  )
+
+  for (i in seq_along(weight_patterns)) {
+    weights <- weight_patterns[[i]]
+    basis_sel <- seq_along(weights)
+
+    con <- pair_contrast(~ condition == "A", ~ condition == "B",
+                        basis = basis_sel,
+                        basis_weights = weights,
+                        name = paste0("test_", i))
+    term1 <- terms(espec)[[1]]
+    cw <- contrast_weights(con, term1)
+
+    # Sum-to-zero property must hold
+    expect_equal(sum(cw$weights), 0, tolerance = 1e-8,
+                info = paste("Pattern", i, "failed sum-to-zero"))
+  }
+})

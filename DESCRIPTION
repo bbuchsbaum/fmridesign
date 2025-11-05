@@ -40,7 +40,7 @@ Remotes:
 VignetteBuilder: knitr
 URL: https://github.com/bbuchsbaum/fmridesign, https://bbuchsbaum.github.io/fmridesign/
 BugReports: https://github.com/bbuchsbaum/fmridesign/issues
-RoxygenNote: 7.3.2.9000
+RoxygenNote: 7.3.3
 Roxygen: list(markdown = TRUE)
 Collate: 
     'baseline_model.R'
@@ -48,6 +48,7 @@ Collate:
     'condition_basis_list.R'
     'contrast.R'
     'covariate.R'
+    'design_colmap.R'
     'design_generics.R'
     'design_map.R'
     'utils-internal.R'
@@ -62,4 +63,5 @@ Collate:
     'hrf-formula.R'
     'namespace-imports.R'
     'naming-utils.R'
+    'residualize.R'
     'validate.R'

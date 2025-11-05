@@ -4,7 +4,7 @@
 \alias{oneway_contrast}
 \title{One-way Contrast}
 \usage{
-oneway_contrast(A, name, where = NULL)
+oneway_contrast(A, name, where = NULL, basis = NULL, basis_weights = NULL)
 }
 \arguments{
 \item{A}{A formula specifying the contrast}
@@ -12,6 +12,14 @@ oneway_contrast(A, name, where = NULL)
 \item{name}{The name of the contrast}
 
 \item{where}{An optional formula specifying the subset over which the contrast is computed.}
+
+\item{basis}{NULL (default: use all basis functions), an integer vector specifying
+which basis function indices to include, or \code{"all"}. See \code{\link{pair_contrast}}
+for details on basis filtering.}
+
+\item{basis_weights}{NULL (default: equal weights), or a numeric vector of weights to apply
+to the selected basis functions. Must have the same length as \code{basis} selection and will
+be normalized to sum to 1. See \code{\link{pair_contrast}} for details on basis weighting.}
 }
 \value{
 A oneway_contrast_spec object that can be used to generate contrast weights
@@ -26,6 +34,9 @@ con <- oneway_contrast(~ basis, name = "Main_basis")
 # Create a one-way contrast with a 'where' clause
 con <- oneway_contrast(~ basis, name = "Main_basis",
                       where = ~ block == 1)
+
+# Test only first two basis functions
+con <- oneway_contrast(~ condition, name = "Main_early", basis = 1:2)
 
 }
 \seealso{

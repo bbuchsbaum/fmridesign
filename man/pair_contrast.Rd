@@ -4,7 +4,7 @@
 \alias{pair_contrast}
 \title{Pair Contrast}
 \usage{
-pair_contrast(A, B, name, where = NULL)
+pair_contrast(A, B, name, where = NULL, basis = NULL, basis_weights = NULL)
 }
 \arguments{
 \item{A}{A formula representing the first logical expression in the contrast.}
@@ -14,12 +14,24 @@ pair_contrast(A, B, name, where = NULL)
 \item{name}{A character string specifying the name of the contrast (mandatory).}
 
 \item{where}{An optional formula specifying the subset over which the contrast is computed.}
+
+\item{basis}{NULL (default: use all basis functions), an integer vector specifying
+which basis function indices to include (e.g., \code{1}, \code{2:3}, \code{c(1,3)}), or \code{"all"}.
+Only relevant when the HRF uses multiple basis functions (e.g., bspline, FIR, Fourier).
+Basis indices are 1-based (1 = first basis function, 2 = second, etc.).}
+
+\item{basis_weights}{NULL (default: equal weights), or a numeric vector of weights to apply
+to the selected basis functions. Must have the same length as \code{basis} selection and will
+be normalized to sum to 1. Use this to emphasize specific temporal components (e.g.,
+\code{c(.1, .2, .4, .2, .1)} for Gaussian-like weighting emphasizing the peak).}
 }
 \value{
 A pair_contrast_spec object containing:
 \item{A}{First logical expression}
 \item{B}{Second logical expression}
 \item{where}{Subsetting formula (if provided)}
+\item{basis}{Basis function specification (if provided)}
+\item{basis_weights}{Basis weights (if provided)}
 \item{name}{Contrast name}
 }
 \description{
@@ -29,10 +41,33 @@ particularly useful for comparing specific conditions or combinations of conditi
 \details{
 The contrast is constructed as (A - B), where A and B are logical expressions that
 evaluate to TRUE/FALSE for each observation. The resulting contrast weights sum to zero.
+
+When using multi-basis HRFs (e.g., bspline with 5 basis functions), the \code{basis} argument
+allows you to test specific temporal components of the response. For example:
+\itemize{
+\item{\code{basis = 1}}: Test only the first basis function (often the canonical/early response)
+\item{\code{basis = 2:3}}: Test the second and third basis functions together
+\item{\code{basis = NULL} or \code{basis = "all"}}: Test all basis functions (default behavior)
+}
+
+The \code{basis_weights} argument allows non-uniform weighting across selected basis functions:
+\itemize{
+\item{\code{basis_weights = c(.1, .2, .4, .2, .1)}}: Gaussian-like emphasis on peak
+\item{\code{basis_weights = c(1, 0, 0, 0, 0)}}: Isolate first basis (equivalent to \code{basis = 1})
+\item{Weights are applied within each condition, maintaining contrast sum-to-zero property}
+}
 }
 \examples{
-# Compare faces vs scenes
+# Compare faces vs scenes (all basis functions)
 pair_contrast(~ category == "face", ~ category == "scene", name = "face_vs_scene")
+
+# Test only the second basis function (e.g., linear component for polynomial HRF)
+pair_contrast(~ category == "face", ~ category == "scene",
+             basis = 2, name = "face_vs_scene_basis2")
+
+# Test early response components (first 3 basis functions)
+pair_contrast(~ category == "face", ~ category == "scene",
+             basis = 1:3, name = "face_vs_scene_early")
 
 # Compare with subsetting
 pair_contrast(~ category == "face", ~ category == "scene",

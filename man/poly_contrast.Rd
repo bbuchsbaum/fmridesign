@@ -4,7 +4,15 @@
 \alias{poly_contrast}
 \title{Polynomial Contrast}
 \usage{
-poly_contrast(A, name, where = NULL, degree = 1, value_map = NULL)
+poly_contrast(
+  A,
+  name,
+  where = NULL,
+  degree = 1,
+  value_map = NULL,
+  basis = NULL,
+  basis_weights = NULL
+)
 }
 \arguments{
 \item{A}{A formula specifying the ordered factor.}
@@ -16,6 +24,14 @@ poly_contrast(A, name, where = NULL, degree = 1, value_map = NULL)
 \item{degree}{An integer specifying the degree of the polynomial (default: 1).}
 
 \item{value_map}{An optional list mapping factor levels to numeric values.}
+
+\item{basis}{NULL (default: use all basis functions), an integer vector specifying
+which basis function indices to include, or \code{"all"}. See \code{\link{pair_contrast}}
+for details on basis filtering.}
+
+\item{basis_weights}{NULL (default: equal weights), or a numeric vector of weights to apply
+to the selected basis functions. Must have the same length as \code{basis} selection and will
+be normalized to sum to 1. See \code{\link{pair_contrast}} for details on basis weighting.}
 }
 \value{
 A poly_contrast_spec object containing the specification for generating
@@ -38,6 +54,10 @@ pcon <- poly_contrast(~ time, name = "linear_time", degree = 1)
 pcon <- poly_contrast(~ dose, name = "dose_cubic",
                      degree = 3,
                      value_map = list("low" = 0, "med" = 2, "high" = 5))
+
+# Linear trend for only first basis function
+pcon <- poly_contrast(~ dose, name = "dose_linear_basis1",
+                     degree = 1, basis = 1)
 
 }
 \seealso{

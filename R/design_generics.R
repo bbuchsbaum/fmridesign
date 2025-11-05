@@ -563,6 +563,37 @@ correlation_map <- function(x, ...) UseMethod("correlation_map")
 #' @export
 design_map <- function(x, ...) UseMethod("design_map")
 
+#' Residualize Data Against a Design
+#'
+#' Projects the data onto the orthogonal complement of the design, returning
+#' residuals from an OLS fit. Specialized for `event_model`, `baseline_model`,
+#' or a raw numeric design matrix.
+#'
+#' @param x A design object (`event_model`, `baseline_model`) or a numeric matrix (design matrix X).
+#' @param data A numeric vector/matrix/data.frame of observations Y with rows matching `nrow(design_matrix(x))`.
+#' @param cols Optional integer or character vector selecting columns of the design to project out.
+#' @param ... Additional arguments passed to methods.
+#' @return Residuals with the same dimensions as `data`.
+#' @examples
+#' # Simple example with a raw design matrix
+#' X <- cbind(1, 1:5)
+#' Y <- cbind(1:5, 2:6)
+#' R <- residualize(X, Y)
+#' dim(R)
+#' @export
+residualize <- function(x, data, cols = NULL, ...) UseMethod("residualize")
+
+#' Column Metadata Map
+#'
+#' Returns a tibble with one row per column of the design matrix and
+#' structured metadata (term, condition, basis, role, run, etc.).
+#'
+#' @param x An object containing or producing a design matrix (e.g., event_model, baseline_model).
+#' @param ... Additional arguments passed to methods.
+#' @return A tibble with per-column metadata.
+#' @export
+design_colmap <- function(x, ...) UseMethod("design_colmap")
+
 #' Compute F-contrasts
 #' 
 #' @param x The object.
