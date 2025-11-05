@@ -262,26 +262,22 @@ interactions:</p>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">interaction_contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">emodel_factorial</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning: Contrast 'main_A' for term 'A_B' has unmatched row names: A1_B1,</span></span>
-<span><span class="co">#&gt; A2_B1, A1_B2, A2_B2</span></span>
-<span><span class="co">#&gt; Warning: Contrast 'main_B' for term 'A_B' has unmatched row names: A1_B1,</span></span>
-<span><span class="co">#&gt; A2_B1, A1_B2, A2_B2</span></span>
 <span><span class="co">#&gt; Warning: Contrast 'A_by_B' for term 'A_B' has unmatched row names: A1_B1,</span></span>
 <span><span class="co">#&gt; A2_B1, A1_B2, A2_B2</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">interaction_contrasts</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">x</span><span class="op">$</span><span class="va">weights</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; $`A:B#main_A`</span></span>
-<span><span class="co">#&gt;       main_A_1</span></span>
-<span><span class="co">#&gt; A1_B1       -1</span></span>
-<span><span class="co">#&gt; A2_B1        1</span></span>
-<span><span class="co">#&gt; A1_B2       -1</span></span>
-<span><span class="co">#&gt; A2_B2        1</span></span>
+<span><span class="co">#&gt;           main_A_1</span></span>
+<span><span class="co">#&gt; A.A1_B.B1       -1</span></span>
+<span><span class="co">#&gt; A.A2_B.B1        1</span></span>
+<span><span class="co">#&gt; A.A1_B.B2       -1</span></span>
+<span><span class="co">#&gt; A.A2_B.B2        1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $`A:B#main_B`</span></span>
-<span><span class="co">#&gt;       main_B_1</span></span>
-<span><span class="co">#&gt; A1_B1       -1</span></span>
-<span><span class="co">#&gt; A2_B1       -1</span></span>
-<span><span class="co">#&gt; A1_B2        1</span></span>
-<span><span class="co">#&gt; A2_B2        1</span></span>
+<span><span class="co">#&gt;           main_B_1</span></span>
+<span><span class="co">#&gt; A.A1_B.B1       -1</span></span>
+<span><span class="co">#&gt; A.A2_B.B1       -1</span></span>
+<span><span class="co">#&gt; A.A1_B.B2        1</span></span>
+<span><span class="co">#&gt; A.A2_B.B2        1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $`A:B#A_by_B`</span></span>
 <span><span class="co">#&gt;       A_by_B_1</span></span>

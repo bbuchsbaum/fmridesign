@@ -7,6 +7,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/articles/a_05_contrasts.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/articles/index.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/authors.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/fmridesign_cheatsheet_v3.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/index.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/BSpline.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.html</loc></url>
@@ -42,6 +43,8 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.event_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/covariate.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_colmap.event_model.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_colmap.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_map.baseline_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_map.event_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_map.html</loc></url>
@@ -92,6 +95,8 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/register_hrfspec_extension.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/regressors.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/requires_external_processing.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/residualize-methods.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/residualize.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/sanitize.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/shortnames.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/sliding_window_contrasts.html</loc></url>
