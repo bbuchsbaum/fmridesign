@@ -208,17 +208,38 @@ correlation_map.event_model <- function(x, rotate_x_text = TRUE, ...) {
 #' Creates a line plot visualization of the predicted BOLD response for each
 #' regressor in an event_model object.
 #' 
+#' This method attempts to keep labels readable when there are many
+#' regressors (e.g., trial-wise designs) by switching to faceting and either
+#' abbreviating or suppressing labels depending on thresholds. You can control
+#' this behavior via `label_mode`, `max_labels`, and `abbrev_min`.
+#' 
 #' @param x An \code{event_model} object.
 #' @param term_name Character. Name of specific term to plot. If NULL, plots all terms.
+#' @param facet_threshold Integer. Switch to faceting when number of regressors exceeds this value. Default 6.
+#' @param label_mode Character. One of `"auto"`, `"compact"`, `"none"`. In `"auto"` mode
+#'   the method abbreviates labels for moderate counts and suppresses labels entirely
+#'   when they are excessive (> `max_labels`). `"compact"` always abbreviates labels.
+#'   `"none"` suppresses legend and facet strip labels.
+#' @param max_labels Integer. When `label_mode = "auto"` and the number of regressors
+#'   exceeds this value, labels are suppressed. Default 30.
+#' @param abbrev_min Integer. Minimum length used by [base::abbreviate()] when compacting labels. Default 10.
+#' @param strip_text_size Numeric. Strip label text size when faceting with labels. Default 8.
 #' @param ... Additional arguments (currently unused).
 #' 
 #' @return A ggplot2 object showing the predicted BOLD timecourses.
 #' 
-#' @importFrom ggplot2 ggplot aes geom_line facet_wrap labs theme_minimal
+#' @importFrom ggplot2 ggplot aes geom_line facet_wrap labs theme_minimal as_labeller scale_color_discrete
 #' @importFrom tidyr pivot_longer
 #' @method plot event_model
 #' @export
-plot.event_model <- function(x, term_name = NULL, ...) {
+plot.event_model <- function(x,
+                             term_name = NULL,
+                             facet_threshold = 6,
+                             label_mode = c("auto", "compact", "none"),
+                             max_labels = 30,
+                             abbrev_min = 10,
+                             strip_text_size = 8,
+                             ...) {
   # Get the design matrix
   DM <- design_matrix(x)
   
@@ -254,18 +275,47 @@ plot.event_model <- function(x, term_name = NULL, ...) {
   # Ensure proper ordering and grouping for line drawing
   df_long <- df_long[order(df_long$Regressor, df_long$Time), ]
   
+  # Label handling
+  label_mode <- match.arg(label_mode)
+  regs <- unique(df_long$Regressor)
+  n_regressors <- length(regs)
+  use_facets <- n_regressors > facet_threshold
+  
+  # Build label map (possibly compacted)
+  label_map <- stats::setNames(regs, regs)
+  should_compact <- (label_mode == "compact") || (label_mode == "auto" && n_regressors > 8)
+  if (should_compact) {
+    abbr <- base::abbreviate(regs, minlength = abbrev_min)
+    # ensure uniqueness to avoid duplicate facet labels or legend entries
+    abbr <- base::make.unique(abbr, sep = "_")
+    label_map[] <- abbr
+  }
+  
   # Create the plot
   plt <- ggplot(df_long, aes(x = Time, y = Response, color = Regressor, group = Regressor)) +
     geom_line(linewidth = 0.8, na.rm = TRUE) +
     theme_minimal(base_size = 14) +
     labs(x = "Time (seconds)", y = "Predicted Response")
   
-  # If many regressors, use facets
-  n_regressors <- length(unique(df_long$Regressor))
-  if (n_regressors > 6) {
-    plt <- plt + 
-      facet_wrap(~ Regressor, scales = "free_y") +
-      theme(legend.position = "none")
+  if (use_facets) {
+    # Facet by regressor; control labels via labeller and theme
+    if (label_mode == "none" || (label_mode == "auto" && n_regressors > max_labels)) {
+      plt <- plt +
+        ggplot2::facet_wrap(~ Regressor, scales = "free_y") +
+        ggplot2::theme(legend.position = "none", strip.text = ggplot2::element_blank())
+    } else {
+      plt <- plt +
+        ggplot2::facet_wrap(~ Regressor, scales = "free_y", labeller = ggplot2::as_labeller(label_map)) +
+        ggplot2::theme(legend.position = "none", strip.text = ggplot2::element_text(size = strip_text_size))
+    }
+  } else {
+    # Not faceting; show legend unless suppressed
+    if (label_mode == "none" || (label_mode == "auto" && n_regressors > max_labels)) {
+      plt <- plt + ggplot2::theme(legend.position = "none")
+    } else {
+      # Apply compacted labels to legend if requested
+      plt <- plt + ggplot2::scale_color_discrete(labels = function(x) ifelse(x %in% names(label_map), label_map[x], x))
+    }
   }
   
   plt
