@@ -90,43 +90,32 @@ regressors.</p>
 <div class="section level2">
 <h2 id="quick-hrf-primer">Quick HRF Primer<a class="anchor" aria-label="anchor" href="#quick-hrf-primer"></a>
 </h2>
-<p>The Hemodynamic Response Function (HRF) maps brief neural events to
+<p>The hemodynamic response function (HRF) maps brief neural events to
 predicted BOLD signal changes via convolution. In practice,
-<code><a href="../reference/event_model.html">event_model()</a></code> builds a set of regressors by convolving an
-event train with an HRF or HRF basis.</p>
-<ul>
-<li>What it is: a function or basis set describing the BOLD impulse
-response.</li>
-<li>How it’s used: event onsets (and durations) are convolved with the
-HRF to produce regressors for the GLM.</li>
-<li>Canonical vs. bases: single-shape canonical HRFs (e.g., SPMG1)
-vs. multi-basis sets (e.g., SPMG2/3, tent/FIR, B-splines) that allow
-response-shape flexibility.</li>
-<li>Durations: events can be modeled as sticks (0 duration) or boxcars
-(nonzero duration) before convolution, depending on your design.</li>
-<li>Sampling: regressors are generated on the sampling frame defined by
-<code>TR</code> and run lengths; <code>fmrihrf</code> handles
-appropriate interpolation/upsampling where needed.</li>
-<li>Where HRFs live now: HRF definitions, generators, and helpers have
-moved to the <code>fmrihrf</code> package. See <code><a href="../reference/hrf.html">?hrf</a></code>,
-<code>list_available_hrfs()</code>, and <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html" class="external-link">gen_hrf()</a></code> in
-<code>fmrihrf</code> for details.</li>
-</ul>
+<code><a href="../reference/event_model.html">event_model()</a></code> builds task regressors by convolving an event
+train with a chosen HRF or with a set of HRF basis functions.</p>
+<p>An HRF can be a single “canonical” shape (e.g., SPMG1) or a
+multi-basis set that allows the response shape to vary (e.g., SPMG2/3,
+tent/FIR, B‑splines). Multi-basis models produce multiple columns per
+condition, one for each basis function. Designs can use stick functions
+(zero duration) or boxcars (non‑zero duration) before convolution—choose
+this based on your experimental timing.</p>
+<p>HRF definitions and generators live in the <code>fmrihrf</code>
+package. See <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html" class="external-link">fmrihrf::gen_hrf()</a></code> and the built‑in HRFs such
+as <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html" class="external-link">fmrihrf::HRF_SPMG1</a></code>, <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html" class="external-link">fmrihrf::HRF_SPMG2</a></code>,
+<code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html" class="external-link">fmrihrf::HRF_SPMG3</a></code>, <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html" class="external-link">fmrihrf::HRF_GAMMA</a></code>,
+<code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html" class="external-link">fmrihrf::HRF_GAUSSIAN</a></code>, and
+<code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html" class="external-link">fmrihrf::HRF_BSPLINE</a></code> for details.</p>
 <div class="section level3">
-<h3 id="timing-sampling-notes">Timing &amp; Sampling Notes<a class="anchor" aria-label="anchor" href="#timing-sampling-notes"></a>
+<h3 id="timing-and-sampling">Timing and Sampling<a class="anchor" aria-label="anchor" href="#timing-and-sampling"></a>
 </h3>
-<ul>
-<li>
-<code>sampling_frame(TR, blocklens)</code>: defines the time grid
-for your design matrix (rows = scans).</li>
-<li>
-<code>durations</code>: if nonzero, events are boxcars convolved
-with the HRF; the effective sampling uses an internal
-<code>precision</code> for accuracy.</li>
-<li>
-<code>precision</code>: controls oversampling for convolution; lower
-values increase accuracy at the cost of compute.</li>
-</ul>
+<p>The <code>sampling_frame(TR, blocklens)</code> defines the time grid
+for your design (one row per scan, grouped by runs). Regressors are
+generated on this grid. When events have non‑zero duration, the
+convolution uses an internal time step to accurately approximate the
+overlap of events and the HRF; <code>fmrihrf</code> handles
+interpolation/upsampling under the hood so you don’t need to micromanage
+it for typical use cases.</p>
 </div>
 </div>
 <div class="section level2">
@@ -638,20 +627,11 @@ matrix:</p>
 <code>correlation_map</code>: Shows the correlation between
 regressors.</li>
 </ul>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Heatmap of the design matrix for the 2-factor model</span></span>
-<span><span class="fu"><a href="../reference/design_map.html">design_map</a></span><span class="op">(</span><span class="va">emodel_two_factor</span>, rotate_x_text <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Design Matrix Heatmap (Two-Factor Model)"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_04_event_models_files/figure-html/matrix_viz-1.png" class="r-plt" alt="Heatmap visualization of event-model design matrix columns across scans."></p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span></span>
-<span><span class="co"># Correlation map for the same model</span></span>
-<span><span class="fu"><a href="../reference/correlation_map.html">correlation_map</a></span><span class="op">(</span><span class="va">emodel_two_factor</span>, rotate_x_text <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> <span class="op">+</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Regressor Correlation Map (Two-Factor Model)"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_04_event_models_files/figure-html/matrix_viz-2.png" class="r-plt" alt="Heatmap visualization of event-model design matrix columns across scans."></p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span></span>
-<span><span class="co"># The column names in the plots will now reflect the new naming scheme.</span></span></code></pre></div>
+<p><img src="a_04_event_models_files/figure-html/matrix_viz-1.png" class="r-plt" alt="Heatmap visualization of event-model design matrix columns across scans."><img src="a_04_event_models_files/figure-html/matrix_viz-2.png" class="r-plt" alt="Heatmap visualization of event-model design matrix columns across scans."></p>
+<p>Note: Axis labels are hidden above to keep the heatmaps legible with
+many regressors. When exploring smaller models interactively, set
+<code>rotate_x_text = TRUE</code> (and remove the
+<code>theme(...)</code> line) to show labels.</p>
 <p>This <code>event_model</code> represents the task-related part of the
 fMRI model. In practice, you will combine it with a
 <code>baseline_model</code> (drift/intercepts/nuisance) to form a full
@@ -663,7 +643,7 @@ design matrix; downstream GLM fitting happens in analysis packages
 </h2>
 <p>You can attach contrasts directly to <code><a href="../reference/hrf.html">hrf()</a></code> terms. Here
 are two common patterns.</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Pairwise contrast between two stimulus levels</span></span>
 <span><span class="va">con_face_vs_scene</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">stim</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span> <span class="va">stim</span> <span class="op">==</span> <span class="st">"scene"</span>, name <span class="op">=</span> <span class="st">"face_vs_scene"</span><span class="op">)</span></span>
 <span></span>
@@ -694,7 +674,7 @@ are two common patterns.</p>
 </h2>
 <p>To build a full design matrix, bind the event regressors with the
 baseline regressors.</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Baseline model for the same sampling frame</span></span>
 <span><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"poly"</span>, degree <span class="op">=</span> <span class="fl">5</span>, sframe <span class="op">=</span> <span class="va">sframe_two_factor</span><span class="op">)</span></span>
 <span></span>

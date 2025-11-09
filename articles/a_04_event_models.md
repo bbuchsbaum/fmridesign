@@ -21,39 +21,39 @@ programmatic `create_event_model()` function for advanced use cases.
 
 ## Quick HRF Primer
 
-The Hemodynamic Response Function (HRF) maps brief neural events to
+The hemodynamic response function (HRF) maps brief neural events to
 predicted BOLD signal changes via convolution. In practice,
 [`event_model()`](https://bbuchsbaum.github.io/fmridesign/reference/event_model.md)
-builds a set of regressors by convolving an event train with an HRF or
-HRF basis.
+builds task regressors by convolving an event train with a chosen HRF or
+with a set of HRF basis functions.
 
-- What it is: a function or basis set describing the BOLD impulse
-  response.
-- How it’s used: event onsets (and durations) are convolved with the HRF
-  to produce regressors for the GLM.
-- Canonical vs. bases: single-shape canonical HRFs (e.g., SPMG1)
-  vs. multi-basis sets (e.g., SPMG2/3, tent/FIR, B-splines) that allow
-  response-shape flexibility.
-- Durations: events can be modeled as sticks (0 duration) or boxcars
-  (nonzero duration) before convolution, depending on your design.
-- Sampling: regressors are generated on the sampling frame defined by
-  `TR` and run lengths; `fmrihrf` handles appropriate
-  interpolation/upsampling where needed.
-- Where HRFs live now: HRF definitions, generators, and helpers have
-  moved to the `fmrihrf` package. See
-  [`?hrf`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.md),
-  `list_available_hrfs()`, and
-  [`gen_hrf()`](https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html)
-  in `fmrihrf` for details.
+An HRF can be a single “canonical” shape (e.g., SPMG1) or a multi-basis
+set that allows the response shape to vary (e.g., SPMG2/3, tent/FIR,
+B‑splines). Multi-basis models produce multiple columns per condition,
+one for each basis function. Designs can use stick functions (zero
+duration) or boxcars (non‑zero duration) before convolution—choose this
+based on your experimental timing.
 
-### Timing & Sampling Notes
+HRF definitions and generators live in the `fmrihrf` package. See
+[`fmrihrf::gen_hrf()`](https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html)
+and the built‑in HRFs such as
+[`fmrihrf::HRF_SPMG1`](https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html),
+[`fmrihrf::HRF_SPMG2`](https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html),
+[`fmrihrf::HRF_SPMG3`](https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html),
+[`fmrihrf::HRF_GAMMA`](https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html),
+[`fmrihrf::HRF_GAUSSIAN`](https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html),
+and
+[`fmrihrf::HRF_BSPLINE`](https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html)
+for details.
 
-- `sampling_frame(TR, blocklens)`: defines the time grid for your design
-  matrix (rows = scans).
-- `durations`: if nonzero, events are boxcars convolved with the HRF;
-  the effective sampling uses an internal `precision` for accuracy.
-- `precision`: controls oversampling for convolution; lower values
-  increase accuracy at the cost of compute.
+### Timing and Sampling
+
+The `sampling_frame(TR, blocklens)` defines the time grid for your
+design (one row per scan, grouped by runs). Regressors are generated on
+this grid. When events have non‑zero duration, the convolution uses an
+internal time step to accurately approximate the overlap of events and
+the HRF; `fmrihrf` handles interpolation/upsampling under the hood so
+you don’t need to micromanage it for typical use cases.
 
 ## A Simple Single-Factor Design (Single Run)
 
@@ -611,29 +611,15 @@ Two functions help visualize the structure of the event design matrix:
 - `design_map`: Shows the matrix values as a heatmap.
 - `correlation_map`: Shows the correlation between regressors.
 
-``` r
-# Heatmap of the design matrix for the 2-factor model
-design_map(emodel_two_factor, rotate_x_text = TRUE) +
-  labs(title = "Design Matrix Heatmap (Two-Factor Model)")
-```
-
 ![Heatmap visualization of event-model design matrix columns across
-scans.](a_04_event_models_files/figure-html/matrix_viz-1.png)
-
-``` r
-
-# Correlation map for the same model
-correlation_map(emodel_two_factor, rotate_x_text = TRUE) +
-  labs(title = "Regressor Correlation Map (Two-Factor Model)")
-```
-
-![Heatmap visualization of event-model design matrix columns across
+scans.](a_04_event_models_files/figure-html/matrix_viz-1.png)![Heatmap
+visualization of event-model design matrix columns across
 scans.](a_04_event_models_files/figure-html/matrix_viz-2.png)
 
-``` r
-
-# The column names in the plots will now reflect the new naming scheme.
-```
+Note: Axis labels are hidden above to keep the heatmaps legible with
+many regressors. When exploring smaller models interactively, set
+`rotate_x_text = TRUE` (and remove the `theme(...)` line) to show
+labels.
 
 This `event_model` represents the task-related part of the fMRI model.
 In practice, you will combine it with a `baseline_model`

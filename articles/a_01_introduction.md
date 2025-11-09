@@ -116,36 +116,20 @@ data:
 # Single run: 200 scans, TR = 2 seconds
 sframe_single <- sampling_frame(blocklens = 200, TR = 2)
 print(sframe_single)
-#> Sampling Frame
-#> ==============
-#> 
-#> Structure:
-#>   1 block
-#>   Total scans: 200
-#> 
-#> Timing:
-#>   TR: 2 s
-#>   Precision: 0.1 s
-#> 
-#> Duration:
-#>   Total time: 400.0 s
+#> Sampling frame
+#> - Blocks: 1 
+#> - Scans: 200 (per block: 200 )
+#> - TR: 2 s
+#> - Duration: 399 s
 
 # Multiple runs: 3 runs with different lengths
 sframe_multi <- sampling_frame(blocklens = c(150, 200, 150), TR = 2)
 print(sframe_multi)
-#> Sampling Frame
-#> ==============
-#> 
-#> Structure:
-#>   3 blocks
-#>   Total scans: 500
-#> 
-#> Timing:
-#>   TR: 2 s
-#>   Precision: 0.1 s
-#> 
-#> Duration:
-#>   Total time: 1000.0 s
+#> Sampling frame
+#> - Blocks: 3 
+#> - Scans: 500 (per block: 150, 200, 150 )
+#> - TR: 2 s
+#> - Duration: 999 s
 ```
 
 ### Event Specification

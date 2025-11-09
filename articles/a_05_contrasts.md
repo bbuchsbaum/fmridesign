@@ -70,13 +70,16 @@ contrast_weights(emodel_with_contrast)
 Validate all attached contrasts for a model in one call:
 
 ``` r
-validate_contrasts(emodel_with_contrast)
+res <- validate_contrasts(emodel_with_contrast)
+# 'full_rank' is only meaningful for F-contrasts; drop it when all are t-contrasts
+if (!any(res$type == "F")) res$full_rank <- NULL
+res
 #>                 name type estimable sum_to_zero orthogonal_to_intercept
 #> 2          hand#hand    t      TRUE        TRUE                    TRUE
 #> 1 hand#left_vs_right    t      TRUE        TRUE                    TRUE
-#>   full_rank nonzero_weights
-#> 2        NA               2
-#> 1        NA               2
+#>   nonzero_weights
+#> 2               2
+#> 1               2
 ```
 
 ## Advanced Contrast Specifications

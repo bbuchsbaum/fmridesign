@@ -130,13 +130,16 @@ argument in <code><a href="../reference/hrf.html">hrf()</a></code> terms:</p>
 </h3>
 <p>Validate all attached contrasts for a model in one call:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/validate_contrasts.html">validate_contrasts</a></span><span class="op">(</span><span class="va">emodel_with_contrast</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/validate_contrasts.html">validate_contrasts</a></span><span class="op">(</span><span class="va">emodel_with_contrast</span><span class="op">)</span></span>
+<span><span class="co"># 'full_rank' is only meaningful for F-contrasts; drop it when all are t-contrasts</span></span>
+<span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">type</span> <span class="op">==</span> <span class="st">"F"</span><span class="op">)</span><span class="op">)</span> <span class="va">res</span><span class="op">$</span><span class="va">full_rank</span> <span class="op">&lt;-</span> <span class="cn">NULL</span></span>
+<span><span class="va">res</span></span>
 <span><span class="co">#&gt;                 name type estimable sum_to_zero orthogonal_to_intercept</span></span>
 <span><span class="co">#&gt; 2          hand#hand    t      TRUE        TRUE                    TRUE</span></span>
 <span><span class="co">#&gt; 1 hand#left_vs_right    t      TRUE        TRUE                    TRUE</span></span>
-<span><span class="co">#&gt;   full_rank nonzero_weights</span></span>
-<span><span class="co">#&gt; 2        NA               2</span></span>
-<span><span class="co">#&gt; 1        NA               2</span></span></code></pre></div>
+<span><span class="co">#&gt;   nonzero_weights</span></span>
+<span><span class="co">#&gt; 2               2</span></span>
+<span><span class="co">#&gt; 1               2</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">

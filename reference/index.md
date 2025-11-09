@@ -253,6 +253,10 @@
   [`print(`*`<event_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
   : Print a Baseline Model
 
+- [`print(`*`<sampling_frame>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.sampling_frame.md)
+  [`plot(`*`<sampling_frame>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.sampling_frame.md)
+  : Print and Plot for sampling_frame
+
 - [`register_hrfspec_extension()`](https://bbuchsbaum.github.io/fmridesign/reference/register_hrfspec_extension.md)
   : Register an External HRF Specification Type
 
