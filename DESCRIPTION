@@ -4,16 +4,18 @@ Title: Design Matrix Construction for fMRI Analysis
 Version: 0.1.0
 Date: 2025-06-28
 Authors@R: person("Bradley", "Buchsbaum", role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
-Description: Provides tools for constructing design matrices for functional magnetic resonance imaging (fMRI) analyses. 
-    Includes facilities for creating event models with flexible hemodynamic response functions (HRFs), 
-    baseline models for nuisance regression, and utilities for handling experimental designs. 
-    This package focuses on the design aspect of fMRI analysis and is intended to be used with 
-    analysis packages like fmrireg.
+Description: Constructs and inspects design matrices for functional magnetic
+    resonance imaging (fMRI) analyses. Provides a formula interface for
+    specifying event-related designs with flexible hemodynamic response
+    function (HRF) bases, parametric modulators, and trialwise models.
+    Includes facilities for baseline/nuisance regressors, contrast
+    specification, and utilities for naming, validation, and visualization. Intended to
+    support the model-building stage prior to statistical fitting.
 License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: false
 Depends:
-    R (>= 4.0.0)
+    R (>= 4.1.0)
 Imports:
     fmrihrf (>= 0.1.0),
     stats,
@@ -30,13 +32,11 @@ Imports:
     ggplot2,
     utils,
     cli
-Suggests: 
+Suggests:
     testthat,
     knitr,
     rmarkdown,
     covr
-Remotes:
-    bbuchsbaum/fmrihrf
 VignetteBuilder: knitr
 URL: https://github.com/bbuchsbaum/fmridesign, https://bbuchsbaum.github.io/fmridesign/
 BugReports: https://github.com/bbuchsbaum/fmridesign/issues

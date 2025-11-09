@@ -58,6 +58,22 @@ sub_basis <-  function(x, subset) UseMethod("sub_basis")
 #' @param ... Additional arguments.
 #' @param newgroup Optional factor for group-dependent bases.
 #' @return A numeric matrix with transformed values (one column per basis component).
+#' @examples
+#' # Create polynomial basis from training data
+#' train_x <- 1:10
+#' poly_basis <- Poly(train_x, degree = 2)
+#'
+#' # Predict on new data
+#' new_x <- c(5.5, 7.3, 11.2)
+#' predict(poly_basis, new_x)
+#'
+#' # Create scaling basis
+#' train_vals <- c(10, 20, 30, 40, 50)
+#' scale_basis <- Scale(train_vals)
+#'
+#' # Apply same scaling to new data
+#' new_vals <- c(15, 25, 35)
+#' predict(scale_basis, new_vals)
 #' @method predict ParametricBasis
 #' @rdname predict
 #' @export
@@ -357,22 +373,11 @@ columns.Ident <- function(x, ...) {
 }
 
 
-#' Number of Basis Functions
-#'
-#' Get the number of basis functions for various basis objects.
-#'
-#' @param x A basis object (e.g., BSpline, Poly, Ident, etc.)
-#' @param ... Additional arguments (currently unused)
-#'
-#' @return An integer representing the number of basis functions
-#' @name nbasis
-#' @rdname nbasis
 #' @export
 nbasis.BSpline <- function(x, ...) {
   x$degree
 }
 
-#' @rdname nbasis
 #' @export
 nbasis.Poly <- function(x,...) {
   x$degree
@@ -601,22 +606,17 @@ columns.RobustScale <- columns.Scale
 
 # Add nbasis methods -----
 
-#' @rdname nbasis
 #' @export
 nbasis.Scale        <- function(x,...) 1L
 
-#' @rdname nbasis
 #' @export
 nbasis.ScaleWithin  <- function(x,...) 1L
 
-#' @rdname nbasis
 #' @export
 nbasis.RobustScale  <- function(x,...) 1L
 
-#' @rdname nbasis
 #' @export
 nbasis.Standardized <- function(x,...) 1L
 
-#' @rdname nbasis
 #' @export
 nbasis.Ident        <- function(x, ...) ncol(x$y)

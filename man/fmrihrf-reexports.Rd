@@ -5,6 +5,7 @@
 \alias{onsets}
 \alias{durations}
 \alias{blockids}
+\alias{nbasis}
 \title{fmrihrf reexports}
 \usage{
 onsets(x, ...)
@@ -12,6 +13,8 @@ onsets(x, ...)
 durations(x, ...)
 
 blockids(x, ...)
+
+nbasis(x, ...)
 }
 \value{
 See the corresponding fmrihrf function documentation.
@@ -31,6 +34,7 @@ The following generics are re-exported:
 \item \code{\link[fmrihrf]{onsets}}: Extract onset times from event objects
 \item \code{\link[fmrihrf]{durations}}: Extract durations from event objects
 \item \code{\link[fmrihrf]{blockids}}: Extract block identifiers
+\item \code{\link[fmrihrf]{nbasis}}: Get number of basis functions
 }
 
 fmridesign adds S3 methods for these generics to work with:
@@ -39,5 +43,23 @@ fmridesign adds S3 methods for these generics to work with:
 \item convolved_term objects
 \item event_model objects
 }
+}
+\examples{
+# Create an event term
+term <- event_term(
+  list(condition = factor(c("A", "B", "A"))),
+  onsets = c(0, 10, 20),
+  blockids = c(1, 1, 1),
+  durations = c(2, 2, 2)
+)
+
+# Extract onset times
+onsets(term)
+
+# Extract durations
+durations(term)
+
+# Extract block IDs
+blockids(term)
 }
 \keyword{internal}

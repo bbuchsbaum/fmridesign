@@ -20,3 +20,6 @@
 ^golden_tests$
 ^vignette_issues\.md$
 .claude
+^TEST_FIXES\.md$
+^examples$
+^fmridesign_cheatsheet_v3\.md$
