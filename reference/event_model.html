@@ -17,7 +17,7 @@ formula and list-based interfaces and uses a more efficient internal pipeline.">
 
     <a class="navbar-brand me-2" href="../index.html">fmridesign</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -197,20 +197,20 @@ to ensure uniqueness (e.g., <code>condition</code>, <code>condition#1</code>).</
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ── <span style="font-weight: bold;">Design Matrix Preview</span> ──</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>           cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.062       0.000      -0.057      -0.179    </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   1.138       0.000      -1.031      -0.577    </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   1.744       0.000      -1.581       0.059    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.062       0.000       0.118       0.374    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   1.138       0.000       2.154       1.206    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   1.744       0.000       3.302      -0.124    </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #B2B2B2;">...</span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">ev_model_form</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 5</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02 mod_mod_b03</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>      0.062<span style="text-decoration: underline;">4</span>      0          -<span style="color: #BB0000;">0.056</span><span style="color: #BB0000; text-decoration: underline;">6</span>     -<span style="color: #BB0000;">0.179</span>     -<span style="color: #BB0000;">0.371</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>      1.14        0          -<span style="color: #BB0000;">1.03</span>       -<span style="color: #BB0000;">0.577</span>      0.175  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>      1.74        0          -<span style="color: #BB0000;">1.58</span>        0.059<span style="text-decoration: underline;">5</span>     0.290  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>      1.20        0          -<span style="color: #BB0000;">1.09</span>        0.334      0.003<span style="text-decoration: underline;">92</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>      0.552       0          -<span style="color: #BB0000;">0.500</span>       0.232     -<span style="color: #BB0000;">0.074</span><span style="color: #BB0000; text-decoration: underline;">1</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>      0.192       0.034<span style="text-decoration: underline;">1</span>     -<span style="color: #BB0000;">0.246</span>      -<span style="color: #BB0000;">0.162</span>     -<span style="color: #BB0000;">0.744</span>  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>      0.062<span style="text-decoration: underline;">4</span>      0            0.118       0.374     0.775  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>      1.14        0            2.15        1.21     -<span style="color: #BB0000;">0.365</span>  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>      1.74        0            3.30       -<span style="color: #BB0000;">0.124</span>    -<span style="color: #BB0000;">0.606</span>  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>      1.20        0            2.28       -<span style="color: #BB0000;">0.698</span>    -<span style="color: #BB0000;">0.008</span><span style="color: #BB0000; text-decoration: underline;">19</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>      0.552       0            1.04       -<span style="color: #BB0000;">0.484</span>     0.155  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>      0.192       0.034<span style="text-decoration: underline;">1</span>       0.330      -<span style="color: #BB0000;">0.339</span>    -<span style="color: #BB0000;">0.219</span>  </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example using list interface (less common)</span></span></span>
 <span class="r-in"><span><span class="co"># spec1 &lt;- hrf(cond)</span></span></span>

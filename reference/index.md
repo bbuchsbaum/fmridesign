@@ -200,16 +200,6 @@
 - [`longnames()`](https://bbuchsbaum.github.io/fmridesign/reference/longnames.md)
   : Extract longnames
 
-- [`nbasis(`*`<BSpline>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
-  [`nbasis(`*`<Poly>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
-  [`nbasis(`*`<Scale>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
-  [`nbasis(`*`<ScaleWithin>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
-  [`nbasis(`*`<RobustScale>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
-  [`nbasis(`*`<Standardized>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
-  [`nbasis(`*`<Ident>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
-  [`nbasis(`*`<covariate_convolved_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
-  : Number of Basis Functions
-
 - [`nbasis(`*`<hrfspec>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.hrfspec.md)
   : Get number of basis functions from hrfspec
 

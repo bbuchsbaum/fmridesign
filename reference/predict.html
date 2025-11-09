@@ -9,7 +9,7 @@ according to a specific parametric basis."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fmridesign</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -98,6 +98,33 @@ according to a specific parametric basis.</p>
     <p>A numeric matrix with transformed values (one column per basis component).</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Create polynomial basis from training data</span></span></span>
+<span class="r-in"><span><span class="va">train_x</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">:</span><span class="fl">10</span></span></span>
+<span class="r-in"><span><span class="va">poly_basis</span> <span class="op">&lt;-</span> <span class="fu"><a href="Poly.html">Poly</a></span><span class="op">(</span><span class="va">train_x</span>, degree <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Predict on new data</span></span></span>
+<span class="r-in"><span><span class="va">new_x</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5.5</span>, <span class="fl">7.3</span>, <span class="fl">11.2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">poly_basis</span>, <span class="va">new_x</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>              1          2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] 0.0000000 -0.3590352</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] 0.1981735 -0.2180323</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] 0.6275493  1.0549106</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Create scaling basis</span></span></span>
+<span class="r-in"><span><span class="va">train_vals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">20</span>, <span class="fl">30</span>, <span class="fl">40</span>, <span class="fl">50</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">scale_basis</span> <span class="op">&lt;-</span> <span class="fu"><a href="Scale.html">Scale</a></span><span class="op">(</span><span class="va">train_vals</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Apply same scaling to new data</span></span></span>
+<span class="r-in"><span><span class="va">new_vals</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">15</span>, <span class="fl">25</span>, <span class="fl">35</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">scale_basis</span>, <span class="va">new_vals</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      z_train_vals</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]   -0.9486833</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,]   -0.3162278</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]    0.3162278</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

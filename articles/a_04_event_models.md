@@ -489,8 +489,8 @@ print(emodel_trialwise)
 # Columns: trialwise_trial.1, trialwise_trial.2, ...
 
 # Plotting trialwise models can be very dense!
-# It generates one condition per trial.
-plot(emodel_trialwise)
+# It generates one condition per trial. Use label_mode/compactness controls.
+plot(emodel_trialwise, label_mode = "none")
 ```
 
 ![Trialwise regressors (one per trial) plotted over time with optional
@@ -499,7 +499,7 @@ column.](a_04_event_models_files/figure-html/create_trialwise-1.png)
 
 ``` r
 if (interactive()) {
-  plotly::ggplotly(plot(emodel_trialwise)) # Use plotly to explore interactively
+  plotly::ggplotly(plot(emodel_trialwise, label_mode = "compact")) # Use plotly to explore interactively
 }
 ```
 
