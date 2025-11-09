@@ -2,11 +2,6 @@
 
 ``` r
 library(fmridesign)
-#> 
-#> Attaching package: 'fmridesign'
-#> The following objects are masked from 'package:stats':
-#> 
-#>     contrasts, convolve
 library(ggplot2)
 ```
 

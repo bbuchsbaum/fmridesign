@@ -69,23 +69,18 @@
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/fmridesign" class="external-link">fmridesign</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Attaching package: 'fmridesign'</span></span>
-<span><span class="co">#&gt; The following objects are masked from 'package:stats':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     contrasts, convolve</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
 </h2>
-<p><code>fmridesign</code> helps you build fMRI design matrices cleanly
-and consistently. It covers task regressors (events convolved with HRFs)
-and baseline/nuisance terms (drift, intercepts, motion). You use a
-simple formula interface to define models, visualize and inspect them,
-and then feed the matrices into your GLM workflow.</p>
-<p>Key ideas: event models (task effects), baseline models (drift and
-nuisance), clear naming, and plots that make it easy to spot
-problems.</p>
+<p>The <code>fmridesign</code> package constructs design matrices for
+fMRI general linear model (GLM) analysis. It provides a formula-based
+interface for specifying event-related designs with flexible hemodynamic
+response functions, parametric modulators, and baseline/nuisance
+regressors.</p>
+<p>The package separates task-related regressors (event models) from
+baseline regressors (drift, intercepts, motion), provides informative
+column names, and includes visualization tools for quality control.</p>
 </div>
 <div class="section level2">
 <h2 id="the-fmri-design-matrix">The fMRI Design Matrix<a class="anchor" aria-label="anchor" href="#the-fmri-design-matrix"></a>
@@ -104,15 +99,16 @@ physiology). Both are essential for reliable inference.</p>
 <div class="section level2">
 <h2 id="package-architecture">Package Architecture<a class="anchor" aria-label="anchor" href="#package-architecture"></a>
 </h2>
-<p>Design construction is split into two parts:</p>
-<ul>
-<li>Event models (<code><a href="../reference/event_model.html">event_model()</a></code>): specify onsets (and
-optional durations), choose HRF basis per term, and include factors,
-continuous modulators, and covariates.</li>
-<li>Baseline models (<code><a href="../reference/baseline_model.html">baseline_model()</a></code>): add drift terms
-(polynomial/spline/constant), block-wise intercepts, and any nuisance
-regressors you provide.</li>
-</ul>
+<p>The package uses two main components:</p>
+<p><strong>Event models</strong> (<code><a href="../reference/event_model.html">event_model()</a></code>) specify
+task-related regressors. You provide onset times, event types, and
+optional durations. Each term can use a different HRF basis function.
+The model supports factorial designs, parametric modulators, and
+trial-specific covariates.</p>
+<p><strong>Baseline models</strong> (<code><a href="../reference/baseline_model.html">baseline_model()</a></code>)
+specify nuisance regressors. You can add polynomial or spline drift
+terms, block-wise intercepts, and any additional nuisance regressors
+(motion, physiological noise, etc.).</p>
 </div>
 <div class="section level2">
 <h2 id="quick-start-complete-workflow">Quick Start: Complete Workflow<a class="anchor" aria-label="anchor" href="#quick-start-complete-workflow"></a>
@@ -338,12 +334,15 @@ with various fMRI analysis approaches:</p>
 <div class="section level2">
 <h2 id="best-practices">Best Practices<a class="anchor" aria-label="anchor" href="#best-practices"></a>
 </h2>
-<p>Always inspect your design. Look for sensible timing, HRF shapes that
-match expectations, and acceptable correlations among regressors. Plan
-for efficiency (jitter and balance help), and match baseline flexibility
-to run length (short runs need fewer drift terms than long ones).
-Include relevant nuisance regressors when available (e.g., motion,
-physiology, artifact/outlier flags).</p>
+<p><strong>Inspect your design matrices visually.</strong> Check that
+event timing is correct, HRF shapes are reasonable, and correlations
+between regressors are acceptable.</p>
+<p><strong>Optimize design efficiency.</strong> Use jittered
+inter-stimulus intervals and balanced event types when possible.</p>
+<p><strong>Match drift models to run length.</strong> Short runs (&lt; 5
+minutes) need fewer drift terms than long runs.</p>
+<p><strong>Include nuisance regressors.</strong> Add motion parameters,
+physiological noise, and artifact flags to your baseline model.</p>
 </div>
 <div class="section level2">
 <h2 id="next-steps">Next Steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>
