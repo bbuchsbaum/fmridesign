@@ -1,0 +1,312 @@
+# Package index
+
+## All functions
+
+- [`BSpline()`](https://bbuchsbaum.github.io/fmridesign/reference/BSpline.md)
+  : B-spline basis
+
+- [`Fcontrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.md)
+  : Compute F-contrasts
+
+- [`Ident()`](https://bbuchsbaum.github.io/fmridesign/reference/Ident.md)
+  : Ident
+
+- [`Poly()`](https://bbuchsbaum.github.io/fmridesign/reference/Poly.md)
+  : Polynomial basis
+
+- [`RobustScale()`](https://bbuchsbaum.github.io/fmridesign/reference/RobustScale.md)
+  : Robust Scaling (Median/MAD)
+
+- [`Scale()`](https://bbuchsbaum.github.io/fmridesign/reference/Scale.md)
+  : Z-score (global) basis
+
+- [`ScaleWithin()`](https://bbuchsbaum.github.io/fmridesign/reference/ScaleWithin.md)
+  : Z-score within groups
+
+- [`Standardized()`](https://bbuchsbaum.github.io/fmridesign/reference/Standardized.md)
+  : Standardized basis
+
+- [`baseline()`](https://bbuchsbaum.github.io/fmridesign/reference/baseline.md)
+  : Create a Baseline Specification
+
+- [`baseline_model()`](https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.md)
+  : Construct a Baseline Model
+
+- [`baseline_terms()`](https://bbuchsbaum.github.io/fmridesign/reference/baseline_terms.md)
+  : Extract baseline terms
+
+- [`basis_suffix()`](https://bbuchsbaum.github.io/fmridesign/reference/basis_suffix.md)
+  : Create Basis Function Suffix
+
+- [`block()`](https://bbuchsbaum.github.io/fmridesign/reference/block.md)
+  : Create a Block Variable
+
+- [`cells()`](https://bbuchsbaum.github.io/fmridesign/reference/cells.md)
+  : Extract cells from a design object
+
+- [`check_collinearity()`](https://bbuchsbaum.github.io/fmridesign/reference/check_collinearity.md)
+  : Check design matrix for multicollinearity
+
+- [`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md)
+  : Column Contrast Specification
+
+- [`column_groups_by_condition()`](https://bbuchsbaum.github.io/fmridesign/reference/column_groups_by_condition.md)
+  : Group column indices by condition for a term/basis pair
+
+- [`columns()`](https://bbuchsbaum.github.io/fmridesign/reference/columns.md)
+  : Extract columns
+
+- [`condition_basis_list()`](https://bbuchsbaum.github.io/fmridesign/reference/condition_basis_list.md)
+  :
+
+  Convert an `event_term` to a per-condition basis list
+
+- [`conditions()`](https://bbuchsbaum.github.io/fmridesign/reference/conditions.md)
+  : Extract conditions from a design object
+
+- [`construct()`](https://bbuchsbaum.github.io/fmridesign/reference/construct.md)
+  : Construct method
+
+- [`contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast.md)
+  : Contrast Specification
+
+- [`contrast_set()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_set.md)
+  : Create a Set of Contrasts
+
+- [`contrast_weights()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.md)
+  : Unit Contrast Weights
+
+- [`contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/contrasts.md)
+  : Extract contrasts
+
+- [`contrasts(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/contrasts.event_model.md)
+  : Retrieve contrast definitions for an event model
+
+- [`contrasts(`*`<event_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/contrasts.event_term.md)
+  : Retrieve contrast definitions for an event term
+
+- [`contrasts(`*`<hrfspec>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/contrasts.hrfspec.md)
+  : Retrieve contrast specifications from an hrfspec
+
+- [`convolve()`](https://bbuchsbaum.github.io/fmridesign/reference/convolve.md)
+  : Convolve events with a hemodynamic response function
+
+- [`convolve_design()`](https://bbuchsbaum.github.io/fmridesign/reference/convolve_design.md)
+  : Convolve HRF with Design Matrix.
+
+- [`correlation_map()`](https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.md)
+  : Compute correlation map
+
+- [`correlation_map(`*`<baseline_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.baseline_model.md)
+  : correlation_map.baseline_model
+
+- [`correlation_map(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.event_model.md)
+  : Visualize Regressor Correlations
+
+- [`covariate()`](https://bbuchsbaum.github.io/fmridesign/reference/covariate.md)
+  : Construct a Covariate Term
+
+- [`design_colmap()`](https://bbuchsbaum.github.io/fmridesign/reference/design_colmap.md)
+  : Column Metadata Map
+
+- [`design_colmap(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/design_colmap.event_model.md)
+  : Column metadata for a design matrix
+
+- [`design_map()`](https://bbuchsbaum.github.io/fmridesign/reference/design_map.md)
+  : Compute design map
+
+- [`design_map(`*`<baseline_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/design_map.baseline_model.md)
+  : Heatmap visualization of the baseline_model design matrix
+
+- [`design_map(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/design_map.event_model.md)
+  : Visualize Event Model Design Matrix
+
+- [`design_matrix()`](https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.md)
+  : Extract or construct a design matrix
+
+- [`elements()`](https://bbuchsbaum.github.io/fmridesign/reference/elements.md)
+  : Extract elements from an object
+
+- [`event_basis()`](https://bbuchsbaum.github.io/fmridesign/reference/event_basis.md)
+  : Create an event set from a ParametricBasis object.
+
+- [`event_conditions()`](https://bbuchsbaum.github.io/fmridesign/reference/event_conditions.md)
+  : Retrieve per-event condition assignments
+
+- [`event_factor()`](https://bbuchsbaum.github.io/fmridesign/reference/event_factor.md)
+  : Create a categorical event sequence from a factor.
+
+- [`event_matrix()`](https://bbuchsbaum.github.io/fmridesign/reference/event_matrix.md)
+  : Create a continuous event set from a matrix.
+
+- [`event_model()`](https://bbuchsbaum.github.io/fmridesign/reference/event_model.md)
+  : Generic functions for fmridesign package
+
+- [`event_table()`](https://bbuchsbaum.github.io/fmridesign/reference/event_table.md)
+  : Extract event table
+
+- [`event_term()`](https://bbuchsbaum.github.io/fmridesign/reference/event_term.md)
+  : Create an event model term from a named list of variables.
+
+- [`event_terms()`](https://bbuchsbaum.github.io/fmridesign/reference/event_terms.md)
+  : Extract event terms
+
+- [`event_variable()`](https://bbuchsbaum.github.io/fmridesign/reference/event_variable.md)
+  : Create a continuous event sequence from a numeric vector.
+
+- [`events()`](https://bbuchsbaum.github.io/fmridesign/reference/events.md)
+  : Retrieve canonical event information
+
+- [`feature_suffix()`](https://bbuchsbaum.github.io/fmridesign/reference/feature_suffix.md)
+  : Create Feature Suffix
+
+- [`get_all_external_hrf_functions()`](https://bbuchsbaum.github.io/fmridesign/reference/get_all_external_hrf_functions.md)
+  : Get All External HRF Function Names
+
+- [`get_external_hrfspec_functions()`](https://bbuchsbaum.github.io/fmridesign/reference/get_external_hrfspec_functions.md)
+  : Get the HRF Function Name for External Specifications
+
+- [`get_external_hrfspec_info()`](https://bbuchsbaum.github.io/fmridesign/reference/get_external_hrfspec_info.md)
+  : Get Information About a Registered External HRF Specification
+
+- [`hrf()`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.md) :
+  hemodynamic regressor specification function for model formulas.
+
+- [`interaction_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/interaction_contrast.md)
+  : Interaction Contrast
+
+- [`is_categorical()`](https://bbuchsbaum.github.io/fmridesign/reference/is_categorical.md)
+  : Check if categorical
+
+- [`is_continuous()`](https://bbuchsbaum.github.io/fmridesign/reference/is_continuous.md)
+  : Check if continuous
+
+- [`is_external_hrfspec()`](https://bbuchsbaum.github.io/fmridesign/reference/is_external_hrfspec.md)
+  : Check if a Class is a Registered External HRF Specification
+
+- [`labels(`*`<event>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/labels.event.md)
+  : Get Formatted Labels for a Single Event
+
+- [`levels(`*`<Scale>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/levels.event.md)
+  [`levels(`*`<ScaleWithin>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/levels.event.md)
+  [`levels(`*`<RobustScale>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/levels.event.md)
+  [`levels(`*`<event>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/levels.event.md)
+  [`columns(`*`<event>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/levels.event.md)
+  : Extract Levels from fmrireg Objects
+
+- [`list_external_hrfspecs()`](https://bbuchsbaum.github.io/fmridesign/reference/list_external_hrfspecs.md)
+  : List All Registered External HRF Specifications
+
+- [`longnames()`](https://bbuchsbaum.github.io/fmridesign/reference/longnames.md)
+  : Extract longnames
+
+- [`nbasis(`*`<BSpline>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
+  [`nbasis(`*`<Poly>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
+  [`nbasis(`*`<Scale>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
+  [`nbasis(`*`<ScaleWithin>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
+  [`nbasis(`*`<RobustScale>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
+  [`nbasis(`*`<Standardized>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
+  [`nbasis(`*`<Ident>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
+  [`nbasis(`*`<covariate_convolved_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.md)
+  : Number of Basis Functions
+
+- [`nbasis(`*`<hrfspec>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/nbasis.hrfspec.md)
+  : Get number of basis functions from hrfspec
+
+- [`nuisance()`](https://bbuchsbaum.github.io/fmridesign/reference/nuisance.md)
+  : Create a Nuisance Specification
+
+- [`one_against_all_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/one_against_all_contrast.md)
+  : One Against All Contrast
+
+- [`oneway_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/oneway_contrast.md)
+  : One-way Contrast
+
+- [`pair_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.md)
+  : Pair Contrast
+
+- [`pairwise_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/pairwise_contrasts.md)
+  : Pairwise Contrasts
+
+- [`plot(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/plot.event_model.md)
+  : Plot Event Model
+
+- [`plot_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/plot_contrasts.md)
+  : plot_contrasts
+
+- [`plot_contrasts(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/plot_contrasts.event_model.md)
+  : plot_contrasts.event_model
+
+- [`poly_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/poly_contrast.md)
+  : Polynomial Contrast
+
+- [`predict(`*`<ParametricBasis>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/predict.md)
+  [`predict(`*`<Standardized>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/predict.md)
+  [`predict(`*`<Poly>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/predict.md)
+  [`predict(`*`<BSpline>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/predict.md)
+  [`predict(`*`<Ident>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/predict.md)
+  [`predict(`*`<Scale>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/predict.md)
+  [`predict(`*`<ScaleWithin>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/predict.md)
+  [`predict(`*`<RobustScale>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/predict.md)
+  : Predict from a ParametricBasis object
+
+- [`print(`*`<baseline_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
+  [`print(`*`<contrast_set>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
+  [`print(`*`<contrast_spec>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
+  [`print(`*`<contrast>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
+  [`print(`*`<poly_contrast_spec>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
+  [`print(`*`<contrast_diff_spec>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
+  [`print(`*`<event>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
+  [`print(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
+  [`print(`*`<fmri_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
+  [`print(`*`<convolved_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
+  [`print(`*`<event_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
+  : Print a Baseline Model
+
+- [`register_hrfspec_extension()`](https://bbuchsbaum.github.io/fmridesign/reference/register_hrfspec_extension.md)
+  : Register an External HRF Specification Type
+
+- [`regressors()`](https://bbuchsbaum.github.io/fmridesign/reference/regressors.md)
+  : Extract regressors
+
+- [`requires_external_processing()`](https://bbuchsbaum.github.io/fmridesign/reference/requires_external_processing.md)
+  : Check if an Object Requires External Processing
+
+- [`residualize()`](https://bbuchsbaum.github.io/fmridesign/reference/residualize.md)
+  : Residualize Data Against a Design
+
+- [`sanitize()`](https://bbuchsbaum.github.io/fmridesign/reference/sanitize.md)
+  : Sanitize Strings for Use in R Names
+
+- [`shortnames()`](https://bbuchsbaum.github.io/fmridesign/reference/shortnames.md)
+  : Extract shortnames
+
+- [`sliding_window_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/sliding_window_contrasts.md)
+  : Sliding-Window Contrasts (Disjoint)
+
+- [`split_by_block()`](https://bbuchsbaum.github.io/fmridesign/reference/split_by_block.md)
+  : Split by block
+
+- [`split_onsets()`](https://bbuchsbaum.github.io/fmridesign/reference/split_onsets.md)
+  : Split onsets
+
+- [`sub_basis()`](https://bbuchsbaum.github.io/fmridesign/reference/sub_basis.md)
+  : sub_basis
+
+- [`term_indices()`](https://bbuchsbaum.github.io/fmridesign/reference/term_indices.md)
+  : Extract term indices
+
+- [`term_matrices()`](https://bbuchsbaum.github.io/fmridesign/reference/term_matrices.md)
+  : Extract term matrices
+
+- [`term_names()`](https://bbuchsbaum.github.io/fmridesign/reference/term_names.md)
+  : Extract term names
+
+- [`trialwise()`](https://bbuchsbaum.github.io/fmridesign/reference/trialwise.md)
+  : trialwise
+
+- [`unit_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.md)
+  : Unit Contrast
+
+- [`validate_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/validate_contrasts.md)
+  : Validate contrast weights against a design matrix or event model

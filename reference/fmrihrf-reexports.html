@@ -64,7 +64,9 @@ This is expected and harmless - the functions work identically.</p>
 <span></span>
 <span><span class="fu">durations</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">blockids</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">blockids</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">nbasis</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -76,11 +78,35 @@ This is expected and harmless - the functions work identically.</p>
     <p>The following generics are re-exported:</p><ul><li><p><code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/onsets.html" class="external-link">onsets</a></code>: Extract onset times from event objects</p></li>
 <li><p><code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/durations.html" class="external-link">durations</a></code>: Extract durations from event objects</p></li>
 <li><p><code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/blockids.html" class="external-link">blockids</a></code>: Extract block identifiers</p></li>
+<li><p><code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/nbasis.html" class="external-link">nbasis</a></code>: Get number of basis functions</p></li>
 </ul><p>fmridesign adds S3 methods for these generics to work with:</p><ul><li><p>event_term objects</p></li>
 <li><p>convolved_term objects</p></li>
 <li><p>event_model objects</p></li>
 </ul></div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Create an event term</span></span></span>
+<span class="r-in"><span><span class="va">term</span> <span class="op">&lt;-</span> <span class="fu"><a href="event_term.html">event_term</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>condition <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"A"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  onsets <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">10</span>, <span class="fl">20</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  blockids <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  durations <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Extract onset times</span></span></span>
+<span class="r-in"><span><span class="fu">onsets</span><span class="op">(</span><span class="va">term</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1]  0 10 20</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Extract durations</span></span></span>
+<span class="r-in"><span><span class="fu">durations</span><span class="op">(</span><span class="va">term</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2 2 2</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Extract block IDs</span></span></span>
+<span class="r-in"><span><span class="fu">blockids</span><span class="op">(</span><span class="va">term</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1 1 1</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 
@@ -90,7 +116,7 @@ This is expected and harmless - the functions work identically.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer></div>
