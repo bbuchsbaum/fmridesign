@@ -17,3 +17,16 @@ The number of basis functions
 \description{
 Get number of basis functions from hrfspec
 }
+\examples{
+# Create hrfspec with canonical HRF (1 basis function)
+spec1 <- hrf(condition, basis = "spmg1")
+nbasis(spec1)
+
+# Create hrfspec with derivative HRF (2 basis functions)
+spec2 <- hrf(condition, basis = "spmg2")
+nbasis(spec2)
+
+# Create hrfspec with FIR basis (custom number of basis functions)
+spec3 <- hrf(condition, basis = "fir", nbasis = 10)
+nbasis(spec3)
+}

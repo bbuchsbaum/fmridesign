@@ -595,7 +595,6 @@ term_facA <- event_term(list(FacA = fac_A), onsets_cond, blockids_cond)
 term_facAB <- event_term(list(FacA = fac_A, FacB = fac_B), onsets_cond, blockids_cond)
 term_facA_P2 <- event_term(list(FacA = fac_A, Poly = basis_P2), onsets_cond, blockids_cond)
 term_P2 <- event_term(list(Poly = basis_P2), onsets_cond, blockids_cond)
-term_empty <- event_term(list(FacA = factor(character(0))), numeric(0), numeric(0))
 
 # Attach dummy hrfspec for basis expansion tests
 hrf_single <- HRF_GAUSSIAN # nbasis = 1
@@ -607,7 +606,12 @@ attr(term_facA, "hrfspec") <- hrfspec_multi
 attr(term_facAB, "hrfspec") <- hrfspec_multi
 attr(term_facA_P2, "hrfspec") <- hrfspec_multi
 attr(term_P2, "hrfspec") <- hrfspec_multi
-attr(term_empty, "hrfspec") <- hrfspec_multi
+test_that("empty event term emits zero-events warning", {
+  expect_warning({
+    term_empty <- event_term(list(FacA = factor(character(0))), numeric(0), numeric(0))
+    attr(term_empty, "hrfspec") <- hrfspec_multi
+  }, class = "fmridesign_zero_events")
+})
 
 test_that("conditions.event_term - basic factor term", {
   conds <- conditions(term_facA)

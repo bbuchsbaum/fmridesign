@@ -36,13 +36,13 @@ make_hrf <- function(basis, lag, nbasis=1) {
         }
         base_hrf_obj <- fmrihrf::as_hrf(custom_bspline_fn, name = "bspline", nbasis = nbasis, span = span)
       } else if (basis == "fir" && nbasis != fmrihrf::nbasis(base_hrf_obj)) {
-        # Create custom FIR HRF with specified nbasis
+        # Create custom FIR HRF with specified nbasis using bspline degree=1 (tent basis)
         span <- attr(base_hrf_obj, "span")
         if (is.null(span)) span <- 24
         custom_fir_fn <- function(t) {
-          fmrihrf:::hrf_tent_generator(span = span, nbasis = nbasis)(t)
+          fmrihrf::hrf_bspline(t, span = span, N = nbasis, degree = 1)
         }
-                base_hrf_obj <- fmrihrf::as_hrf(custom_fir_fn, name = "fir", nbasis = nbasis, span = span)
+        base_hrf_obj <- fmrihrf::as_hrf(custom_fir_fn, name = "fir", nbasis = nbasis, span = span)
       }
     } else if (basis == "fourier") {
       # Create Fourier HRF with specified nbasis
@@ -282,6 +282,18 @@ hrfspec <- function(vars, label=NULL, basis=fmrihrf::HRF_SPMG1, ...) {
 #' @param x An hrfspec object
 #' @param ... Additional arguments (unused)
 #' @return The number of basis functions
+#' @examples
+#' # Create hrfspec with canonical HRF (1 basis function)
+#' spec1 <- hrf(condition, basis = "spmg1")
+#' nbasis(spec1)
+#'
+#' # Create hrfspec with derivative HRF (2 basis functions)
+#' spec2 <- hrf(condition, basis = "spmg2")
+#' nbasis(spec2)
+#'
+#' # Create hrfspec with FIR basis (custom number of basis functions)
+#' spec3 <- hrf(condition, basis = "fir", nbasis = 10)
+#' nbasis(spec3)
 #' @export
 nbasis.hrfspec <- function(x, ...) {
   fmrihrf::nbasis(x$hrf)

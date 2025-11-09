@@ -1997,6 +1997,21 @@ plot_contrasts <- function(x, ...) {
 #' @param ... Further arguments passed to \code{geom_tile}, e.g. \code{color="grey80"}.
 #'
 #' @return A \code{ggplot2} object (a heatmap).
+#' @examples
+#' # Create event model with contrasts
+#' des <- data.frame(
+#'   onset = c(0, 10, 20, 30, 40, 50),
+#'   run = 1,
+#'   cond = factor(c("A", "B", "C", "A", "B", "C"))
+#' )
+#' sframe <- fmrihrf::sampling_frame(blocklens = 60, TR = 1)
+#' cset <- contrast_set(
+#'   A_vs_B = pair_contrast(~ cond == "A", ~ cond == "B", name = "A_vs_B"),
+#'   B_vs_C = pair_contrast(~ cond == "B", ~ cond == "C", name = "B_vs_C")
+#' )
+#' emod <- event_model(onset ~ hrf(cond, contrasts = cset),
+#'                     data = des, block = ~run, sampling_frame = sframe)
+#' plot_contrasts(emod)
 #' @import ggplot2
 #' @export
 plot_contrasts.event_model <- function(

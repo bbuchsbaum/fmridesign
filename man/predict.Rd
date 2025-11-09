@@ -43,3 +43,20 @@ A numeric matrix with transformed values (one column per basis component).
 Dispatch to the appropriate method for transforming new data
 according to a specific parametric basis.
 }
+\examples{
+# Create polynomial basis from training data
+train_x <- 1:10
+poly_basis <- Poly(train_x, degree = 2)
+
+# Predict on new data
+new_x <- c(5.5, 7.3, 11.2)
+predict(poly_basis, new_x)
+
+# Create scaling basis
+train_vals <- c(10, 20, 30, 40, 50)
+scale_basis <- Scale(train_vals)
+
+# Apply same scaling to new data
+new_vals <- c(15, 25, 35)
+predict(scale_basis, new_vals)
+}

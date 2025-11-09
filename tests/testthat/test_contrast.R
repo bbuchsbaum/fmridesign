@@ -252,13 +252,13 @@ test_that("can contrast two basis functions from a custom multi-phase hrf", {
   simple_des$onset <- seq(1,300, length.out=nrow(simple_des))
   simple_des$run <- rep(1,nrow(simple_des))
   
-  hrf_encode <- fmrihrf::gen_hrf(fmrihrf::hrf_spmg1, normalize=TRUE)
-  hrf_delay <- fmrihrf::gen_hrf(fmrihrf::hrf_spmg1, lag=3, width=8, normalize=TRUE)
-  hrf_probe <-fmrihrf::gen_hrf(fmrihrf::hrf_spmg1, lag=11, width=3, normalize=TRUE)  
-  hrf_trial <<- fmrihrf::hrf_set(hrf_encode, hrf_delay, hrf_probe)
+  hrf_encode <- suppressWarnings(fmrihrf::gen_hrf(fmrihrf::hrf_spmg1, normalize=TRUE))
+  hrf_delay <- suppressWarnings(fmrihrf::gen_hrf(fmrihrf::hrf_spmg1, lag=3, width=8, normalize=TRUE))
+  hrf_probe <- suppressWarnings(fmrihrf::gen_hrf(fmrihrf::hrf_spmg1, lag=11, width=3, normalize=TRUE))
+  hrf_trial <<- suppressWarnings(fmrihrf::hrf_set(hrf_encode, hrf_delay, hrf_probe))
   
   sframe <- fmrihrf::sampling_frame(blocklens=250, TR=2)
-  espec <- event_model(onset ~  hrf(trial_type, basis=hrf_trial), data=simple_des, block=~run, sampling_frame=sframe)
+  espec <- suppressWarnings(event_model(onset ~  hrf(trial_type, basis=hrf_trial), data=simple_des, block=~run, sampling_frame=sframe))
   
   # Updated to use new HRF basis suffix naming scheme: _b01, _b02, etc.
   # Use column_contrast to target specific basis functions
@@ -556,8 +556,8 @@ test_that("basis filtering with FIR HRF", {
     run = rep(1:2, each = 15)
   )
   sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
-  espec <- event_model(onset ~ hrf(condition, basis = "fir", nbasis = 10),
-                      data = des, block = ~run, sampling_frame = sframe)
+  espec <- suppressWarnings(event_model(onset ~ hrf(condition, basis = "fir", nbasis = 10),
+                      data = des, block = ~run, sampling_frame = sframe))
 
   # Test filtering to peak response window (bins 3-5)
   con <- pair_contrast(~ condition == "A", ~ condition == "B",

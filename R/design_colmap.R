@@ -24,7 +24,22 @@
 #'   - `is_block_diagonal` (logical): TRUE when the regressor is per-run/block
 #'   - `modulation_type` (character): "amplitude", "parametric", or "covariate"
 #'   - `modulation_id` (character): modulator identifier when applicable (e.g., "RT", "RT_by_group")
+#' @examples
+#' # Create event model
+#' des <- data.frame(
+#'   onset = c(0, 10, 20, 30),
+#'   run = 1,
+#'   cond = factor(c("A", "B", "A", "B"))
+#' )
+#' sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
+#' emod <- event_model(onset ~ hrf(cond), data = des, block = ~run, sampling_frame = sframe)
 #'
+#' # Get column metadata
+#' colmap <- design_colmap(emod)
+#' head(colmap)
+#'
+#' # Query columns by condition
+#' colmap[colmap$condition == "A", ]
 #' @export
 design_colmap.event_model <- function(x, ...) {
   dm <- design_matrix(x)

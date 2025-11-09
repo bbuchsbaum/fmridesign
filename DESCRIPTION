@@ -1,7 +1,7 @@
 Package: fmridesign
 Type: Package
 Title: Design Matrix Construction for fMRI Analysis
-Version: 0.1.0
+Version: 0.5.0
 Date: 2025-06-28
 Authors@R: person("Bradley", "Buchsbaum", role = c("aut", "cre"), email = "brad.buchsbaum@gmail.com")
 Description: Constructs and inspects design matrices for functional magnetic

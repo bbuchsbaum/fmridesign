@@ -293,9 +293,12 @@ test_that("event_model handles term naming and clashes correctly", {
 
   # Scenario 1: Simple clash, no explicit names
   # Default name for hrf(condition) is "condition"
-  model1 <- event_model(
-    onset ~ hrf(condition) + hrf(condition),
-    data = events, block = ~block, sampling_frame = sf
+  expect_warning(
+    model1 <- event_model(
+      onset ~ hrf(condition) + hrf(condition),
+      data = events, block = ~block, sampling_frame = sf
+    ),
+    class = "fmridesign_name_clash"
   )
   # make_term_tag generates "condition", then "condition#1"
   expect_named(model1$terms, c("condition", "condition#1"))
@@ -303,9 +306,12 @@ test_that("event_model handles term naming and clashes correctly", {
   # Scenario 2: Clash with one explicit name identical to default
   # hrf(condition) -> default "condition"
   # hrf(condition, name="condition") -> explicit "condition"
-  model2 <- event_model(
-    onset ~ hrf(condition) + hrf(condition, name="condition"),
-    data = events, block = ~block, sampling_frame = sf
+  expect_warning(
+    model2 <- event_model(
+      onset ~ hrf(condition) + hrf(condition, name="condition"),
+      data = events, block = ~block, sampling_frame = sf
+    ),
+    class = "fmridesign_name_clash"
   )
   # make_term_tag handles the clash: "condition", "condition#1"
   expect_named(model2$terms, c("condition", "condition#1"))
@@ -323,9 +329,12 @@ test_that("event_model handles term naming and clashes correctly", {
   # Scenario 4: Clash between two explicit names
   # hrf(condition, name="term") -> explicit "term"
   # hrf(modulator, name="term") -> explicit "term"
-  model4 <- event_model(
-    onset ~ hrf(condition, name="term") + hrf(modulator, name="term"),
-    data = events, block = ~block, sampling_frame = sf
+  expect_warning(
+    model4 <- event_model(
+      onset ~ hrf(condition, name="term") + hrf(modulator, name="term"),
+      data = events, block = ~block, sampling_frame = sf
+    ),
+    class = "fmridesign_name_clash"
   )
   # make_term_tag resolves the clash: "term", "term#1"
   expect_named(model4$terms, c("term", "term#1"))
@@ -335,9 +344,12 @@ test_that("event_model handles term naming and clashes correctly", {
   # hrf(modulator) -> default "modulator"
   # hrf(condition) -> default "condition" (clash 1)
   # hrf(x, y) -> default "x_y"
-  model5 <- event_model(
-    onset ~ hrf(condition) + hrf(modulator) + hrf(condition) + hrf(x, y),
-    data = events, block = ~block, sampling_frame = sf
+  expect_warning(
+    model5 <- event_model(
+      onset ~ hrf(condition) + hrf(modulator) + hrf(condition) + hrf(x, y),
+      data = events, block = ~block, sampling_frame = sf
+    ),
+    class = "fmridesign_name_clash"
   )
   # Expected sequence: "condition", "modulator", "condition#1", "x_y"
   expect_named(model5$terms, c("condition", "modulator", "condition#1", "x_y"))
@@ -351,16 +363,22 @@ test_that("event_model handles term naming and clashes correctly", {
     hrf(modulator),
     hrf(condition)
   )
-  model6 <- event_model(spec_list6, data = events, block = ~block, sampling_frame = sf)
+  expect_warning(
+    model6 <- event_model(spec_list6, data = events, block = ~block, sampling_frame = sf),
+    class = "fmridesign_name_clash"
+  )
   # Expected sequence: "condition", "modulator", "condition#1"
   expect_named(model6$terms, c("condition", "modulator", "condition#1"))
   
   # Scenario 7: Clash where explicit name matches an auto-generated name 
   # hrf(condition) -> default "condition"
   # hrf(modulator, name="condition") -> explicit "condition" (clash 1)
-  model7 <- event_model(
-    onset ~ hrf(condition) + hrf(modulator, name="condition"),
-    data = events, block = ~block, sampling_frame = sf
+  expect_warning(
+    model7 <- event_model(
+      onset ~ hrf(condition) + hrf(modulator, name="condition"),
+      data = events, block = ~block, sampling_frame = sf
+    ),
+    class = "fmridesign_name_clash"
   )
   # Expected sequence: "condition", "condition#1"
   expect_named(model7$terms, c("condition", "condition#1"))
@@ -370,9 +388,12 @@ test_that("event_model handles term naming and clashes correctly", {
   # hrf(condition, subset=!cond_flag) -> default "condition" (clash 1)
   events_subset <- events
   events_subset$cond_flag <- rep(c(TRUE, FALSE), length.out=nrow(events_subset))
-  model8 <- event_model(
-    onset ~ hrf(condition, subset=cond_flag) + hrf(condition, subset=!cond_flag),
-    data = events_subset, block = ~block, sampling_frame = sf
+  expect_warning(
+    model8 <- event_model(
+      onset ~ hrf(condition, subset=cond_flag) + hrf(condition, subset=!cond_flag),
+      data = events_subset, block = ~block, sampling_frame = sf
+    ),
+    class = "fmridesign_name_clash"
   )
   # Expected sequence: "condition", "condition#1"
   expect_named(model8$terms, c("condition", "condition#1"))
@@ -381,9 +402,12 @@ test_that("event_model handles term naming and clashes correctly", {
   # hrf(condition) -> default "condition"
   # hrf(condition) -> default "condition" -> clash 1 -> "condition#1"
   # hrf(modulator, name="condition") -> explicit "condition" -> clash 2 -> "condition#2"
-  model9 <- event_model(
-      onset ~ hrf(condition) + hrf(condition) + hrf(modulator, name="condition"),
-      data = events, block = ~block, sampling_frame = sf
+  expect_warning(
+    model9 <- event_model(
+        onset ~ hrf(condition) + hrf(condition) + hrf(modulator, name="condition"),
+        data = events, block = ~block, sampling_frame = sf
+    ),
+    class = "fmridesign_name_clash"
   )
   # Expected sequence: "condition", "condition#1", "condition#2" 
   expect_named(model9$terms, c("condition", "condition#1", "condition#2"))
@@ -399,9 +423,12 @@ test_that("event_model handles term naming and clashes correctly", {
   # Scenario 11: Clash after sanitization
   # hrf(condition, name="term.one") -> sanitized "term_one"
   # hrf(modulator, name="term_one") -> sanitized "term_one" -> clash -> "term_one#1"
-  model11 <- event_model(
-    onset ~ hrf(condition, name="term.one") + hrf(modulator, name="term_one"),
-    data = events, block = ~block, sampling_frame = sf
+  expect_warning(
+    model11 <- event_model(
+      onset ~ hrf(condition, name="term.one") + hrf(modulator, name="term_one"),
+      data = events, block = ~block, sampling_frame = sf
+    ),
+    class = "fmridesign_name_clash"
   )
   expect_named(model11$terms, c("term_one", "term_one#1"))
 })
@@ -445,12 +472,15 @@ test_that("Clash test: duplicate default term tags get unique suffixes", {
   sf <- td$sf
   
   # Create model where two terms would default to the same tag ("x")
-  model_clash <- event_model(
-    onset ~ hrf(x, subset = condition == "a") + 
-            hrf(x, subset = condition == "b"), 
-    data = events,
-    block = ~block,
-    sampling_frame = sf
+  expect_warning(
+    model_clash <- event_model(
+      onset ~ hrf(x, subset = condition == "a") + 
+              hrf(x, subset = condition == "b"), 
+      data = events,
+      block = ~block,
+      sampling_frame = sf
+    ),
+    class = "fmridesign_name_clash"
   )
   
   dm_clash <- design_matrix(model_clash)
@@ -930,4 +960,3 @@ test_that("error when onset length mismatched with data", {
     "Length of extracted onset variable"
   )
 })
-

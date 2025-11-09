@@ -591,6 +591,22 @@ residualize <- function(x, data, cols = NULL, ...) UseMethod("residualize")
 #' @param x An object containing or producing a design matrix (e.g., event_model, baseline_model).
 #' @param ... Additional arguments passed to methods.
 #' @return A tibble with per-column metadata.
+#' @examples
+#' # Create a simple event model
+#' des <- data.frame(
+#'   onset = c(0, 10, 20, 30),
+#'   run = 1,
+#'   cond = factor(c("A", "B", "A", "B"))
+#' )
+#' sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
+#' emod <- event_model(onset ~ hrf(cond), data = des, block = ~run, sampling_frame = sframe)
+#'
+#' # Extract column metadata
+#' colmap <- design_colmap(emod)
+#' head(colmap)
+#'
+#' # Query specific columns
+#' colmap[colmap$condition == "A", ]
 #' @export
 design_colmap <- function(x, ...) UseMethod("design_colmap")
 
