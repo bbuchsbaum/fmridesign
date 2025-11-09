@@ -17,16 +17,16 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r packages}
+```{r packages, message=FALSE, warning=FALSE}
 library(fmridesign)
 library(ggplot2)
 ```
 
 ## Overview
 
-`fmridesign` helps you build fMRI design matrices cleanly and consistently. It covers task regressors (events convolved with HRFs) and baseline/nuisance terms (drift, intercepts, motion). You use a simple formula interface to define models, visualize and inspect them, and then feed the matrices into your GLM workflow.
+The `fmridesign` package constructs design matrices for fMRI general linear model (GLM) analysis. It provides a formula-based interface for specifying event-related designs with flexible hemodynamic response functions, parametric modulators, and baseline/nuisance regressors.
 
-Key ideas: event models (task effects), baseline models (drift and nuisance), clear naming, and plots that make it easy to spot problems.
+The package separates task-related regressors (event models) from baseline regressors (drift, intercepts, motion), provides informative column names, and includes visualization tools for quality control.
 
 ## The fMRI Design Matrix
 
@@ -46,10 +46,11 @@ The design matrix typically combines task-related predictors (expected responses
 
 ## Package Architecture
 
-Design construction is split into two parts:
+The package uses two main components:
 
-- Event models (`event_model()`): specify onsets (and optional durations), choose HRF basis per term, and include factors, continuous modulators, and covariates.
-- Baseline models (`baseline_model()`): add drift terms (polynomial/spline/constant), block-wise intercepts, and any nuisance regressors you provide.
+**Event models** (`event_model()`) specify task-related regressors. You provide onset times, event types, and optional durations. Each term can use a different HRF basis function. The model supports factorial designs, parametric modulators, and trial-specific covariates.
+
+**Baseline models** (`baseline_model()`) specify nuisance regressors. You can add polynomial or spline drift terms, block-wise intercepts, and any additional nuisance regressors (motion, physiological noise, etc.).
 
 ## Quick Start: Complete Workflow
 
@@ -233,7 +234,13 @@ write.table(X, "design_matrix.txt", row.names = FALSE, col.names = TRUE)
 
 ## Best Practices
 
-Always inspect your design. Look for sensible timing, HRF shapes that match expectations, and acceptable correlations among regressors. Plan for efficiency (jitter and balance help), and match baseline flexibility to run length (short runs need fewer drift terms than long ones). Include relevant nuisance regressors when available (e.g., motion, physiology, artifact/outlier flags).
+**Inspect your design matrices visually.** Check that event timing is correct, HRF shapes are reasonable, and correlations between regressors are acceptable.
+
+**Optimize design efficiency.** Use jittered inter-stimulus intervals and balanced event types when possible.
+
+**Match drift models to run length.** Short runs (< 5 minutes) need fewer drift terms than long runs.
+
+**Include nuisance regressors.** Add motion parameters, physiological noise, and artifact flags to your baseline model.
 
 ## Next Steps
 
