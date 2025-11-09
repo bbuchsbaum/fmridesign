@@ -64,4 +64,5 @@ Collate:
     'namespace-imports.R'
     'naming-utils.R'
     'residualize.R'
+    'sampling_frame.R'
     'validate.R'

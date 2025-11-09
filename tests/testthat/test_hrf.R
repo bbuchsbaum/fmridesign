@@ -371,11 +371,15 @@ test_that("block_hrf correctly blocks an HRF object", {
   if (!is.null(prm_sum)) {
     if (".width" %in% names(prm_sum)) expect_equal(prm_sum$.width, width)
     if (".summate" %in% names(prm_sum)) expect_equal(prm_sum$.summate, TRUE)
-    if (".normalize" %in% names(prm_sum)) expect_equal(prm_sum$.normalize, TRUE)
+    if (".normalize" %in% names(prm_sum)) expect_equal(prm_sum$.normalize, FALSE)
   }
   prm_max <- attr(blocked_hrf_max, "params")
   if (!is.null(prm_max) && ".summate" %in% names(prm_max)) {
     expect_equal(prm_max$.summate, FALSE)
+  }
+  prm_norm <- attr(blocked_hrf_norm, "params")
+  if (!is.null(prm_norm) && ".normalize" %in% names(prm_norm)) {
+    expect_equal(prm_norm$.normalize, TRUE)
   }
 
   # Test function evaluation - Compare with evaluate.HRF which uses similar logic

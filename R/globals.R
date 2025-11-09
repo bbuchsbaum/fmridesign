@@ -5,5 +5,6 @@ utils::globalVariables(c(
   "scan_number", "Regressor", "Value",
   "Var1", "Var2", "Correlation",
   "Time", "Response", "ContrastName", "Weight",
-  ".time", ".block", "condition", "value"
+  ".time", ".block", "condition", "value",
+  "run", "start", "end"
 ))
