@@ -11,6 +11,9 @@ and harmless - the functions work identically.
 ## Usage
 
 ``` r
+# S3 method for class 'covariate_convolved_term'
+nbasis(x, ...)
+
 onsets(x, ...)
 
 durations(x, ...)
