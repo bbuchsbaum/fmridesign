@@ -169,7 +169,7 @@ event_table.covariate_convolved_term <- function(x, ...) {
   
 }
 
-#' @rdname nbasis
+#' @rdname fmrihrf-reexports
 #' @export
 nbasis.covariate_convolved_term <- function(x,...) {
   ncol(x$design_matrix)
