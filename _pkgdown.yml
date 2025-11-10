@@ -2,6 +2,8 @@ url: https://bbuchsbaum.github.io/fmridesign/
 template:
   package: albersdown
   bootstrap: 5
+extra_css:
+  - vignettes/albers.css
 
 navbar:
   structure:
@@ -22,4 +24,3 @@ navbar:
         href: articles/a_03_baseline_model.html
       - text: Contrasts
         href: articles/a_05_contrasts.html
-

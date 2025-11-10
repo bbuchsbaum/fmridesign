@@ -6,7 +6,7 @@ output:
     toc: true
     toc_depth: 2
 params:
-  family: "lapis"
+  family: "red"
   base_size: 13
   content_width: 80
 vignette: >

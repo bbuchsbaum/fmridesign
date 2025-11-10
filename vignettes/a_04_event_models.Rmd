@@ -6,7 +6,7 @@ output:
     toc: true
     toc_depth: 2
 params:
-  family: "teal"
+  family: "red"
   base_size: 13
   content_width: 80
 vignette: >
@@ -31,13 +31,11 @@ suppressPackageStartupMessages({
   library(plotly)
 })
 if (requireNamespace("albersdown", quietly = TRUE)) {
-  theme_set(albersdown::theme_albers(params$family, base_size = params$base_size))
+  theme_set(albersdown::theme_albers("red", base_size = params$base_size))
 }
 ```
 
-```{r albers-family, echo=FALSE, results='asis'}
-cat(sprintf('<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.add("palette-%s");});</script>', params$family))
-```
+<!-- Removed per-page palette injection; default palette is red via CSS root variables. -->
 
 ```{r content-width, echo=FALSE, results='asis'}
 cat(sprintf('<style>:root{--content:%sch}</style>', params$content_width))

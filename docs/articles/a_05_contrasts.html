@@ -10,7 +10,8 @@
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Contrasts in fmridesign">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<meta property="og:title" content="Contrasts in fmridesign">
 <meta name="description" content="Guide to defining and using contrasts for hypothesis testing in fMRI designs.">
 <meta property="og:description" content="Guide to defining and using contrasts for hypothesis testing in fMRI designs.">
 </head>
@@ -72,17 +73,8 @@
 
     
     
-<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.add("palette-green");});</script><style>:root{--content:80ch}</style>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/message.html" class="external-link">suppressPackageStartupMessages</a></span><span class="op">(</span><span class="op">{</span></span>
-<span>  <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/bbuchsbaum/fmridesign" class="external-link">fmridesign</a></span><span class="op">)</span></span>
-<span>  <span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
-<span><span class="op">}</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Apply albersdown theme if available</span></span>
-<span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"albersdown"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/get_theme.html" class="external-link">theme_set</a></span><span class="op">(</span><span class="fu">albersdown</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/albersdown/man/theme_albers.html" class="external-link">theme_albers</a></span><span class="op">(</span><span class="va">params</span><span class="op">$</span><span class="va">family</span>, base_size <span class="op">=</span> <span class="va">params</span><span class="op">$</span><span class="va">base_size</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">}</span></span></code></pre></div>
+<!-- Removed per-page palette injection; default palette is red via CSS root variables. -->
+<style>:root{--content:80ch}</style>
 <div class="section level2">
 <h2 id="introduction-to-contrasts">Introduction to Contrasts<a class="anchor" aria-label="anchor" href="#introduction-to-contrasts"></a>
 </h2>
@@ -105,7 +97,7 @@ with <code><a href="../reference/Fcontrasts.html">Fcontrasts()</a></code>).</p>
 <p>Contrasts can be specified directly within the
 <code><a href="../reference/event_model.html">event_model()</a></code> formula using the <code>contrasts</code>
 argument in <code><a href="../reference/hrf.html">hrf()</a></code> terms:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a simple two-condition experiment</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">123</span><span class="op">)</span></span>
 <span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">200</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
@@ -142,7 +134,7 @@ argument in <code><a href="../reference/hrf.html">hrf()</a></code> terms:</p>
 <h3 id="quick-validation">Quick Validation<a class="anchor" aria-label="anchor" href="#quick-validation"></a>
 </h3>
 <p>Validate all attached contrasts for a model in one call:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/validate_contrasts.html">validate_contrasts</a></span><span class="op">(</span><span class="va">emodel_with_contrast</span><span class="op">)</span></span>
 <span><span class="co"># 'full_rank' is only meaningful for F-contrasts; drop it when all are t-contrasts</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">type</span> <span class="op">==</span> <span class="st">"F"</span><span class="op">)</span><span class="op">)</span> <span class="va">res</span><span class="op">$</span><span class="va">full_rank</span> <span class="op">&lt;-</span> <span class="cn">NULL</span></span>
@@ -163,7 +155,7 @@ argument in <code><a href="../reference/hrf.html">hrf()</a></code> terms:</p>
 </h3>
 <p>For designs with multiple levels, you can specify all pairwise
 comparisons:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Three-condition experiment</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">456</span><span class="op">)</span></span>
 <span><span class="va">conditions_3</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"easy"</span>, <span class="st">"medium"</span>, <span class="st">"hard"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">15</span><span class="op">)</span></span>
@@ -192,7 +184,7 @@ comparisons:</p>
 </h3>
 <p>Test for linear, quadratic, or higher-order trends across ordered
 conditions:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Parametric design with 4 levels</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">789</span><span class="op">)</span></span>
 <span><span class="va">intensity_levels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">4</span>, each <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span>
@@ -248,7 +240,7 @@ conditions:</p>
 </h3>
 <p>For factorial designs, specify contrasts for main effects and
 interactions:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># 2x2 factorial design</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">234</span><span class="op">)</span></span>
 <span><span class="va">n_trials</span> <span class="op">&lt;-</span> <span class="fl">60</span></span>
@@ -301,7 +293,7 @@ interactions:</p>
 </h2>
 <p>When using parametric modulators, contrasts can test both categorical
 and continuous effects:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Design with conditions and RT modulation</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">567</span><span class="op">)</span></span>
 <span><span class="va">n_events</span> <span class="op">&lt;-</span> <span class="fl">50</span></span>
@@ -341,7 +333,7 @@ and continuous effects:</p>
 <h2 id="f-contrasts-for-omnibus-tests">F-contrasts for Omnibus Tests<a class="anchor" aria-label="anchor" href="#f-contrasts-for-omnibus-tests"></a>
 </h2>
 <p>F-contrasts test multiple parameters simultaneously:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Four-condition design for omnibus test</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">890</span><span class="op">)</span></span>
 <span><span class="va">conditions_4</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"C"</span>, <span class="st">"D"</span><span class="op">)</span>, each <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span>
@@ -378,7 +370,7 @@ and continuous effects:</p>
 <div class="section level3">
 <h3 id="extracting-and-manipulating-weights">Extracting and Manipulating Weights<a class="anchor" aria-label="anchor" href="#extracting-and-manipulating-weights"></a>
 </h3>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Create a model</span></span>
 <span><span class="va">simple_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
 <span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span><span class="op">)</span>,</span>
@@ -417,7 +409,7 @@ and continuous effects:</p>
 <p>Validate contrasts once the model (and design matrix) is constructed.
 You can validate built-in contrast specs or your own custom vectors
 using <code><a href="../reference/validate_contrasts.html">validate_contrasts()</a></code>:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Validate the custom contrast against the design implied by the model</span></span>
 <span><span class="fu"><a href="../reference/validate_contrasts.html">validate_contrasts</a></span><span class="op">(</span><span class="va">simple_model</span>, weights <span class="op">=</span> <span class="va">custom_contrast</span><span class="op">)</span></span>
 <span><span class="co">#&gt;       name type estimable sum_to_zero orthogonal_to_intercept full_rank</span></span>
@@ -431,7 +423,7 @@ using <code><a href="../reference/validate_contrasts.html">validate_contrasts()<
 </h2>
 <p>When working with multiple runs, contrasts can be specified to test
 within-run or across-run effects:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Two-run experiment with potential run differences</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">345</span><span class="op">)</span></span>
 <span><span class="va">run1_onsets</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">20</span>, <span class="fl">0</span>, <span class="fl">200</span><span class="op">)</span><span class="op">)</span></span>
@@ -469,7 +461,7 @@ prefer orthogonal sets when possible.</p>
 <div class="section level3">
 <h3 id="scaling-and-normalization">2. Scaling and Normalization<a class="anchor" aria-label="anchor" href="#scaling-and-normalization"></a>
 </h3>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Properly scaled contrasts sum to zero</span></span>
 <span><span class="va">create_scaled_contrast</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">n_positive</span>, <span class="va">n_negative</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">/</span><span class="va">n_positive</span>, <span class="va">n_positive</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span><span class="op">/</span><span class="va">n_negative</span>, <span class="va">n_negative</span><span class="op">)</span><span class="op">)</span></span>
@@ -487,7 +479,7 @@ prefer orthogonal sets when possible.</p>
 </h3>
 <p>When testing multiple contrasts, consider correction for multiple
 comparisons:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Design with multiple planned contrasts</span></span>
 <span><span class="va">emodel_multiple</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
 <span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">condition</span>,</span>
@@ -517,7 +509,7 @@ comparisons:</p>
 </h2>
 <p>Once contrasts are defined, they can be used in the statistical
 analysis:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Assuming you have:</span></span>
 <span><span class="co"># - Y: fMRI time series data</span></span>
 <span><span class="co"># - X: design matrix from event_model</span></span>
@@ -546,7 +538,7 @@ analysis:</p>
 <p>You can generate complex patterns via helper generators that return
 contrast specifications. For example, a sliding-window set that compares
 adjacent, disjoint windows across an ordered factor:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Five ordered levels</span></span>
 <span><span class="va">lvl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"L"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span></span>
 <span></span>
@@ -578,7 +570,7 @@ match design-matrix columns.</p>
 <div class="section level3">
 <h3 id="rank-deficient-contrasts">1. Rank-Deficient Contrasts<a class="anchor" aria-label="anchor" href="#rank-deficient-contrasts"></a>
 </h3>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># This will cause issues - contrast is not estimable</span></span>
 <span><span class="va">bad_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">30</span><span class="op">)</span>,</span>
@@ -601,7 +593,7 @@ match design-matrix columns.</p>
 <div class="section level3">
 <h3 id="multicollinearity-in-contrasts">2. Multicollinearity in Contrasts<a class="anchor" aria-label="anchor" href="#multicollinearity-in-contrasts"></a>
 </h3>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check for multicollinearity in your design matrix</span></span>
 <span><span class="va">cc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/check_collinearity.html">check_collinearity</a></span><span class="op">(</span><span class="fu"><a href="../reference/design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">emodel_with_contrast</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">0.9</span><span class="op">)</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">cc</span><span class="op">$</span><span class="va">ok</span><span class="op">)</span> <span class="va">cc</span><span class="op">$</span><span class="va">pairs</span></span></code></pre></div>
