@@ -5,7 +5,6 @@ output:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 2
-    css: albers.css
 params:
   family: "green"
   base_size: 13
@@ -14,42 +13,30 @@ vignette: >
   %\VignetteIndexEntry{Contrasts in fmridesign}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+css: albers.css
 ---
 
-```{r setup, include = FALSE}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.align = "center",
-  fig.retina = 2,
-  out.width = "100%",
-  fig.width = 7,
-  fig.asp = 0.618,
-  message = FALSE,
-  warning = FALSE
+  collapse = TRUE, comment = "#>", fig.align = "center", fig.retina = 2,
+  out.width = "100%", fig.width = 7, fig.asp = 0.618, message = FALSE, warning = FALSE
 )
-set.seed(123)
-options(pillar.sigfig = 7, width = 80)
-```
-
-```{r theme-setup, echo = FALSE, results = 'asis'}
-# Palette family activation
-cat(sprintf('<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.add("palette-%s");});</script>', params$family))
-
-# Content width control
-cat(sprintf('<style>:root{--content:%sch}</style>', params$content_width))
-```
-
-```{r packages, message = FALSE}
+set.seed(123); options(pillar.sigfig = 7, width = 80)
 suppressPackageStartupMessages({
   library(fmridesign)
   library(ggplot2)
 })
-
-# Apply albersdown theme if available
 if (requireNamespace("albersdown", quietly = TRUE)) {
   theme_set(albersdown::theme_albers(params$family, base_size = params$base_size))
 }
+```
+
+```{r albers-family, echo=FALSE, results='asis'}
+cat(sprintf('<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.add("palette-%s");});</script>', params$family))
+```
+
+```{r content-width, echo=FALSE, results='asis'}
+cat(sprintf('<style>:root{--content:%sch}</style>', params$content_width))
 ```
 
 ## Introduction to Contrasts
