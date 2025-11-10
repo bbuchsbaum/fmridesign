@@ -5,6 +5,7 @@ output:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 2
+    css: albers.css
 params:
   family: "ochre"
   base_size: 13
@@ -13,7 +14,6 @@ vignette: >
   %\VignetteIndexEntry{Modeling Baseline and Nuisance Effects}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
-css: albers.css
 ---
 
 ```{r setup, include = FALSE}
