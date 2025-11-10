@@ -1,8 +1,14 @@
 ---
 title: "Modeling Baseline and Nuisance Effects"
-author: "Bradley R. Buchsbaum"
-date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+description: "Comprehensive guide to baseline modeling including drift, intercepts, and nuisance regressors."
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 2
+params:
+  family: "ochre"
+  base_size: 13
+  content_width: 80
 vignette: >
   %\VignetteIndexEntry{Modeling Baseline and Nuisance Effects}
   %\VignetteEngine{knitr::rmarkdown}
@@ -13,17 +19,27 @@ vignette: >
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.width = 7, 
-  fig.height = 5,
-  fig.retina = 1,
+  fig.align = "center",
+  fig.retina = 2,
+  out.width = "100%",
+  fig.width = 7,
+  fig.asp = 0.618,
   message = FALSE,
   warning = FALSE
 )
+set.seed(123)
+options(pillar.sigfig = 7, width = 80)
+
 library(fmridesign)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
-library(Matrix) # May be needed for sparse matrix ops internally
+library(Matrix)
+
+# Apply albersdown theme if available
+if (requireNamespace("albersdown", quietly = TRUE)) {
+  theme_set(albersdown::theme_albers(params$family, base_size = params$base_size))
+}
 ```
 
 ## The Purpose of a Baseline Model

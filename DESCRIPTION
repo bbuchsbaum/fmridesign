@@ -38,6 +38,7 @@ Suggests:
     rmarkdown,
     covr
 VignetteBuilder: knitr
+Config/Needs/website: bbuchsbaum/albersdown
 URL: https://github.com/bbuchsbaum/fmridesign, https://bbuchsbaum.github.io/fmridesign/
 BugReports: https://github.com/bbuchsbaum/fmridesign/issues
 RoxygenNote: 7.3.3
