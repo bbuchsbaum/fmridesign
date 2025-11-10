@@ -13,6 +13,7 @@ vignette: >
   %\VignetteIndexEntry{Contrasts in fmridesign}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+css: albers.css
 ---
 
 ```{r setup, include = FALSE}
@@ -31,9 +32,19 @@ set.seed(123)
 options(pillar.sigfig = 7, width = 80)
 ```
 
-```{r packages}
-library(fmridesign)
-library(ggplot2)
+```{r theme-setup, echo = FALSE, results = 'asis'}
+# Palette family activation
+cat(sprintf('<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.add("palette-%s");});</script>', params$family))
+
+# Content width control
+cat(sprintf('<style>:root{--content:%sch}</style>', params$content_width))
+```
+
+```{r packages, message = FALSE}
+suppressPackageStartupMessages({
+  library(fmridesign)
+  library(ggplot2)
+})
 
 # Apply albersdown theme if available
 if (requireNamespace("albersdown", quietly = TRUE)) {

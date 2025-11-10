@@ -13,6 +13,7 @@ vignette: >
   %\VignetteIndexEntry{Building Event Models}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+css: albers.css
 ---
 
 ```{r setup, include = FALSE}
@@ -29,20 +30,30 @@ knitr::opts_chunk$set(
 )
 set.seed(123)
 options(pillar.sigfig = 7, width = 80)
+```
 
-library(fmridesign)
-library(fmrihrf)
-library(dplyr)
-library(ggplot2)
-library(tidyr)
+```{r theme-setup, echo = FALSE, results = 'asis'}
+# Palette family activation
+cat(sprintf('<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.add("palette-%s");});</script>', params$family))
+
+# Content width control
+cat(sprintf('<style>:root{--content:%sch}</style>', params$content_width))
+```
+
+```{r packages, message = FALSE}
+suppressPackageStartupMessages({
+  library(fmridesign)
+  library(fmrihrf)
+  library(dplyr)
+  library(ggplot2)
+  library(tidyr)
+  library(plotly)
+})
 
 # Apply albersdown theme if available
 if (requireNamespace("albersdown", quietly = TRUE)) {
   theme_set(albersdown::theme_albers(params$family, base_size = params$base_size))
 }
-library(plotly)
-
-# No longer need workaround - fmrihrf bug has been fixed
 ```
 
 ## Introduction: Modeling Task Effects
