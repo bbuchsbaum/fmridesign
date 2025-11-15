@@ -2,13 +2,17 @@ url: https://bbuchsbaum.github.io/fmridesign/
 template:
   package: albersdown
   bootstrap: 5
-extra_css:
-  - vignettes/albers.css
-
+extra_css: vignettes/albers.css
 navbar:
   structure:
-    left: [intro, articles, reference, news]
-    right: [search, github]
+    left:
+    - intro
+    - articles
+    - reference
+    - news
+    right:
+    - search
+    - github
   components:
     articles:
       text: Articles
@@ -16,7 +20,7 @@ navbar:
       - text: Getting Started
       - text: Introduction to fmridesign
         href: articles/a_01_introduction.html
-      - text: ---
+      - text: '---'
       - text: Core Concepts
       - text: Building Event Models
         href: articles/a_04_event_models.html

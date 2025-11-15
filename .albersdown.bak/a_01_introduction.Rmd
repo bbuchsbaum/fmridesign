@@ -1,25 +1,19 @@
 ---
-title: Introduction to fmridesign
-description: Quick tour of the core workflow for building fMRI design matrices.
+title: "Introduction to fmridesign"
+description: "Quick tour of the core workflow for building fMRI design matrices."
 output:
   rmarkdown::html_vignette:
-    toc: yes
+    toc: true
     toc_depth: 2
 params:
-  family: red
+  family: "red"
   base_size: 13
   content_width: 80
-vignette: |
-  %\VignetteIndexEntry{Introduction to fmridesign} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+vignette: >
+  %\VignetteIndexEntry{Introduction to fmridesign}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 css: albers.css
-resource_files:
-- albers.css
-- albers.js
-includes:
-  in_header: |-
-    <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
-
 ---
 
 ```{r setup, include=FALSE}
@@ -33,7 +27,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
 })
 if (requireNamespace("albersdown", quietly = TRUE)) {
-  ggplot2::theme_set(albersdown::theme_albers(params$family, base_size = params$base_size))
+  theme_set(albersdown::theme_albers(params$family, base_size = params$base_size))
 }
 ```
 

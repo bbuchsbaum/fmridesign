@@ -182,21 +182,22 @@ comparisons:</p>
 <div class="section level3">
 <h3 id="polynomial-contrasts">Polynomial Contrasts<a class="anchor" aria-label="anchor" href="#polynomial-contrasts"></a>
 </h3>
-<p>Test for linear, quadratic, or higher-order trends across ordered
-conditions:</p>
+<p>Test for linear, quadratic, or higher‑order trends across ordered
+conditions. Note: <code><a href="../reference/poly_contrast.html">poly_contrast()</a></code> with
+<code>degree = k</code> returns an F‑contrast matrix with k orthogonal
+columns (linear, quadratic, …, k‑th), so you usually only need a single
+call rather than separate one‑by‑one contrasts.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Parametric design with 4 levels</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">789</span><span class="op">)</span></span>
 <span><span class="va">intensity_levels</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">4</span>, each <span class="op">=</span> <span class="fl">12</span><span class="op">)</span></span>
 <span><span class="va">onsets_param</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">48</span>, <span class="fl">0</span>, <span class="fl">350</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Create polynomial contrasts using poly_contrast()</span></span>
+<span><span class="co"># Create a single polynomial contrast up to cubic (3 columns: linear/quadratic/cubic)</span></span>
 <span><span class="va">emodel_polynomial</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
-<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">intensity</span>, </span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">intensity</span>,</span>
 <span>              contrasts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>                linear <span class="op">=</span> <span class="fu"><a href="../reference/poly_contrast.html">poly_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">intensity</span>, name <span class="op">=</span> <span class="st">"linear"</span>, degree <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
-<span>                quadratic <span class="op">=</span> <span class="fu"><a href="../reference/poly_contrast.html">poly_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">intensity</span>, name <span class="op">=</span> <span class="st">"quadratic"</span>, degree <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,</span>
-<span>                cubic <span class="op">=</span> <span class="fu"><a href="../reference/poly_contrast.html">poly_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">intensity</span>, name <span class="op">=</span> <span class="st">"cubic"</span>, degree <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span>                poly_trend <span class="op">=</span> <span class="fu"><a href="../reference/poly_contrast.html">poly_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">intensity</span>, name <span class="op">=</span> <span class="st">"poly_trend"</span>, degree <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span>              <span class="op">)</span><span class="op">)</span>,</span>
 <span>  data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>    onset <span class="op">=</span> <span class="va">onsets_param</span>,</span>
@@ -207,29 +208,26 @@ conditions:</p>
 <span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Extract polynomial contrast weights</span></span>
+<span><span class="co"># Extract polynomial contrast weights (3 columns = linear, quadratic, cubic)</span></span>
 <span><span class="va">poly_contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">emodel_polynomial</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">poly_contrasts</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">x</span><span class="op">$</span><span class="va">weights</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $`intensity#linear`</span></span>
-<span><span class="co">#&gt;             linear_1</span></span>
-<span><span class="co">#&gt; intensity.1   -0.671</span></span>
-<span><span class="co">#&gt; intensity.2   -0.224</span></span>
-<span><span class="co">#&gt; intensity.3    0.224</span></span>
-<span><span class="co">#&gt; intensity.4    0.671</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $`intensity#quadratic`</span></span>
-<span><span class="co">#&gt;             quadratic_1 quadratic_2</span></span>
-<span><span class="co">#&gt; intensity.1      -0.671         0.5</span></span>
-<span><span class="co">#&gt; intensity.2      -0.224        -0.5</span></span>
-<span><span class="co">#&gt; intensity.3       0.224        -0.5</span></span>
-<span><span class="co">#&gt; intensity.4       0.671         0.5</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $`intensity#cubic`</span></span>
-<span><span class="co">#&gt;             cubic_1 cubic_2 cubic_3</span></span>
-<span><span class="co">#&gt; intensity.1  -0.671     0.5  -0.224</span></span>
-<span><span class="co">#&gt; intensity.2  -0.224    -0.5   0.671</span></span>
-<span><span class="co">#&gt; intensity.3   0.224    -0.5  -0.671</span></span>
-<span><span class="co">#&gt; intensity.4   0.671     0.5   0.224</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">poly_contrasts</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "intensity#poly_trend"</span></span>
+<span><span class="va">pc</span> <span class="op">&lt;-</span> <span class="va">poly_contrasts</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">pc</span><span class="op">$</span><span class="va">weights</span>, <span class="fl">6</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt;             poly_trend_1 poly_trend_2 poly_trend_3</span></span>
+<span><span class="co">#&gt; intensity.1       -0.671          0.5       -0.224</span></span>
+<span><span class="co">#&gt; intensity.2       -0.224         -0.5        0.671</span></span>
+<span><span class="co">#&gt; intensity.3        0.224         -0.5       -0.671</span></span>
+<span><span class="co">#&gt; intensity.4        0.671          0.5        0.224</span></span>
+<span></span>
+<span><span class="co"># If you want a specific component, select a column (e.g., linear = column 1)</span></span>
+<span><span class="va">linear_weights</span> <span class="op">&lt;-</span> <span class="va">pc</span><span class="op">$</span><span class="va">weights</span><span class="op">[</span>, <span class="fl">1</span>, drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">linear_weights</span><span class="op">)</span></span>
+<span><span class="co">#&gt;             poly_trend_1</span></span>
+<span><span class="co">#&gt; intensity.1   -0.6708204</span></span>
+<span><span class="co">#&gt; intensity.2   -0.2236068</span></span>
+<span><span class="co">#&gt; intensity.3    0.2236068</span></span>
+<span><span class="co">#&gt; intensity.4    0.6708204</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -289,10 +287,14 @@ interactions:</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="contrasts-with-parametric-modulators">Contrasts with Parametric Modulators<a class="anchor" aria-label="anchor" href="#contrasts-with-parametric-modulators"></a>
+<h2 id="parametric-modulators-do-you-need-a-contrast">Parametric Modulators: Do You Need a Contrast?<a class="anchor" aria-label="anchor" href="#parametric-modulators-do-you-need-a-contrast"></a>
 </h2>
-<p>When using parametric modulators, contrasts can test both categorical
-and continuous effects:</p>
+<p>For a simple parametric modulator (e.g., <code>hrf(RT)</code> with a
+single‑basis HRF), the effect is captured by a single regressor. In
+standard GLM software, the t‑test on that coefficient directly tests the
+parametric effect—no explicit contrast is required. Contrasts are useful
+if you need to combine multiple columns (e.g., multi‑basis HRF, or a set
+of RT‑by‑condition regressors) into a single hypothesis.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Design with conditions and RT modulation</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">567</span><span class="op">)</span></span>
@@ -302,8 +304,8 @@ and continuous effects:</p>
 <span><span class="va">pm_RT</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_events</span>, mean <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">pm_conditions</span> <span class="op">==</span> <span class="st">"congruent"</span>, <span class="fl">0.5</span>, <span class="fl">0.7</span><span class="op">)</span>, sd <span class="op">=</span> <span class="fl">0.1</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">emodel_parametric</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
-<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">condition</span>, </span>
-<span>              contrasts <span class="op">=</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"incongruent"</span>, <span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"congruent"</span>, name <span class="op">=</span> <span class="st">"incongruent_gt_congruent"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> </span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">condition</span>,</span>
+<span>              contrasts <span class="op">=</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"incongruent"</span>, <span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"congruent"</span>, name <span class="op">=</span> <span class="st">"incongruent_gt_congruent"</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
 <span>          <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">RT</span><span class="op">)</span>,</span>
 <span>  data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>    onset <span class="op">=</span> <span class="va">pm_onsets</span>,</span>
@@ -315,19 +317,14 @@ and continuous effects:</p>
 <span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Get contrasts - includes both categorical and parametric terms</span></span>
-<span><span class="va">param_contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">emodel_parametric</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">param_contrasts</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $`condition#incongruent_gt_congruent`</span></span>
-<span><span class="co">#&gt; contrast: incongruent_gt_congruent </span></span>
-<span><span class="co">#&gt;  A:  ~condition == "incongruent" </span></span>
-<span><span class="co">#&gt;  B:  ~condition == "congruent" </span></span>
-<span><span class="co">#&gt;  term:  condition </span></span>
-<span><span class="co">#&gt;  weights:  </span></span>
-<span><span class="co">#&gt;                       incongruent_gt_congruent</span></span>
-<span><span class="co">#&gt; condition.congruent                         -1</span></span>
-<span><span class="co">#&gt; condition.incongruent                        1</span></span>
-<span><span class="co">#&gt;  conditions:  condition_condition.congruent condition_condition.incongruent RT_RT</span></span></code></pre></div>
+<span><span class="co"># Categorical contrast (condition) is attached; the RT parametric term is a single regressor.</span></span>
+<span><span class="co"># Identify its column(s) for reporting; the model t‑stat on this column tests the parametric effect.</span></span>
+<span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">emodel_parametric</span><span class="op">)</span></span>
+<span><span class="va">idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/term_indices.html">term_indices</a></span><span class="op">(</span><span class="va">dm</span><span class="op">)</span></span>
+<span><span class="va">idx</span><span class="op">[[</span><span class="st">"RT"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="co">#&gt; [1] 3</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">dm</span><span class="op">)</span><span class="op">[</span><span class="va">idx</span><span class="op">[[</span><span class="st">"RT"</span><span class="op">]</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="co">#&gt; [1] "RT_RT"</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="f-contrasts-for-omnibus-tests">F-contrasts for Omnibus Tests<a class="anchor" aria-label="anchor" href="#f-contrasts-for-omnibus-tests"></a>
@@ -473,61 +470,11 @@ prefer orthogonal sets when possible.</p>
 <span><span class="co">#&gt; [1]  0.3333333  0.3333333  0.3333333 -0.5000000 -0.5000000</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">scaled_contrast</span><span class="op">)</span><span class="op">)</span>  <span class="co"># Should be ~0</span></span>
 <span><span class="co">#&gt; [1] 0</span></span></code></pre></div>
+<!-- Section on multiple-comparison correction removed: not standard within-model in typical fMRI GLM workflows. Downstream group analysis packages handle control of false positives across space/contrasts. -->
+<!-- Section on downstream statistical fitting removed to keep the vignette focused on
+     building and validating contrasts. GLM fitting and inference vary by toolbox and
+     are typically handled outside fmridesign. -->
 </div>
-<div class="section level3">
-<h3 id="multiple-comparison-correction">3. Multiple Comparison Correction<a class="anchor" aria-label="anchor" href="#multiple-comparison-correction"></a>
-</h3>
-<p>When testing multiple contrasts, consider correction for multiple
-comparisons:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Design with multiple planned contrasts</span></span>
-<span><span class="va">emodel_multiple</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
-<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">condition</span>,</span>
-<span>              contrasts <span class="op">=</span> <span class="fu"><a href="../reference/contrast_set.html">contrast_set</a></span><span class="op">(</span></span>
-<span>                <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"C1"</span>, <span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"C2"</span>, name <span class="op">=</span> <span class="st">"C1_vs_C2"</span><span class="op">)</span>,</span>
-<span>                <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"C1"</span>, <span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"C3"</span>, name <span class="op">=</span> <span class="st">"C1_vs_C3"</span><span class="op">)</span>,</span>
-<span>                <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"C2"</span>, <span class="op">~</span> <span class="va">condition</span> <span class="op">==</span> <span class="st">"C3"</span>, name <span class="op">=</span> <span class="st">"C2_vs_C3"</span><span class="op">)</span></span>
-<span>              <span class="op">)</span><span class="op">)</span>,</span>
-<span>  data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
-<span>    onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">60</span>, <span class="fl">0</span>, <span class="fl">350</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    condition <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"C1"</span>, <span class="st">"C2"</span>, <span class="st">"C3"</span><span class="op">)</span>, <span class="fl">20</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    block <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">60</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">block</span>,</span>
-<span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Number of contrasts to correct for</span></span>
-<span><span class="va">n_contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">emodel_multiple</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">bonferroni_alpha</span> <span class="op">&lt;-</span> <span class="fl">0.05</span> <span class="op">/</span> <span class="va">n_contrasts</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"Bonferroni-corrected alpha:"</span>, <span class="va">bonferroni_alpha</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "Bonferroni-corrected alpha: 0.0166666666666667"</span></span></code></pre></div>
-</div>
-</div>
-<div class="section level2">
-<h2 id="integration-with-statistical-analysis">Integration with Statistical Analysis<a class="anchor" aria-label="anchor" href="#integration-with-statistical-analysis"></a>
-</h2>
-<p>Once contrasts are defined, they can be used in the statistical
-analysis:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Assuming you have:</span></span>
-<span><span class="co"># - Y: fMRI time series data</span></span>
-<span><span class="co"># - X: design matrix from event_model</span></span>
-<span><span class="co"># - C: contrast vector</span></span>
-<span></span>
-<span><span class="co"># Standard GLM analysis</span></span>
-<span><span class="co"># fit &lt;- lm(Y ~ X - 1)</span></span>
-<span><span class="co"># beta &lt;- coef(fit)</span></span>
-<span><span class="co"># contrast_estimate &lt;- t(C) %*% beta</span></span>
-<span><span class="co"># contrast_se &lt;- sqrt(t(C) %*% vcov(fit) %*% C)</span></span>
-<span><span class="co"># t_stat &lt;- contrast_estimate / contrast_se</span></span>
-<span></span>
-<span><span class="co"># Using the fmridesign contrast</span></span>
-<span><span class="va">design_mat</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">emodel_with_contrast</span><span class="op">)</span></span>
-<span><span class="va">contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">emodel_with_contrast</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Apply contrast to parameter estimates</span></span>
-<span><span class="co"># contrast_result &lt;- apply_contrast(fit, contrasts[[1]])</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="advanced-topics">Advanced Topics<a class="anchor" aria-label="anchor" href="#advanced-topics"></a>
@@ -538,7 +485,7 @@ analysis:</p>
 <p>You can generate complex patterns via helper generators that return
 contrast specifications. For example, a sliding-window set that compares
 adjacent, disjoint windows across an ordered factor:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Five ordered levels</span></span>
 <span><span class="va">lvl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"L"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span></span>
 <span></span>
@@ -570,7 +517,7 @@ match design-matrix columns.</p>
 <div class="section level3">
 <h3 id="rank-deficient-contrasts">1. Rank-Deficient Contrasts<a class="anchor" aria-label="anchor" href="#rank-deficient-contrasts"></a>
 </h3>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># This will cause issues - contrast is not estimable</span></span>
 <span><span class="va">bad_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">30</span><span class="op">)</span>,</span>
@@ -593,7 +540,7 @@ match design-matrix columns.</p>
 <div class="section level3">
 <h3 id="multicollinearity-in-contrasts">2. Multicollinearity in Contrasts<a class="anchor" aria-label="anchor" href="#multicollinearity-in-contrasts"></a>
 </h3>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check for multicollinearity in your design matrix</span></span>
 <span><span class="va">cc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/check_collinearity.html">check_collinearity</a></span><span class="op">(</span><span class="fu"><a href="../reference/design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">emodel_with_contrast</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">0.9</span><span class="op">)</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">cc</span><span class="op">$</span><span class="va">ok</span><span class="op">)</span> <span class="va">cc</span><span class="op">$</span><span class="va">pairs</span></span></code></pre></div>
@@ -604,14 +551,12 @@ match design-matrix columns.</p>
 </h2>
 <p>Define contrasts inline, extract weights cleanly, and validate before
 analysis. Use t-contrasts for directional tests and F-contrasts for
-omnibus effects. 3. <strong>Complex designs</strong>: Handle factorial,
-parametric, and multi-run contrasts 4. <strong>Validation
-tools</strong>: Ensure contrasts are properly specified and
-estimable</p>
+omnibus effects. - Complex designs: handle factorial, parametric, and
+multi‑run contrasts - Validation tools: ensure contrasts are properly
+specified and estimable</p>
 <p>Remember to: - Plan contrasts based on your hypotheses - Validate
-contrast properties before analysis - Consider multiple comparison
-corrections - Document your contrast specifications for
-reproducibility</p>
+contrast properties before analysis - Document your contrast
+specifications for reproducibility</p>
 <p>For more information on event and baseline models, see: -
 <code><a href="../articles/a_01_introduction.html">vignette("a_01_introduction")</a></code> -
 <code><a href="../articles/a_03_baseline_model.html">vignette("a_03_baseline_model")</a></code> -

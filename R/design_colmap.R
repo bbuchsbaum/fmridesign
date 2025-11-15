@@ -21,6 +21,7 @@
 #'   - `basis_ix` (integer): within-condition basis index (HRF component); `NA` if not applicable
 #'   - `basis_total` (integer): total number of basis components for the column's term; `NA` if not applicable
 #'   - `basis_label` (character): human-readable label for the basis component when known
+#'   - `pretty_name` (character): concise, human-friendly label for display (e.g., "RT" or "RT_lag_02")
 #'   - `is_block_diagonal` (logical): TRUE when the regressor is per-run/block
 #'   - `modulation_type` (character): "amplitude", "parametric", or "covariate"
 #'   - `modulation_id` (character): modulator identifier when applicable (e.g., "RT", "RT_by_group")
@@ -143,7 +144,7 @@ design_colmap.event_model <- function(x, ...) {
     }
   }
 
-  tibble::tibble(
+  out <- tibble::tibble(
     col = seq_len(n_cols),
     name = cn,
     term_tag = term_tag_by_col,
@@ -160,6 +161,23 @@ design_colmap.event_model <- function(x, ...) {
     modulation_type = per_term_mod_type[term_index_by_col],
     modulation_id   = per_term_mod_id[term_index_by_col]
   )
+
+  # Derive a human-friendly display label without duplicated tags for common cases
+  pretty_name <- out$name
+  is_param <- out$modulation_type == "parametric"
+  # Single-basis parametric: just use the modulator id (e.g., "RT")
+  mask_single <- is_param & (is.na(out$basis_ix) | !is.finite(out$basis_ix))
+  pretty_name[mask_single & !is.na(out$modulation_id)] <- out$modulation_id[mask_single & !is.na(out$modulation_id)]
+  # Multi-basis parametric: include basis label when available, otherwise _bXX
+  mask_multi <- is_param & is.finite(out$basis_ix)
+  pretty_name[mask_multi] <- ifelse(
+    !is.na(out$basis_label[mask_multi]) & nzchar(out$basis_label[mask_multi]),
+    paste0(out$modulation_id[mask_multi], "_", out$basis_label[mask_multi]),
+    paste0(out$modulation_id[mask_multi], "_b", sprintf("%02d", out$basis_ix[mask_multi]))
+  )
+
+  out$pretty_name <- pretty_name
+  out
 }
 
 #' @export

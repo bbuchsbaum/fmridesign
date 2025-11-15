@@ -496,6 +496,71 @@ context:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel_gen_hrf</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel_gen_hrf</span>, term_name <span class="op">=</span> <span class="st">"stim"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="a_04_event_models_files/figure-html/specify_hrf-4.png" class="r-plt" alt="Regressors generated using different HRF bases (SPMG, Gaussian, spline/tent)." width="100%" style="display: block; margin: auto;"></p>
+<div class="section level3">
+<h3 id="advanced-parametric-modulator-with-fir-hrf-and-windowed-f-contrast">Advanced: Parametric Modulator with FIR HRF and Windowed
+F-contrast<a class="anchor" aria-label="anchor" href="#advanced-parametric-modulator-with-fir-hrf-and-windowed-f-contrast"></a>
+</h3>
+<p>Sometimes a parametric modulator is modeled with a multi‑basis HRF
+(e.g., FIR) to allow more flexible timing. In that case, the modulator
+produces multiple columns (one per basis bin). You can form an omnibus
+F‑test across a window of bins (e.g., around the expected peak) or
+across all bins.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Toy design with a continuous RT modulator</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
+<span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">60</span></span>
+<span><span class="va">des_pm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="va">n</span>, <span class="fl">0</span>, <span class="fl">260</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  RT    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="va">n</span>, <span class="fl">0.4</span>, <span class="fl">0.9</span><span class="op">)</span><span class="op">)</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span>,</span>
+<span>  run   <span class="op">=</span> <span class="fl">1</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">sframe_pm</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">140</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Model RT with an FIR basis (10 bins)</span></span>
+<span><span class="va">emod_rt_fir</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">RT</span>, basis <span class="op">=</span> <span class="st">"fir"</span>, nbasis <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">des_pm</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, sampling_frame <span class="op">=</span> <span class="va">sframe_pm</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Identify the RT columns in the full design matrix</span></span>
+<span><span class="va">dm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">emod_rt_fir</span><span class="op">)</span></span>
+<span><span class="va">idx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/term_indices.html">term_indices</a></span><span class="op">(</span><span class="va">dm</span><span class="op">)</span>    <span class="co"># maps term tags -&gt; column indices</span></span>
+<span><span class="va">rt_cols</span> <span class="op">&lt;-</span> <span class="va">idx</span><span class="op">[[</span><span class="st">"RT"</span><span class="op">]</span><span class="op">]</span>     <span class="co"># columns for the RT FIR term (b01..b10)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">dm</span><span class="op">)</span><span class="op">[</span><span class="va">rt_cols</span><span class="op">]</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span></span>
+<span><span class="co">#&gt; [1] "RT_RT_b01" "RT_RT_b02" "RT_RT_b03" "RT_RT_b04" "RT_RT_b05"</span></span>
+<span></span>
+<span><span class="co"># Build a windowed F-contrast over FIR bins 3:5 (peak region example)</span></span>
+<span><span class="va">window</span> <span class="op">&lt;-</span> <span class="fl">3</span><span class="op">:</span><span class="fl">5</span></span>
+<span><span class="va">win_cols</span> <span class="op">&lt;-</span> <span class="va">rt_cols</span><span class="op">[</span><span class="va">window</span><span class="op">]</span></span>
+<span><span class="va">C_F</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">0</span>, nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">dm</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">win_cols</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="kw">for</span> <span class="op">(</span><span class="va">j</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">win_cols</span><span class="op">)</span><span class="op">)</span> <span class="va">C_F</span><span class="op">[</span><span class="va">win_cols</span><span class="op">[</span><span class="va">j</span><span class="op">]</span>, <span class="va">j</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">1</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">C_F</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"RT_b"</span>, <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%02d"</span>, <span class="va">window</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Validate (treat `dm` as X); this reports an F-type contrast because C has multiple columns</span></span>
+<span><span class="fu"><a href="../reference/validate_contrasts.html">validate_contrasts</a></span><span class="op">(</span><span class="va">dm</span>, weights <span class="op">=</span> <span class="va">C_F</span><span class="op">)</span></span>
+<span><span class="co">#&gt;         name type estimable sum_to_zero orthogonal_to_intercept full_rank</span></span>
+<span><span class="co">#&gt; 1 contrast#1    F      TRUE       FALSE                    TRUE      TRUE</span></span>
+<span><span class="co">#&gt; 2 contrast#2    F      TRUE       FALSE                    TRUE      TRUE</span></span>
+<span><span class="co">#&gt; 3 contrast#3    F      TRUE       FALSE                    TRUE      TRUE</span></span>
+<span><span class="co">#&gt;   nonzero_weights</span></span>
+<span><span class="co">#&gt; 1               1</span></span>
+<span><span class="co">#&gt; 2               1</span></span>
+<span><span class="co">#&gt; 3               1</span></span>
+<span></span>
+<span><span class="co"># If you instead want a single t-contrast averaging the window, use 1/|window| weights</span></span>
+<span><span class="va">C_avg</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fl">0</span>, nrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="va">dm</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">C_avg</span><span class="op">[</span><span class="va">win_cols</span>, <span class="fl">1</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fl">1</span><span class="op">/</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">win_cols</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">C_avg</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="st">"RT_peak_avg"</span></span>
+<span><span class="fu"><a href="../reference/validate_contrasts.html">validate_contrasts</a></span><span class="op">(</span><span class="va">dm</span>, weights <span class="op">=</span> <span class="va">C_avg</span><span class="op">)</span></span>
+<span><span class="co">#&gt;       name type estimable sum_to_zero orthogonal_to_intercept full_rank</span></span>
+<span><span class="co">#&gt; 1 contrast    t      TRUE       FALSE                    TRUE        NA</span></span>
+<span><span class="co">#&gt;   nonzero_weights</span></span>
+<span><span class="co">#&gt; 1               3</span></span></code></pre></div>
+<p>This pattern also works for other multi‑basis choices (e.g.,
+SPMG2/3): build a contrast matrix that selects the columns for the
+modulator’s basis functions and use <code><a href="../reference/validate_contrasts.html">validate_contrasts()</a></code> to
+confirm the contrast structure before fitting downstream.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="trialwise-models-for-beta-series-analysis">Trialwise Models for Beta-Series Analysis<a class="anchor" aria-label="anchor" href="#trialwise-models-for-beta-series-analysis"></a>
@@ -504,7 +569,7 @@ context:</p>
 use <code><a href="../reference/trialwise.html">trialwise()</a></code> in the formula. This creates a separate
 regressor for every single event specified by the <code>onset</code>
 variable.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">emodel_trialwise</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/trialwise.html">trialwise</a></span><span class="op">(</span><span class="op">)</span>, </span>
 <span>                                data <span class="op">=</span> <span class="va">simple_design</span>, </span>
 <span>                                block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, </span>
@@ -517,7 +582,7 @@ variable.</p>
 <span><span class="co"># It generates one condition per trial. Use label_mode/compactness controls.</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel_trialwise</span>, label_mode <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="a_04_event_models_files/figure-html/create_trialwise-1.png" class="r-plt" alt="Trialwise regressors (one per trial) plotted over time with optional mean column." width="100%" style="display: block; margin: auto;"></p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu">plotly</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/plotly/man/ggplotly.html" class="external-link">ggplotly</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel_trialwise</span>, label_mode <span class="op">=</span> <span class="st">"compact"</span><span class="op">)</span><span class="op">)</span> <span class="co"># Use plotly to explore interactively</span></span>
 <span><span class="op">}</span></span></code></pre></div>
@@ -532,7 +597,7 @@ have one row per scan (sum of <code>blocklens</code>).</p>
 <p>Normally, one would add <code>motion</code> regressors to the
 <code>baseline_model</code> but we use it as an illustrative
 example.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Create covariates aligned to the sampling frame</span></span>
 <span><span class="va">n_scans</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/blocklens.html" class="external-link">blocklens</a></span><span class="op">(</span><span class="va">sframe_single_run</span><span class="op">)</span><span class="op">)</span></span>
@@ -557,7 +622,7 @@ construction will error with a helpful message.</p>
 </h2>
 <p>Once an <code>event_model</code> is created, you can extract its
 components:</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># List the terms in the model (names are now term tags)</span></span>
 <span><span class="va">terms_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">emodel_pmod_int</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">terms_list</span><span class="op">)</span><span class="op">)</span></span>
@@ -648,7 +713,7 @@ design matrix; downstream GLM fitting happens in analysis packages
 </h2>
 <p>You can attach contrasts directly to <code><a href="../reference/hrf.html">hrf()</a></code> terms. Here
 are two common patterns.</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Pairwise contrast between two stimulus levels</span></span>
 <span><span class="va">con_face_vs_scene</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">stim</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span> <span class="va">stim</span> <span class="op">==</span> <span class="st">"scene"</span>, name <span class="op">=</span> <span class="st">"face_vs_scene"</span><span class="op">)</span></span>
 <span></span>
@@ -679,7 +744,7 @@ are two common patterns.</p>
 </h2>
 <p>To build a full design matrix, bind the event regressors with the
 baseline regressors.</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Baseline model for the same sampling frame</span></span>
 <span><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"poly"</span>, degree <span class="op">=</span> <span class="fl">5</span>, sframe <span class="op">=</span> <span class="va">sframe_two_factor</span><span class="op">)</span></span>
 <span></span>

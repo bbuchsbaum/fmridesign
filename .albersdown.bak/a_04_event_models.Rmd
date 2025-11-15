@@ -1,26 +1,19 @@
 ---
-title: Building Event Models
-description: Comprehensive guide to event model specification with HRF bases and parametric
-  modulators.
+title: "Building Event Models"
+description: "Comprehensive guide to event model specification with HRF bases and parametric modulators."
 output:
   rmarkdown::html_vignette:
-    toc: yes
+    toc: true
     toc_depth: 2
 params:
-  family: red
+  family: "red"
   base_size: 13
   content_width: 80
-vignette: |
-  %\VignetteIndexEntry{Building Event Models} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+vignette: >
+  %\VignetteIndexEntry{Building Event Models}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 css: albers.css
-resource_files:
-- albers.css
-- albers.js
-includes:
-  in_header: |-
-    <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
-
 ---
 
 ```{r setup, include=FALSE}
@@ -38,7 +31,7 @@ suppressPackageStartupMessages({
   library(plotly)
 })
 if (requireNamespace("albersdown", quietly = TRUE)) {
-  ggplot2::theme_set(albersdown::theme_albers("red", base_size = params$base_size))
+  theme_set(albersdown::theme_albers("red", base_size = params$base_size))
 }
 ```
 
@@ -337,52 +330,6 @@ emodel_gen_hrf <- event_model(onset ~ hrf(stim, basis = lagged_gauss),
 print(emodel_gen_hrf)
 plot(emodel_gen_hrf, term_name = "stim")
 ```
-
-### Advanced: Parametric Modulator with FIR HRF and Windowed F-contrast
-
-Sometimes a parametric modulator is modeled with a multi‑basis HRF (e.g., FIR) to allow more flexible timing. In that case, the modulator produces multiple columns (one per basis bin). You can form an omnibus F‑test across a window of bins (e.g., around the expected peak) or across all bins.
-
-```{r pm_fir_fcontrast, fig.alt="Design with RT parametric modulator modeled using an FIR basis; demonstration of constructing a windowed F-contrast across FIR bins."}
-# Toy design with a continuous RT modulator
-set.seed(42)
-n <- 60
-des_pm <- data.frame(
-  onset = sort(runif(n, 0, 260)),
-  RT    = scale(runif(n, 0.4, 0.9))[,1],
-  run   = 1
-)
-sframe_pm <- sampling_frame(blocklens = 140, TR = 2)
-
-# Model RT with an FIR basis (10 bins)
-emod_rt_fir <- event_model(
-  onset ~ hrf(RT, basis = "fir", nbasis = 10),
-  data = des_pm, block = ~ run, sampling_frame = sframe_pm
-)
-
-# Identify the RT columns in the full design matrix
-dm <- design_matrix(emod_rt_fir)
-idx <- term_indices(dm)    # maps term tags -> column indices
-rt_cols <- idx[["RT"]]     # columns for the RT FIR term (b01..b10)
-colnames(dm)[rt_cols][1:5]
-
-# Build a windowed F-contrast over FIR bins 3:5 (peak region example)
-window <- 3:5
-win_cols <- rt_cols[window]
-C_F <- matrix(0, nrow = ncol(dm), ncol = length(win_cols))
-for (j in seq_along(win_cols)) C_F[win_cols[j], j] <- 1
-colnames(C_F) <- paste0("RT_b", sprintf("%02d", window))
-
-# Validate (treat `dm` as X); this reports an F-type contrast because C has multiple columns
-validate_contrasts(dm, weights = C_F)
-
-# If you instead want a single t-contrast averaging the window, use 1/|window| weights
-C_avg <- matrix(0, nrow = ncol(dm), ncol = 1)
-C_avg[win_cols, 1] <- 1/length(win_cols)
-colnames(C_avg) <- "RT_peak_avg"
-validate_contrasts(dm, weights = C_avg)
-```
-
-This pattern also works for other multi‑basis choices (e.g., SPMG2/3): build a contrast matrix that selects the columns for the modulator’s basis functions and use `validate_contrasts()` to confirm the contrast structure before fitting downstream.
 
 ## Trialwise Models for Beta-Series Analysis
 

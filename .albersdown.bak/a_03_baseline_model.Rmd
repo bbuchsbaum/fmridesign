@@ -1,26 +1,19 @@
 ---
-title: Modeling Baseline and Nuisance Effects
-description: Comprehensive guide to baseline modeling including drift, intercepts,
-  and nuisance regressors.
+title: "Modeling Baseline and Nuisance Effects"
+description: "Comprehensive guide to baseline modeling including drift, intercepts, and nuisance regressors."
 output:
   rmarkdown::html_vignette:
-    toc: yes
+    toc: true
     toc_depth: 2
 params:
-  family: red
+  family: "red"
   base_size: 13
   content_width: 80
-vignette: |
-  %\VignetteIndexEntry{Modeling Baseline and Nuisance Effects} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+vignette: >
+  %\VignetteIndexEntry{Modeling Baseline and Nuisance Effects}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 css: albers.css
-resource_files:
-- albers.css
-- albers.js
-includes:
-  in_header: |-
-    <script src="albers.js"></script>
-    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
-
 ---
 
 ```{r setup, include=FALSE}
@@ -37,7 +30,7 @@ suppressPackageStartupMessages({
   library(Matrix)
 })
 if (requireNamespace("albersdown", quietly = TRUE)) {
-  ggplot2::theme_set(albersdown::theme_albers("red", base_size = params$base_size))
+  theme_set(albersdown::theme_albers("red", base_size = params$base_size))
 }
 ```
 
