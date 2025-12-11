@@ -338,6 +338,56 @@ print(emodel_gen_hrf)
 plot(emodel_gen_hrf, term_name = "stim")
 ```
 
+### Per-Onset HRF Specification with `hrf_fun`
+
+For advanced use cases where different events require different HRF shapes, you can use the `hrf_fun` parameter. This accepts a generator function that receives event data and returns a list of HRF objects (one per onset). The generator is called *after* any subsetting, so it only sees the events that will actually be modeled.
+
+```{r per_onset_hrf, fig.alt="Event model using per-onset HRF specification with different HRFs for different conditions."}
+# Generator function that assigns different HRFs based on condition
+cond_hrf_gen <- function(event_data) {
+  lapply(seq_len(nrow(event_data)), function(i) {
+    if (event_data$stim[i] == "face") {
+      HRF_SPMG1
+    } else {
+      HRF_GAMMA
+    }
+  })
+}
+
+emodel_per_onset <- event_model(
+  onset ~ hrf(stim, hrf_fun = cond_hrf_gen),
+  data = simple_design,
+  block = ~ run,
+  sampling_frame = sframe_single_run
+)
+print(emodel_per_onset)
+```
+
+The `hrf_fun` generator receives a data frame containing `onset`, `duration`, `blockid`, and any term variables. This enables use cases like:
+
+- **Duration-based HRFs**: Use `boxcar_hrf_gen()` to create boxcar HRFs based on event duration
+- **Weighted sub-event HRFs**: Use `weighted_hrf_gen()` for events with sub-onset timing
+- **Formula syntax**: Reference a column containing HRF objects directly with `hrf_fun = ~my_hrf_column`
+
+```{r boxcar_example}
+# Create a design with varying event durations
+boxcar_design <- data.frame(
+  onset = c(0, 20, 45, 70),
+  stim = factor(c("A", "B", "A", "B")),
+  duration = c(2, 4, 3, 5),  # Varying durations
+  run = 1
+)
+
+emodel_boxcar <- event_model(
+  onset ~ hrf(stim, hrf_fun = boxcar_hrf_gen()),
+  data = boxcar_design,
+  durations = boxcar_design$duration,
+  block = ~ run,
+  sampling_frame = sframe_single_run
+)
+print(emodel_boxcar)
+```
+
 ### Advanced: Parametric Modulator with FIR HRF and Windowed F-contrast
 
 Sometimes a parametric modulator is modeled with a multi‑basis HRF (e.g., FIR) to allow more flexible timing. In that case, the modulator produces multiple columns (one per basis bin). You can form an omnibus F‑test across a window of bins (e.g., around the expected peak) or across all bins.

@@ -76,62 +76,98 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #### TODO character variables need an "as.factor"
 
 #' hemodynamic regressor specification function for model formulas.
-#' 
+#'
 #' This function is to be used in formulas for fitting functions, e.g. onsets ~ hrf(fac1,fac2) ...
-#' It captures the variables/expressions provided and packages them with HRF/contrast 
+#' It captures the variables/expressions provided and packages them with HRF/contrast
 #' information into an `hrfspec` object, which is then processed by `event_model`.
-#' 
-#' @param ... One or more variable names (bare or character) or expressions involving variables 
+#'
+#' @param ... One or more variable names (bare or character) or expressions involving variables
 #'            present in the `data` argument of `event_model`.
-#' @param basis the impulse response function or the name of a pre-supplied function, 
-#'        one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs". 
+#' @param basis the impulse response function or the name of a pre-supplied function,
+#'        one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs".
 #'        Can also be an `HRF` object.
+#' @param hrf_fun optional per-onset HRF generator. Can be:
+#'        \itemize{
+#'          \item A function that takes a data frame of event data (with columns `onset`, `duration`,
+#'                `blockid`, plus any term variables) and returns either a single HRF object
+#'                (recycled to all events) or a list of HRF objects (one per event).
+#'          \item A formula (e.g., `~hrf_column`) referencing a column in the event data that
+#'                contains a list of pre-built HRF objects.
+#'        }
+#'        When `hrf_fun` is specified, the `basis` argument is ignored. The generator function
+#'        is called AFTER any subsetting via `subset=`, ensuring correct alignment between
+#'        HRFs and events. All returned HRFs must have the same `nbasis` for design matrix consistency.
 #' @param onsets optional onsets override. If missing, onsets will be taken from the LHS of the main model formula.
 #' @param durations optional durations override. If missing, durations argument from `event_model` is used.
-#' @param prefix a character string that is prepended to the variable names and used to identify the term. 
+#' @param prefix a character string that is prepended to the variable names and used to identify the term.
 #'               Can be used to disambiguate two \code{hrf} terms with the same variable(s) but different onsets or basis functions.
 #' @param subset an expression indicating the subset of 'onsets' to keep.
 #' @param precision sampling precision in seconds.
 #' @param nbasis number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.
-#' @param contrasts one or more \code{contrast_spec} objects created with the \code{contrast}, `pair_contrast` etc. functions. 
+#' @param contrasts one or more \code{contrast_spec} objects created with the \code{contrast}, `pair_contrast` etc. functions.
 #'                  Must be NULL, a single contrast spec, or a *named* list of contrast specs.
 #' @param id a unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.
 #' @param name Optional human-readable name for the term.
 #' @param lag a temporal offset in seconds which is added to onset before convolution
 #' @param summate whether impulse amplitudes sum up when duration is greater than 0.
-#' @examples 
-#' 
+#' @examples
+#'
 #' ## 'hrf' is typically used in the context of \code{formula}s passed to `event_model`.
-#' 
+#'
 #' # Simple model with one factor
 #' form1 <- onsets ~ hrf(condition, basis="spmg1")
-#' 
+#'
 #' # Model with factor and continuous modulator, using default SPMG1 for both terms
 #' form2 <- onsets ~ hrf(condition) + hrf(RT)
-#' 
+#'
 #' # Model with interaction term and SPMG3 basis
 #' form3 <- onsets ~ hrf(condition, RT, basis="spmg3")
-#' 
+#'
 #' # Model with an expression and contrasts
 #' library(rlang)
 #' con1 <- pair_contrast(~ condition == "A", ~ condition == "B", name="AvB")
 #' form4 <- onsets ~ hrf(condition, Poly(RT, 2), contrasts=con1)
-#' 
+#'
+#' # Per-onset HRF using hrf_fun: variable duration boxcars
+#' form5 <- onsets ~ hrf(condition,
+#'                       hrf_fun = function(d) {
+#'                         lapply(d$duration, function(dur) fmrihrf::hrf_boxcar(width = dur))
+#'                       })
+#'
+#' # Per-onset HRF using hrf_fun with weighted HRFs for events with internal structure
+#' # (e.g., clusters of weighted impulses)
+#' form6 <- onsets ~ hrf(condition,
+#'                       hrf_fun = function(d) {
+#'                         Map(function(times, weights, onset) {
+#'                           fmrihrf::hrf_weighted(times = times - onset, weights = weights)
+#'                         }, d$sub_times, d$sub_weights, d$onset)
+#'                       })
+#'
 #' @export
 #' @importFrom rlang enquos enexpr syms is_formula is_quosure is_call as_label %||%
 #' @return an \code{hrfspec} instance
-hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.3, 
+hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.3,
                 nbasis=1, contrasts=NULL, id=NULL, name=NULL, lag=0, summate=TRUE) {
-  
+
   vars <- rlang::enquos(...) # Capture variables/expressions as quosures
-  
+
   # --- Handle special named arguments within ... ---
   var_names <- names(vars)
   # Remove any quosures whose name matches hrf formals (these are control args, not vars)
   hrf_formals <- names(formals(hrf))
+
+  # Check if hrf_fun was passed via ... (happens when called from eval() on a quoted expression)
+  # In this case, hrf_fun formal is NULL but there's a quosure named "hrf_fun" in vars
+  if (is.null(hrf_fun) && "hrf_fun" %in% var_names) {
+    hrf_fun_idx <- which(var_names == "hrf_fun")
+    hrf_fun_quo <- vars[[hrf_fun_idx]]
+    # Evaluate the quosure to get the actual function/formula
+    hrf_fun <- rlang::eval_tidy(hrf_fun_quo)
+  }
+
   var_indices <- ! (var_names %in% hrf_formals)
   vars <- vars[var_indices]
-  
+
   if (length(vars) == 0) {
       stop("`hrf` must have at least one variable or expression specified in `...`")
   }
@@ -193,21 +229,40 @@ hrf <- function(..., basis="spmg1", onsets=NULL, durations=NULL, prefix=NULL, su
     }
   }
   # -----------------------------
-  
+
+  # --- Handle hrf_fun parameter ---
+  hrf_fun_captured <- NULL
+  if (!is.null(hrf_fun)) {
+    if (rlang::is_formula(hrf_fun)) {
+      hrf_fun_captured <- hrf_fun
+    } else if (is.function(hrf_fun)) {
+      hrf_fun_captured <- hrf_fun
+    } else {
+      stop("`hrf_fun` must be a function or formula (e.g., ~hrf_column)", call. = FALSE)
+    }
+
+    # Warn if both basis (non-default) and hrf_fun specified
+    if (!missing(basis) && basis != "spmg1") {
+      warning("Both `basis` and `hrf_fun` specified; `hrf_fun` takes precedence.", call. = FALSE)
+    }
+  }
+  # -----------------------------
+
   basis_obj <- make_hrf(basis, lag, nbasis=nbasis)
-  
+
   # Call the internal constructor, passing quosures directly
   ret <- hrfspec(
     vars = vars, # Pass list of quosures captured by enquos
-    basis = basis_obj,         
-    onsets = onsets,       
-    durations = durations, 
-    prefix = prefix,       
+    basis = basis_obj,
+    hrf_fun = hrf_fun_captured,  # NEW: per-onset HRF generator
+    onsets = onsets,
+    durations = durations,
+    prefix = prefix,
     subset = rlang::enexpr(subset), # Capture subset expr unevaluated
     precision = precision,
     contrasts = contrasts, ## Pass validated list of contrast specs
     summate = summate,
-    id = final_id # Pass the determined ID 
+    id = final_id # Pass the determined ID
     )
 
   ret
@@ -250,12 +305,13 @@ hrfspec <- function(vars, label=NULL, basis=fmrihrf::HRF_SPMG1, ...) {
   other_args <- list(...)
   
   ret <- list(
-    name = termname, 
+    name = termname,
     label = label,
     id = other_args$id,
     vars = vars,
-    varnames = varnames, 
+    varnames = varnames,
     hrf = basis,
+    hrf_fun = other_args$hrf_fun,  # NEW: per-onset HRF generator (function or formula)
     onsets = other_args$onsets,
     durations = other_args$durations,
     prefix = other_args$prefix,
@@ -320,16 +376,21 @@ contrasts.hrfspec <- function(x, ...) {
 construct.hrfspec <- function(x, model_spec, ...) {
   ons <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   et <- construct_event_term(x, model_spec)
-  
+
   # Set the term_tag attribute on the event_term before returning
   # This ensures that when convolution happens later, the correct column names are generated
   term_tag <- x$id %||% x$name
   attr(et, "term_tag") <- term_tag
-  
+
   # DON'T convolve here - let build_event_model_design_matrix handle convolution
   # Just return the event_term with hrfspec attached
   # The hrfspec is already attached in construct_event_term
-  
+
+  # NEW: Propagate hrf_fun for per-onset HRF generation during convolution
+  if (!is.null(x$hrf_fun)) {
+    attr(et, "hrf_fun") <- x$hrf_fun
+  }
+
   # Handle add_sum flag if present in the hrfspec (set by trialwise)
   # Store this as an attribute for later processing during convolution
   if (isTRUE(x$add_sum)) {
@@ -424,4 +485,99 @@ trialwise <- function(basis   = "spmg1",
 .trial_factor <- function(n) {
   pad <- nchar(as.character(n))
   factor(sprintf(paste0("%0", pad, "d"), seq_len(n)))
+}
+
+
+# --- HRF Generator Functions for per-onset HRF specification ---
+
+#' Create duration-based boxcar HRF generator
+#'
+#' Creates a generator function for use with the `hrf_fun` parameter in `hrf()`.
+#' The generator produces boxcar HRFs where each event's duration determines
+#' the boxcar width.
+#'
+#' @param normalize Logical; whether to normalize the boxcar HRF. Default TRUE.
+#' @param min_duration Numeric; minimum duration to use (prevents zero-width boxcars). Default 0.1.
+#'
+#' @return A function that takes an event data frame and returns a list of HRF objects.
+#'
+#' @examples
+#' \dontrun{
+#' # Events with variable durations
+#' trial_data <- data.frame(
+#'   onset = c(0, 10, 25),
+#'   duration = c(2, 5, 3),
+#'   condition = c("A", "B", "A"),
+#'   run = 1
+#' )
+#' sf <- fmrihrf::sampling_frame(blocklens = 50, TR = 2)
+#'
+#' emod <- event_model(
+#'   onset ~ hrf(condition, hrf_fun = boxcar_hrf_gen()),
+#'   data = trial_data, block = ~run, sampling_frame = sf
+#' )
+#' }
+#'
+#' @seealso [weighted_hrf_gen()] for weighted impulse HRFs
+#' @export
+boxcar_hrf_gen <- function(normalize = TRUE, min_duration = 0.1) {
+  function(d) {
+    lapply(d$duration, function(dur) {
+      fmrihrf::hrf_boxcar(width = max(dur, min_duration), normalize = normalize)
+    })
+  }
+}
+
+
+#' Create weighted HRF generator from list columns
+#'
+#' Creates a generator function for use with the `hrf_fun` parameter in `hrf()`.
+#' The generator produces weighted impulse HRFs from columns containing lists
+#' of sub-event times and weights.
+#'
+#' @param times_col Character; name of the column containing sub-event times (relative or absolute).
+#' @param weights_col Character; name of the column containing sub-event weights.
+#' @param relative Logical; if TRUE, times are relative to event onset; if FALSE, times are absolute
+#'   and will be converted to relative by subtracting the onset. Default FALSE (absolute times).
+#' @param method Character; interpolation method for `hrf_weighted()`. Default "constant".
+#' @param normalize Logical; whether to normalize the weighted HRF. Default FALSE.
+#'
+#' @return A function that takes an event data frame and returns a list of HRF objects.
+#'
+#' @examples
+#' \dontrun{
+#' # Events with internal temporal structure
+#' trial_data <- data.frame(
+#'   onset = c(0, 20),
+#'   sub_times = I(list(c(0, 1, 2), c(0, 3, 6))),  # Times relative to onset
+#'   sub_weights = I(list(c(0.2, 0.5, 0.3), c(0.1, 0.6, 0.3))),
+#'   run = 1
+#' )
+#' sf <- fmrihrf::sampling_frame(blocklens = 50, TR = 2)
+#'
+#' emod <- event_model(
+#'   onset ~ hrf(onset, hrf_fun = weighted_hrf_gen("sub_times", "sub_weights", relative = TRUE)),
+#'   data = trial_data, block = ~run, sampling_frame = sf
+#' )
+#' }
+#'
+#' @seealso [boxcar_hrf_gen()] for duration-based boxcar HRFs
+#' @export
+weighted_hrf_gen <- function(times_col = "sub_times", weights_col = "sub_weights",
+                              relative = FALSE, method = "constant", normalize = FALSE) {
+  function(d) {
+    if (!times_col %in% names(d)) {
+      stop(sprintf("weighted_hrf_gen: column '%s' not found in event data", times_col), call. = FALSE)
+    }
+    if (!weights_col %in% names(d)) {
+      stop(sprintf("weighted_hrf_gen: column '%s' not found in event data", weights_col), call. = FALSE)
+    }
+
+    Map(function(times, weights, onset) {
+      # Convert absolute times to relative if needed
+      rel_times <- if (relative) times else times - onset
+      fmrihrf::hrf_weighted(times = rel_times, weights = weights,
+                            method = method, normalize = normalize)
+    }, d[[times_col]], d[[weights_col]], d$onset)
+  }
 }

@@ -191,17 +191,27 @@ construct_event_term <- function(hrfspec, model_spec) {
   # Call the public event_term constructor
   # Use hrfspec durations if specified, otherwise fall back to model_spec durations
   durations_to_use <- if (!is.null(hrfspec$durations)) hrfspec$durations else model_spec$durations
-  
-  et <- event_term(evlist = evaluated_vars, 
-                   onsets = model_spec$onsets, 
-                   blockids = model_spec$blockids, 
+
+  et <- event_term(evlist = evaluated_vars,
+                   onsets = model_spec$onsets,
+                   blockids = model_spec$blockids,
                    durations = durations_to_use,
                    subset = subset_result)
-                   
+
   attr(et, "hrfspec") <- hrfspec
-  
+
+  # Attach original data (post-subset) for hrf_fun generator access
+  # This allows generators to access any column from the original data, including list columns
+  if (!is.null(hrfspec$hrf_fun)) {
+    original_data <- as.data.frame(data_env)
+    if (!is.null(subset_result)) {
+      original_data <- original_data[subset_result, , drop = FALSE]
+    }
+    attr(et, "original_data") <- original_data
+  }
+
   # TODO (EM-19): Add check here
-  
+
   et
 }
 

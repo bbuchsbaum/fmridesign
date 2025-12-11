@@ -832,16 +832,167 @@ split_onsets.event_term <- function(x, sframe, global = FALSE, blocksplit = FALS
 ## Section 10: Convolution and Regressor Generation
 ## ============================================================================
 
+## --- Helper functions for per-onset HRF generation (hrf_fun) ---
+
+#' Build event data frame for HRF generator function
+#'
+#' Creates a data frame containing event information that can be passed to
+#' an hrf_fun generator. The data frame includes onset, duration, blockid,
+#' and any term variables extracted from the event_term. Also includes
+#' columns from the original data (if attached) to support list columns
+#' and other complex data types.
+#'
+#' @param event_term An event_term object.
+#' @return A data frame with columns: onset, duration, blockid, plus term variables.
+#' @keywords internal
+#' @noRd
+build_event_data_for_generator <- function(event_term) {
+  n_events <- length(event_term$onsets)
+
+  # Start with timing info
+ event_data <- data.frame(
+    onset = event_term$onsets,
+    duration = event_term$durations,
+    blockid = event_term$blockids,
+    stringsAsFactors = FALSE
+  )
+
+  # Add term variables from the events list
+  for (ev_name in names(event_term$events)) {
+    ev <- event_term$events[[ev_name]]
+    if (!is.null(ev$meta$levels)) {
+      # Factor: reconstruct from integer codes
+      event_data[[ev_name]] <- factor(
+        ev$value[, 1],
+        levels = seq_along(ev$meta$levels),
+        labels = ev$meta$levels
+      )
+    } else if (ncol(ev$value) == 1) {
+      # Single-column continuous
+      event_data[[ev_name]] <- ev$value[, 1]
+    } else {
+      # Multi-column: add each column with suffix
+      for (j in seq_len(ncol(ev$value))) {
+        event_data[[paste0(ev_name, "_", j)]] <- ev$value[, j]
+      }
+    }
+  }
+
+  # Merge in columns from original data (if attached)
+  # This allows access to list columns and other complex types not in event_term$events
+  original_data <- attr(event_term, "original_data")
+  if (!is.null(original_data)) {
+    for (col_name in names(original_data)) {
+      # Only add columns not already in event_data
+      if (!(col_name %in% names(event_data))) {
+        event_data[[col_name]] <- original_data[[col_name]]
+      }
+    }
+  }
+
+  event_data
+}
+
+#' Evaluate formula-style hrf_fun
+#'
+#' Extracts an HRF list from a column in event_data referenced by a formula.
+#'
+#' @param hrf_formula A formula like ~hrf_column.
+#' @param event_data Data frame of event information.
+#' @param original_data Optional: the original data passed to event_model (for column lookup).
+#' @return A list of HRF objects.
+#' @keywords internal
+#' @noRd
+evaluate_hrf_formula <- function(hrf_formula, event_data, original_data = NULL) {
+  # Extract column name from formula RHS
+  col_name <- as.character(rlang::f_rhs(hrf_formula))
+
+  # Try event_data first
+  if (col_name %in% names(event_data)) {
+    hrf_col <- event_data[[col_name]]
+  } else if (!is.null(original_data) && col_name %in% names(original_data)) {
+    # Fall back to original data (with subsetting handled externally)
+    hrf_col <- original_data[[col_name]]
+  } else {
+    stop(sprintf("hrf_fun formula references column '%s' not found in event data. Available columns: %s",
+                 col_name, paste(names(event_data), collapse = ", ")), call. = FALSE)
+  }
+
+  # Validate it's a list
+  if (!is.list(hrf_col)) {
+    stop(sprintf("Column '%s' must contain a list of HRF objects", col_name), call. = FALSE)
+  }
+
+  hrf_col
+}
+
+#' Validate HRF generator result
+#'
+#' Validates that the result of an hrf_fun generator is a valid list of HRF objects.
+#' Handles single HRF (recycles to all events), validates length, checks all elements
+#' are HRF objects, and verifies consistent nbasis.
+#'
+#' @param result The result from an hrf_fun generator.
+#' @param n_events Expected number of events.
+#' @param term_tag Optional term tag for error messages.
+#' @return A validated list of HRF objects with length equal to n_events.
+#' @keywords internal
+#' @noRd
+validate_hrf_list <- function(result, n_events, term_tag = NULL) {
+  term_label <- term_tag %||% "unknown"
+
+  # Handle single HRF (recycle to all events)
+  if (inherits(result, "HRF")) {
+    return(rep(list(result), n_events))
+  }
+
+  # Must be a list at this point
+ if (!is.list(result)) {
+    stop(sprintf("hrf_fun for term '%s' must return an HRF object or list of HRF objects",
+                 term_label), call. = FALSE)
+  }
+
+  # Validate length
+  if (length(result) == 1) {
+    result <- rep(result, n_events)
+  } else if (length(result) != n_events) {
+    stop(sprintf("hrf_fun for term '%s' returned %d HRFs but %d events exist",
+                 term_label, length(result), n_events), call. = FALSE)
+  }
+
+  # Validate each element is an HRF
+  for (i in seq_along(result)) {
+    if (!inherits(result[[i]], "HRF")) {
+      stop(sprintf("Element %d of hrf_fun result for term '%s' is not an HRF object (class: %s)",
+                   i, term_label, class(result[[i]])[1]), call. = FALSE)
+    }
+  }
+
+  # Validate consistent nbasis
+  nbasis_vals <- vapply(result, fmrihrf::nbasis, integer(1))
+  if (length(unique(nbasis_vals)) > 1) {
+    stop(sprintf("All HRFs from hrf_fun for term '%s' must have the same nbasis. Got: %s",
+                 term_label, paste(unique(nbasis_vals), collapse = ", ")), call. = FALSE)
+  }
+
+  result
+}
+
+## --- End of hrf_fun helper functions ---
+
 #' Convolve HRF with Design Matrix.
 #'
 #' Convolves a HRF with a design matrix (one column per condition) to produce a
 #' list of regressors.
 #'
-#' @param hrf A function representing the HRF.
+#' @param hrf A function representing the HRF (used when hrf_list is NULL).
 #' @param dmat Design matrix (with named columns).
 #' @param globons Numeric vector of global onsets.
 #' @param durations Numeric vector of event durations.
 #' @param summate Logical; if TRUE, summate the convolved HRF (default: TRUE).
+#' @param hrf_list Optional list of HRF objects, one per event (row in dmat).
+#'        When provided, allows per-onset HRF specification. The list is subsetted
+#'        to match non-zero amplitude events for each condition.
 #'
 #' @return A list of regressors (one for each column).
 #' @export
@@ -852,30 +1003,46 @@ split_onsets.event_term <- function(x, sframe, global = FALSE, blocksplit = FALS
 #' durations <- rep(0, 3)
 #' regs <- convolve_design(hrf, dmat, globons, durations)
 #' length(regs)
-convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE) {
+convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE, hrf_list = NULL) {
   cond.names <- names(dmat)
-  
-  # Remove rows with NA values.
+
+  # Check if we have per-onset HRFs
+  hrf_is_list <- !is.null(hrf_list)
+
+  # Remove rows with NA values
   if (any(is.na(dmat)) || any(is.na(globons))) {
     keep <- apply(dmat, 1, function(vals) all(!is.na(vals)))
     keep[is.na(globons)] <- FALSE
-    dmat <- dmat[keep, ]
+    dmat <- dmat[keep, , drop = FALSE]
     durations <- durations[keep]
     globons <- globons[keep]
+    # Also filter HRF list if present
+    if (hrf_is_list) {
+      hrf_list <- hrf_list[keep]
+    }
   }
-  
+
   reglist <- purrr::map(1:ncol(dmat), function(i) {
     amp <- dmat[, i][[1]]
     nonzero <- which(amp != 0)
     if (length(nonzero) == 0) {
-      # Call Reg directly to create an empty regressor object
-      fmrihrf::regressor(onsets = numeric(0), hrf = hrf, amplitude = 0)
+      # Empty regressor - use first HRF from list or single HRF for span info
+      ref_hrf <- if (hrf_is_list && length(hrf_list) > 0) hrf_list[[1]] else hrf
+      fmrihrf::regressor(onsets = numeric(0), hrf = ref_hrf, amplitude = 0)
     } else {
-      # Call Reg directly here as well
-      fmrihrf::regressor(onsets = globons[nonzero], hrf = hrf, amplitude = amp[nonzero], duration = durations[nonzero], summate = summate)
+      # Subset HRF list if applicable (for non-zero amplitude events only)
+      hrf_for_reg <- if (hrf_is_list) hrf_list[nonzero] else hrf
+
+      fmrihrf::regressor(
+        onsets = globons[nonzero],
+        hrf = hrf_for_reg,  # Single HRF or list of HRFs
+        amplitude = amp[nonzero],
+        duration = durations[nonzero],
+        summate = summate
+      )
     }
   })
-  
+
   reglist
 }
 
@@ -918,19 +1085,47 @@ regressors.event_term <- function(x, hrf, sampling_frame, summate = FALSE, drop.
 #' sf <- fmrihrf::sampling_frame(blocklens = 20, TR = 1)
 #' conv <- convolve(term, fmrihrf::HRF_SPMG1, sf)
 #' names(conv)
-convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE, 
+convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
                                 summate = TRUE, precision = 0.3, ...) {
   # Check for term_tag attribute (should have been added in realise_event_terms)
   term_tag <- attr(x, "term_tag")
   # --- REMOVED FALLBACK LOGIC FOR term_tag ---
-  # If term_tag is NULL (e.g., for Ident()-only terms), make_column_names will handle it 
+  # If term_tag is NULL (e.g., for Ident()-only terms), make_column_names will handle it
   # by not prepending a term_tag, resulting in direct variable names.
-  # if (is.null(term_tag)) {
-  #     warning(sprintf("Missing 'term_tag' attribute on event_term '%s'. Using $varname as fallback.", x$varname %||% "Unnamed"), call.=FALSE)
-  #     term_tag <- x$varname %||% "UnnamedTerm"
-  # }
-  
-  # --- Basic Setup --- 
+
+  # --- Check for hrf_fun (per-onset HRF generator) ---
+  hrfspec <- attr(x, "hrfspec")
+  hrf_fun <- attr(x, "hrf_fun") %||% (if (!is.null(hrfspec)) hrfspec$hrf_fun else NULL)
+
+  # --- Generate per-onset HRF list if hrf_fun specified ---
+  hrf_list <- NULL
+  if (!is.null(hrf_fun) && length(x$onsets) > 0) {
+    # Build event data frame for generator
+    event_data <- build_event_data_for_generator(x)
+
+    if (rlang::is_formula(hrf_fun)) {
+      # Formula syntax: extract column from event_data or original_data
+      original_data <- attr(x, "original_data")
+      hrf_list <- evaluate_hrf_formula(hrf_fun, event_data, original_data)
+    } else if (is.function(hrf_fun)) {
+      # Function syntax: call with event_data
+      hrf_list <- tryCatch(
+        hrf_fun(event_data),
+        error = function(e) {
+          stop(sprintf("hrf_fun failed for term '%s': %s",
+                       term_tag %||% x$varname, e$message), call. = FALSE)
+        }
+      )
+    }
+
+    # Validate the result
+    hrf_list <- validate_hrf_list(hrf_list, nrow(event_data), term_tag)
+
+    # Update hrf for nbasis calculation (use first HRF from list)
+    hrf <- hrf_list[[1]]
+  }
+
+  # --- Basic Setup ---
   globons <- fmrihrf::global_onsets(sampling_frame, x$onsets, x$blockids)
   durations <- x$durations
   blockids <- x$blockids
@@ -964,9 +1159,12 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
     durations_block <- durations[idx]
     
     # Skip block if dblock is empty (e.g., no events for this term in this block)
-    if(nrow(dblock) == 0 || ncol(dblock) == 0) return(NULL) 
-    
-    reg <- convolve_design(hrf, dblock, globons_block, durations_block, summate = summate)
+    if(nrow(dblock) == 0 || ncol(dblock) == 0) return(NULL)
+
+    # Subset hrf_list for this block if applicable
+    hrf_list_block <- if (!is.null(hrf_list)) hrf_list[idx] else NULL
+
+    reg <- convolve_design(hrf, dblock, globons_block, durations_block, summate = summate, hrf_list = hrf_list_block)
     
     # FIXED METHOD: Evaluate against all global samples but extract only block-specific rows
     # This preserves temporal accuracy while maintaining correct dimensions

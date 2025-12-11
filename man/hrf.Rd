@@ -7,6 +7,7 @@
 hrf(
   ...,
   basis = "spmg1",
+  hrf_fun = NULL,
   onsets = NULL,
   durations = NULL,
   prefix = NULL,
@@ -27,6 +28,18 @@ present in the \code{data} argument of \code{event_model}.}
 \item{basis}{the impulse response function or the name of a pre-supplied function,
 one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs".
 Can also be an \code{HRF} object.}
+
+\item{hrf_fun}{optional per-onset HRF generator. Can be:
+\itemize{
+\item A function that takes a data frame of event data (with columns \code{onset}, \code{duration},
+\code{blockid}, plus any term variables) and returns either a single HRF object
+(recycled to all events) or a list of HRF objects (one per event).
+\item A formula (e.g., \code{~hrf_column}) referencing a column in the event data that
+contains a list of pre-built HRF objects.
+}
+When \code{hrf_fun} is specified, the \code{basis} argument is ignored. The generator function
+is called AFTER any subsetting via \verb{subset=}, ensuring correct alignment between
+HRFs and events. All returned HRFs must have the same \code{nbasis} for design matrix consistency.}
 
 \item{onsets}{optional onsets override. If missing, onsets will be taken from the LHS of the main model formula.}
 
@@ -77,5 +90,20 @@ form3 <- onsets ~ hrf(condition, RT, basis="spmg3")
 library(rlang)
 con1 <- pair_contrast(~ condition == "A", ~ condition == "B", name="AvB")
 form4 <- onsets ~ hrf(condition, Poly(RT, 2), contrasts=con1)
+
+# Per-onset HRF using hrf_fun: variable duration boxcars
+form5 <- onsets ~ hrf(condition,
+                      hrf_fun = function(d) {
+                        lapply(d$duration, function(dur) fmrihrf::hrf_boxcar(width = dur))
+                      })
+
+# Per-onset HRF using hrf_fun with weighted HRFs for events with internal structure
+# (e.g., clusters of weighted impulses)
+form6 <- onsets ~ hrf(condition,
+                      hrf_fun = function(d) {
+                        Map(function(times, weights, onset) {
+                          fmrihrf::hrf_weighted(times = times - onset, weights = weights)
+                        }, d$sub_times, d$sub_weights, d$onset)
+                      })
 
 }
