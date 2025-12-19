@@ -429,6 +429,8 @@ evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1, ...
 #'     onset ~ trialwise(basis = "spmg1", add_sum = TRUE)
 #'
 #' @param basis,lag,nbasis Passed straight to `hrf()`.
+#' @param durations Optional durations override (passed to `hrf()`). If NULL, uses
+#'        the durations argument from `event_model`.
 #' @param add_sum If TRUE, append a column that is the average of all
 #'                trialwise columns (useful as a conventional main effect).
 #' @param label Term label / prefix for the generated columns.
@@ -461,7 +463,8 @@ trialwise <- function(basis   = "spmg1",
                       lag     = 0,
                       nbasis  = 1,
                       add_sum = FALSE,
-                      label   = "trial") {
+                      label   = "trial",
+                      durations = NULL) {
 
   # Create an expression that will evaluate .trial_factor(length(onsets)) 
   # when the onsets variable is available at evaluation time
@@ -471,6 +474,7 @@ trialwise <- function(basis   = "spmg1",
               basis = basis,
               lag   = lag,
               nbasis = nbasis,
+              durations = durations,
               id     = label) # Use id argument for naming
 
   term$add_sum <- isTRUE(add_sum) # flag for construct() to act upon

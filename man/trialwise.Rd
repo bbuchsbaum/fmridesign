@@ -9,7 +9,8 @@ trialwise(
   lag = 0,
   nbasis = 1,
   add_sum = FALSE,
-  label = "trial"
+  label = "trial",
+  durations = NULL
 )
 }
 \arguments{
@@ -19,6 +20,9 @@ trialwise(
 trialwise columns (useful as a conventional main effect).}
 
 \item{label}{Term label / prefix for the generated columns.}
+
+\item{durations}{Optional durations override (passed to \code{hrf()}). If NULL, uses
+the durations argument from \code{event_model}.}
 }
 \value{
 An \code{hrfspec} term to be used on the RHS of an event-model formula.

@@ -100,6 +100,26 @@ test_that("durations from hrf() are properly propagated", {
   expect_equal(unique(event_term3$durations), 1.5)
 })
 
+test_that("trialwise durations are properly propagated", {
+  test_events <- data.frame(
+    Onset = c(1.0, 4.0, 7.0, 10.0),
+    Run = rep(1, 4),
+    stringsAsFactors = FALSE
+  )
+
+  sframe <- sampling_frame(20, TR = 1.0)
+  durations_vec <- c(0.5, 1.0, 2.0, 3.0)
+
+  emodel <- event_model(Onset ~ trialwise(durations = durations_vec),
+                        block = ~ Run,
+                        sampling_frame = sframe,
+                        data = test_events,
+                        durations = 1.5)
+
+  event_term <- emodel$terms[[1]]
+  expect_equal(event_term$durations, durations_vec)
+})
+
 test_that("durations actually affect convolution output", {
   test_events <- data.frame(
     Onset = c(5.0, 15.0, 25.0),
