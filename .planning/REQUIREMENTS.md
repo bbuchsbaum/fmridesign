@@ -1,6 +1,6 @@
 # CRAN Submission Requirements
 
-**Version:** 0.5.0 → 1.0.0
+**Version:** 0.5.0 -> 1.0.0
 **Target:** CRAN initial submission
 
 ---
@@ -90,11 +90,47 @@
 
 From research:
 
-1. **Package size:** 9.8 MB — near 10 MB limit (REQ-SIZE-01)
+1. **Package size:** 9.8 MB - near 10 MB limit (REQ-SIZE-01)
 2. **\dontrun{} usage:** 6 instances need review (REQ-DOC-04)
 3. **Missing NEWS.md:** Needs creation (REQ-QUAL-01)
 4. **Authors@R:** May need 'cph' role added (REQ-DESC-03)
 
 ---
 
-*Generated: 2026-01-25 from research synthesis*
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| REQ-DOC-01 | Phase 1 | Pending |
+| REQ-DOC-02 | Phase 1 | Pending |
+| REQ-DOC-03 | Phase 1 | Pending |
+| REQ-DOC-04 | Phase 1 | Pending |
+| REQ-DOC-05 | Phase 1 | Pending |
+| REQ-DOC-06 | Phase 1 | Pending |
+| REQ-NS-01 | Phase 2 | Pending |
+| REQ-NS-02 | Phase 2 | Pending |
+| REQ-NS-03 | Phase 2 | Pending |
+| REQ-NS-04 | Phase 2 | Pending |
+| REQ-DESC-01 | Phase 2 | Pending |
+| REQ-DESC-02 | Phase 2 | Pending |
+| REQ-DESC-03 | Phase 2 | Pending |
+| REQ-DESC-04 | Phase 2 | Pending |
+| REQ-DESC-05 | Phase 2 | Pending |
+| REQ-CHK-01 | Phase 3 | Pending |
+| REQ-CHK-02 | Phase 3 | Pending |
+| REQ-CHK-03 | Phase 3 | Pending |
+| REQ-SIZE-01 | Phase 3 | Pending |
+| REQ-CHK-04 | Phase 4 | Pending |
+| REQ-CHK-05 | Phase 4 | Pending |
+| REQ-CHK-06 | Phase 4 | Pending |
+| REQ-TEST-01 | Phase 4 | Pending |
+| REQ-TEST-02 | Phase 4 | Pending |
+| REQ-TEST-03 | Phase 4 | Pending |
+| REQ-QUAL-01 | Phase 5 | Pending |
+| REQ-QUAL-02 | Phase 5 | Pending |
+| REQ-QUAL-03 | Phase 5 | Pending |
+
+---
+
+*Generated: 2025-01-25 from research synthesis*
+*Traceability added: 2025-01-25*
