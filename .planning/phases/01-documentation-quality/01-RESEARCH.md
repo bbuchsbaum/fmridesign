@@ -1,0 +1,532 @@
+# Phase 1: Documentation Quality - Research
+
+**Researched:** 2026-01-25
+**Domain:** R package documentation (roxygen2)
+**Confidence:** HIGH
+
+## Summary
+
+The fmridesign R package has 93 exported functions with 102 .Rd documentation files. The package documentation is in good overall condition, using standard roxygen2 format consistently. However, there are specific gaps that need to be addressed to meet the phase requirements.
+
+**Current documentation state:**
+- 100 of 102 files have complete @return documentation (98% complete)
+- 98 of 102 files have @examples (96% complete)
+- 6 functions use \dontrun{} in examples (most legitimately)
+- ~91 spelling "errors" detected (mostly technical terms and proper nouns)
+- All URLs valid (urlchecker reports success)
+- 10 functions have incomplete @param documentation (mostly S3 methods with ... parameter)
+
+The package follows consistent roxygen2 documentation style with good examples in event_model(), baseline_model(), and hrf(). Most issues are straightforward to fix.
+
+**Primary recommendation:** Focus on the 2 missing @return statements, 4 missing @examples, evaluate the 6 \dontrun{} uses for conversion to runnable examples, add ~91 technical terms to inst/WORDLIST, and complete @param documentation for 10 functions.
+
+## Standard Stack
+
+### Core Tools
+| Tool | Version | Purpose | Standard in R Ecosystem |
+|------|---------|---------|-------------------------|
+| roxygen2 | Latest | Generate .Rd files from comments | Universal standard for R package docs |
+| devtools | Latest | Package development workflow | Standard development tool |
+| spelling | Latest | Spell checking for packages | Standard for CRAN submissions |
+| urlchecker | Latest | Validate URLs in documentation | Standard for CRAN submissions |
+| testthat | Latest | Run examples as tests | Standard testing framework |
+
+### Documentation Generation Commands
+```r
+# Generate .Rd files from roxygen2 comments
+devtools::document()
+
+# Check documentation completeness
+devtools::check()
+
+# Run examples
+devtools::run_examples()
+
+# Check spelling
+spelling::spell_check_package()
+
+# Check URLs
+urlchecker::url_check()
+```
+
+### Installation
+```bash
+# Already in DESCRIPTION Suggests
+# No additional packages needed
+```
+
+## Architecture Patterns
+
+### Roxygen2 Documentation Format
+
+The package consistently uses this structure:
+
+```r
+#' Function Title (One Line)
+#'
+#' Longer description paragraph explaining what the function does,
+#' its purpose, and any important context.
+#'
+#' @param param_name Description of the parameter. Can span
+#'   multiple lines with proper indentation.
+#' @param another_param Another parameter description.
+#'
+#' @return Description of what the function returns. Be specific about
+#'   the object class, structure, and any important attributes.
+#'
+#' @examples
+#' # Simple example showing basic usage
+#' result <- function_name(arg1 = "value")
+#' print(result)
+#'
+#' # Example with context
+#' data <- data.frame(x = 1:10, y = rnorm(10))
+#' result2 <- function_name(data, param = TRUE)
+#' stopifnot(nrow(result2) == 10)
+#'
+#' @export
+function_name <- function(param_name, another_param) {
+  # Implementation
+}
+```
+
+### Good Examples in Codebase
+
+**event_model() (R/event_model.R:12-117)**
+- Complete @param documentation for all 9 parameters
+- Detailed @return with class information
+- Runnable @examples with data.frame creation
+- @details section explaining naming conventions
+
+**baseline_model() (R/baseline_model.R:122-146)**
+- All parameters documented
+- @return specifies class
+- Working examples with stopifnot() assertions
+- Uses fmrihrf:: prefix for dependencies
+
+**hrf() (R/hrf-formula.R:78-269)**
+- Comprehensive parameter documentation
+- Multiple examples showing different use cases
+- Examples include formulas and contrast specifications
+
+### S3 Method Documentation Pattern
+
+For S3 methods, the package uses:
+
+```r
+#' @export
+#' @rdname generic_name
+method.class <- function(x, ...) {
+  # Implementation
+}
+```
+
+Where parameters are documented on the generic's .Rd file.
+
+### Internal Function Documentation
+
+Internal functions use `@keywords internal` and `@noRd`:
+
+```r
+#' Internal helper function
+#'
+#' @param x Input
+#' @return Output
+#' @keywords internal
+#' @noRd
+.internal_function <- function(x) {
+  # Implementation
+}
+```
+
+## Don't Hand-Roll
+
+### Spelling Dictionary Management
+
+**DON'T:** Manually edit individual documentation files to work around spelling errors
+**USE:** Create inst/WORDLIST file for technical terms
+
+```r
+# inst/WORDLIST format (one word per line)
+AFNI
+fmrihrf
+hemodynamic
+HRF
+spmg
+```
+
+**Why:** The spelling package automatically recognizes words in inst/WORDLIST. Hand-editing docs introduces inconsistencies.
+
+### Documentation Generation
+
+**DON'T:** Manually edit .Rd files in man/ directory
+**USE:** Always edit roxygen2 comments in R/ files and regenerate
+
+**Why:** .Rd files are generated by roxygen2. Manual edits will be overwritten.
+
+### Example Testing
+
+**DON'T:** Use \dontrun{} to hide broken examples
+**USE:** Fix the example or use \donttest{} for slow examples
+
+**Why:** \dontrun{} examples aren't tested. Broken examples indicate documentation problems.
+
+## Common Pitfalls
+
+### Pitfall 1: Overusing \dontrun{}
+**What goes wrong:** Examples wrapped in \dontrun{} aren't tested during R CMD check or devtools::check()
+**Why it happens:** It's easy to wrap complex examples in \dontrun{} when they require setup
+**How to avoid:** Create minimal self-contained examples or use \donttest{} for slow examples
+**Warning signs:** Many functions have \dontrun{} wrapping entire example sections
+
+**Current state:** 6 functions use \dontrun{}. Analysis:
+- `register_hrfspec_extension()`: Legitimately requires external package context
+- `validate_contrasts()`: Requires pre-built model but could be made runnable
+- `check_collinearity()`: Requires pre-built model but could be made runnable
+- `boxcar_hrf_gen()`: Requires pre-built model but could be made runnable
+- `weighted_hrf_gen()`: Requires pre-built model but could be made runnable
+- `translate_legacy_pattern()`: Internal function, \dontrun{} acceptable
+
+**Recommendation:** Convert 4 functions (validate_contrasts, check_collinearity, boxcar_hrf_gen, weighted_hrf_gen) to runnable examples by including the model setup within the example.
+
+### Pitfall 2: Missing @return Documentation for Special Cases
+**What goes wrong:** Re-exported functions and method collections marked "missing @return"
+**Why it happens:** These special cases have different documentation patterns
+**How to avoid:** Check if the missing @return is actually problematic
+**Warning signs:** "reexports" and "residualize-methods" flagged as missing @return
+
+**Current state:** 2 files missing @return:
+- `reexports.Rd`: Documents re-exported functions from fmrihrf package (doesn't need @return)
+- `residualize-methods.Rd`: Documents multiple S3 methods (should have @return)
+
+**Recommendation:** Only `residualize-methods.Rd` needs a @return statement added.
+
+### Pitfall 3: Incomplete @param for ... Parameter
+**What goes wrong:** S3 methods with ... parameter don't document it
+**Why it happens:** ... is passed to other methods and developers forget to document it
+**How to avoid:** Always include "@param ... Additional arguments passed to methods"
+**Warning signs:** 10 functions flagged with missing params
+
+**Current state:** Most missing params are for empty generics or ... parameters in S3 methods. The only substantial issue is `trialwise()` missing documentation for `basis`, `lag`, `nbasis` parameters.
+
+### Pitfall 4: Technical Terms Flagged as Misspellings
+**What goes wrong:** spell_check_package() flags 91 domain-specific terms
+**Why it happens:** No inst/WORDLIST file exists to whitelist technical terms
+**How to avoid:** Create inst/WORDLIST with project-specific terms
+**Warning signs:** Long list of "misspellings" that are actually correct technical terms
+
+**Terms to add to WORDLIST (~91 unique terms):**
+- HRF-related: HRF, HRFs, hemodynamic, hrf, hrfspec, spmg, SPMG, bspline
+- Package names: fmrihrf, fmrireg, AFNI
+- Technical terms: convolve, convolved, convolving, multicollinearity, timecourse, trialwise
+- R ecosystem: ggplot, tibble, tibbles, pkgdown, roxygen
+- Statistics: ISI, TRs, CSF
+- Other: baselinespec, blockspec, covariatespec, nuisancespec, ParametricBasis
+
+## Code Examples
+
+### Adding @return Documentation
+
+```r
+# BEFORE (missing @return)
+#' Residualize methods
+#'
+#' @param x Input
+#' @export
+residualize <- function(x, ...) {
+  UseMethod("residualize")
+}
+
+# AFTER (with @return)
+#' Residualize methods
+#'
+#' @param x Input object to residualize
+#' @param ... Additional arguments passed to specific methods
+#'
+#' @return A residualized version of the input object. The specific structure
+#'   depends on the method:
+#'   \itemize{
+#'     \item For matrices: A matrix with nuisance effects removed
+#'     \item For event_model: An updated event_model with residualized design matrix
+#'     \item For baseline_model: An updated baseline_model
+#'   }
+#'
+#' @export
+residualize <- function(x, ...) {
+  UseMethod("residualize")
+}
+```
+
+### Adding @examples Documentation
+
+```r
+# BEFORE (missing @examples)
+#' @export
+residualize.matrix <- function(x, baseline, ...) {
+  # Implementation
+}
+
+# AFTER (with @examples)
+#' @export
+#' @examples
+#' # Create sample data
+#' X <- matrix(rnorm(100), ncol=10)
+#' baseline <- matrix(rnorm(50), ncol=5)
+#'
+#' # Residualize
+#' X_resid <- residualize(X, baseline)
+#' dim(X_resid)
+residualize.matrix <- function(x, baseline, ...) {
+  # Implementation
+}
+```
+
+### Converting \dontrun{} to Runnable Example
+
+```r
+# BEFORE (using \dontrun{})
+#' @examples
+#' \dontrun{
+#' res <- check_collinearity(design_matrix(emodel), threshold = 0.95)
+#' if (!res$ok) print(res$pairs)
+#' }
+
+# AFTER (runnable example)
+#' @examples
+#' # Create sample event model
+#' des <- data.frame(
+#'   onset = seq(0, 90, by=10),
+#'   run = rep(1:2, each=5),
+#'   cond = factor(rep(c("A","B"), 5))
+#' )
+#' sframe <- fmrihrf::sampling_frame(blocklens=c(50, 60), TR=2)
+#' emodel <- event_model(onset ~ hrf(cond),
+#'                       data = des, block = ~run,
+#'                       sampling_frame = sframe)
+#'
+#' # Check collinearity
+#' res <- check_collinearity(design_matrix(emodel), threshold = 0.95)
+#' if (!res$ok) print(res$pairs)
+```
+
+### Creating inst/WORDLIST
+
+```bash
+# Create file
+mkdir -p inst
+cat > inst/WORDLIST << 'EOF'
+AFNI
+Albers
+albersdown
+baselinespec
+blockspec
+bs
+bspline
+CFALS
+cli
+convolve
+Convolve
+convolved
+Convolves
+convolving
+covariatespec
+CSF
+dmat
+Estimability
+fac
+fmrihrf
+fmrireg
+ggplot
+hemodynamic
+Hemodynamic
+hrf
+HRF
+HRFs
+hrfspec
+Ident
+inspectable
+ISI
+longnames
+multicollinearity
+Multicollinearity
+nA
+nB
+ns
+nuisancespec
+oneway
+ParametricBasis
+pearson
+pkgdown
+pre
+Pre
+queryable
+Quickstart
+realisation
+recognised
+Residualize
+RobustScale
+runwise
+Sanitization
+shortnames
+spearman
+SPM
+spmg
+SPMG
+summarise
+summate
+th
+tibble
+tibbles
+timecourse
+timecourses
+trialwise
+Trialwise
+TRs
+upsampling
+EOF
+```
+
+### Adding Missing @param Documentation
+
+```r
+# BEFORE (trialwise missing param docs)
+#' @export
+trialwise <- function(basis   = "spmg1",
+                      lag     = 0,
+                      nbasis  = 1,
+                      add_sum = FALSE,
+                      label   = "trial",
+                      durations = NULL) {
+  # Implementation
+}
+
+# AFTER (complete param docs)
+#' @param basis Character string specifying the HRF basis function type.
+#'   One of "spmg1", "spmg2", "spmg3", "gamma", "gaussian", "bspline", "fir". Default "spmg1".
+#' @param lag Numeric temporal offset in seconds added to onset before convolution. Default 0.
+#' @param nbasis Integer number of basis functions for HRF types that support variable bases
+#'   (e.g., bspline, fir). Default 1.
+#' @param add_sum Logical; if TRUE, append a column averaging all trialwise regressors. Default FALSE.
+#' @param label Character string used as term label/prefix for generated columns. Default "trial".
+#' @param durations Numeric vector or scalar specifying event durations in seconds.
+#'   If NULL, uses the durations argument from event_model(). Default NULL.
+#'
+#' @export
+trialwise <- function(basis   = "spmg1",
+                      lag     = 0,
+                      nbasis  = 1,
+                      add_sum = FALSE,
+                      label   = "trial",
+                      durations = NULL) {
+  # Implementation
+}
+```
+
+## State of the Art
+
+| Aspect | Current Practice | Notes |
+|--------|------------------|-------|
+| Documentation generator | roxygen2 7.x | Standard for R packages since 2011 |
+| Spell checking | spelling package | Adopted by CRAN for all new submissions (~2018) |
+| URL validation | urlchecker package | Increasingly required by CRAN (~2020) |
+| Example testing | devtools::run_examples() | Standard practice; examples run during R CMD check |
+| \dontrun{} vs \donttest{} | Prefer \donttest{} | CRAN policy shift ~2019; \dontrun{} discouraged |
+
+**Package is using current best practices.** No deprecated patterns detected.
+
+## Open Questions
+
+1. **Should internal functions (.fmridesign_extensions, .trial_factor) have @examples?**
+   - What we know: They're documented with @keywords internal and @noRd
+   - What's unclear: Whether examples add value for truly internal functions
+   - Recommendation: Skip examples for these; they're implementation details not user-facing
+
+2. **Is the "reexports.Rd" missing @return a real issue?**
+   - What we know: This file documents re-exported functions from fmrihrf package
+   - What's unclear: Whether roxygen2's @reexport tag requires @return
+   - Recommendation: Leave as-is; standard roxygen2 pattern for re-exports doesn't include @return
+
+3. **Should we document the ... parameter for every S3 method?**
+   - What we know: 8 of 10 "missing param" issues are ... in S3 methods
+   - What's unclear: Best practice for documenting ... when it's just pass-through
+   - Recommendation: Add minimal documentation "@param ... Additional arguments (unused)" for S3 methods
+
+## Sources
+
+### Primary (HIGH confidence)
+- Direct inspection of R source files (R/*.R)
+- Generated .Rd documentation files (man/*.Rd)
+- NAMESPACE file showing 93 exports
+- spelling::spell_check_package() output (91 flagged words)
+- urlchecker::url_check() output (all URLs valid)
+- Custom R scripts analyzing documentation completeness
+- devtools::run_examples() testing (samples successful)
+
+### Secondary (MEDIUM confidence)
+- R package documentation best practices (Hadley Wickham's R Packages book, 2nd ed)
+- CRAN Repository Policy (current as of 2026)
+- roxygen2 package documentation
+
+### Tertiary (LOW confidence)
+- None - all findings verified with direct package inspection
+
+## Metadata
+
+**Confidence breakdown:**
+- Standard stack: HIGH - standard R package tooling, verified with direct execution
+- Architecture: HIGH - patterns verified by reading 23 R source files
+- Pitfalls: HIGH - issues identified through automated tooling and manual inspection
+- Code examples: HIGH - all examples extracted from actual package code or constructed following existing patterns
+
+**Research date:** 2026-01-25
+**Valid until:** ~90 days (R package tooling and roxygen2 are very stable)
+
+## Diagnostic Commands Reference
+
+```r
+# 1. Check overall package
+devtools::check()
+
+# 2. Generate documentation from roxygen2 comments
+devtools::document()
+
+# 3. Check spelling
+spelling::spell_check_package()
+# Returns data frame with WORD and FOUND_IN columns
+
+# 4. Check URLs
+urlchecker::url_check()
+# Returns data frame with URL, File, Line, Status
+
+# 5. Run all examples
+devtools::run_examples()
+# Stops on first error
+
+# 6. Test specific function examples
+example("function_name", package="fmridesign")
+
+# 7. Check for missing documentation
+tools::checkDocFiles(dir = ".")
+tools::checkDocStyle(dir = ".")
+
+# 8. List all exported functions
+getNamespaceExports("fmridesign")
+```
+
+## Fix Patterns Summary
+
+### Priority 1: Required Fixes
+1. **Add @return to residualize-methods.Rd** (1 file)
+2. **Add @examples to residualize-methods.Rd** (1 file)
+3. **Add @param documentation to trialwise()** (3 params)
+4. **Create inst/WORDLIST** (91 technical terms)
+
+### Priority 2: Recommended Improvements
+5. **Convert 4 \dontrun{} to runnable examples** (validate_contrasts, check_collinearity, boxcar_hrf_gen, weighted_hrf_gen)
+6. **Add @param ... documentation to S3 methods** (8 methods)
+
+### Priority 3: Optional
+7. **Review translate_legacy_pattern \dontrun{}** (may be fine as-is)
+
+**Total files to modify:** ~12 R source files
+**Estimated effort:** 4-6 hours for all fixes
