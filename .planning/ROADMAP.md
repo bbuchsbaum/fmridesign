@@ -12,7 +12,7 @@ Prepare fmridesign v0.5.0 for CRAN submission as v1.0.0. The package functionali
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Documentation Quality** - Fix spelling, URLs, @return tags, and examples
+- [x] **Phase 1: Documentation Quality** - Fix spelling, URLs, @return tags, and examples ✓
 - [ ] **Phase 2: Namespace & Metadata** - Audit exports, internals, and DESCRIPTION compliance
 - [ ] **Phase 3: Local Validation** - Achieve clean R CMD check --as-cran locally
 - [ ] **Phase 4: Platform Testing** - Validate on Windows, macOS, and R-devel
@@ -34,7 +34,7 @@ Prepare fmridesign v0.5.0 for CRAN submission as v1.0.0. The package functionali
 **Plans**: 1 plan
 
 Plans:
-- [ ] 01-01-PLAN.md - Fix spelling (WORDLIST), @return/@examples for residualize, convert \dontrun{} to runnable
+- [x] 01-01-PLAN.md - Fix spelling (WORDLIST), @return/@examples for residualize, convert \dontrun{} to runnable ✓
 
 ### Phase 2: Namespace & Metadata
 **Goal**: Only user-facing functions exported, DESCRIPTION fully CRAN-compliant
@@ -106,7 +106,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Documentation Quality | 0/1 | Planned | - |
+| 1. Documentation Quality | 1/1 | ✓ Complete | 2026-01-25 |
 | 2. Namespace & Metadata | 0/1 | Not started | - |
 | 3. Local Validation | 0/1 | Not started | - |
 | 4. Platform Testing | 0/2 | Not started | - |

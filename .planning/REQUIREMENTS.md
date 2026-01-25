@@ -91,7 +91,7 @@
 From research:
 
 1. **Package size:** 9.8 MB - near 10 MB limit (REQ-SIZE-01)
-2. **\dontrun{} usage:** 6 instances need review (REQ-DOC-04)
+2. ~~**\dontrun{} usage:** 6 instances need review (REQ-DOC-04)~~ ✓ Fixed - only 2 justified remain
 3. **Missing NEWS.md:** Needs creation (REQ-QUAL-01)
 4. **Authors@R:** May need 'cph' role added (REQ-DESC-03)
 
@@ -101,12 +101,12 @@ From research:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REQ-DOC-01 | Phase 1 | Pending |
-| REQ-DOC-02 | Phase 1 | Pending |
-| REQ-DOC-03 | Phase 1 | Pending |
-| REQ-DOC-04 | Phase 1 | Pending |
-| REQ-DOC-05 | Phase 1 | Pending |
-| REQ-DOC-06 | Phase 1 | Pending |
+| REQ-DOC-01 | Phase 1 | ✓ Complete |
+| REQ-DOC-02 | Phase 1 | ✓ Complete |
+| REQ-DOC-03 | Phase 1 | ✓ Complete |
+| REQ-DOC-04 | Phase 1 | ✓ Complete |
+| REQ-DOC-05 | Phase 1 | ✓ Complete |
+| REQ-DOC-06 | Phase 1 | ✓ Complete |
 | REQ-NS-01 | Phase 2 | Pending |
 | REQ-NS-02 | Phase 2 | Pending |
 | REQ-NS-03 | Phase 2 | Pending |
