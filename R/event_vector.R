@@ -730,13 +730,14 @@ events.convolved_term <- function(x, drop.empty = FALSE, ...) {
 #' @return A named list mapping condition tags to integer indices.
 #' @keywords internal
 #' @examples
+#' \dontrun{
 #' term <- event_term(
 #'   list(condition = factor(c("A", "B"))),
 #'   onsets = c(0, 5),
 #'   blockids = c(1, 1)
 #' )
 #' column_groups_by_condition(term, fmrihrf::HRF_SPMG1, NULL)
-#' @keywords internal
+#' }
 column_groups_by_condition <- function(term, basis, sampling_frame) {
   nb <- fmrihrf::nbasis(basis)
   base_levels <- as.character(conditions(term, expand_basis = FALSE, drop.empty = FALSE))

@@ -20,11 +20,13 @@ A named list mapping condition tags to integer indices.
 Group column indices by condition for a term/basis pair
 }
 \examples{
+\dontrun{
 term <- event_term(
   list(condition = factor(c("A", "B"))),
   onsets = c(0, 5),
   blockids = c(1, 1)
 )
 column_groups_by_condition(term, fmrihrf::HRF_SPMG1, NULL)
+}
 }
 \keyword{internal}

@@ -432,6 +432,7 @@ construct <- function(x, ...) UseMethod("construct")
 #' @return A list split by block/run.
 #' @keywords internal
 #' @examples
+#' \dontrun{
 #' # Create experimental design with multiple runs
 #' des <- data.frame(
 #'   onset = c(0, 10, 20, 30, 5, 15, 25, 35),
@@ -446,7 +447,7 @@ construct <- function(x, ...) UseMethod("construct")
 #' # Example usage (when methods are implemented):
 #' # block_list <- split_by_block(emod)
 #' # length(block_list)  # Should return 2 (for 2 runs)
-#' @keywords internal
+#' }
 split_by_block <- function(x, ...) UseMethod("split_by_block")
 
 #' Split onsets
