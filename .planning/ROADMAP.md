@@ -49,10 +49,10 @@ Plans:
   6. DESCRIPTION Description is complete sentences with proper punctuation
   7. Authors@R includes 'cph' (copyright holder) role
   8. Maintainer email is valid and active
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 02-01: Audit and fix namespace/DESCRIPTION
+- [ ] 02-01-PLAN.md - Unexport internal utilities, add 'cph' role, verify NAMESPACE compliance
 
 ### Phase 3: Local Validation
 **Goal**: R CMD check --as-cran passes with 0 errors, 0 warnings, minimal notes
@@ -107,7 +107,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Documentation Quality | 1/1 | ✓ Complete | 2026-01-25 |
-| 2. Namespace & Metadata | 0/1 | Not started | - |
+| 2. Namespace & Metadata | 0/1 | Planned | - |
 | 3. Local Validation | 0/1 | Not started | - |
 | 4. Platform Testing | 0/2 | Not started | - |
 | 5. Submission | 0/1 | Not started | - |
