@@ -13,7 +13,7 @@ Prepare fmridesign v0.5.0 for CRAN submission as v1.0.0. The package functionali
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Documentation Quality** - Fix spelling, URLs, @return tags, and examples ✓
-- [ ] **Phase 2: Namespace & Metadata** - Audit exports, internals, and DESCRIPTION compliance
+- [x] **Phase 2: Namespace & Metadata** - Audit exports, internals, and DESCRIPTION compliance ✓
 - [ ] **Phase 3: Local Validation** - Achieve clean R CMD check --as-cran locally
 - [ ] **Phase 4: Platform Testing** - Validate on Windows, macOS, and R-devel
 - [ ] **Phase 5: Submission** - Prepare NEWS.md, cran-comments.md, and submit
@@ -52,7 +52,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 02-01-PLAN.md - Unexport internal utilities, add 'cph' role, verify NAMESPACE compliance
+- [x] 02-01-PLAN.md - Unexport internal utilities, add 'cph' role, verify NAMESPACE compliance ✓
 
 ### Phase 3: Local Validation
 **Goal**: R CMD check --as-cran passes with 0 errors, 0 warnings, minimal notes
@@ -107,7 +107,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Documentation Quality | 1/1 | ✓ Complete | 2026-01-25 |
-| 2. Namespace & Metadata | 0/1 | Planned | - |
+| 2. Namespace & Metadata | 1/1 | ✓ Complete | 2026-01-25 |
 | 3. Local Validation | 0/1 | Not started | - |
 | 4. Platform Testing | 0/2 | Not started | - |
 | 5. Submission | 0/1 | Not started | - |

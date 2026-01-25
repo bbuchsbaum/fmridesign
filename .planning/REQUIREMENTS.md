@@ -93,7 +93,7 @@ From research:
 1. **Package size:** 9.8 MB - near 10 MB limit (REQ-SIZE-01)
 2. ~~**\dontrun{} usage:** 6 instances need review (REQ-DOC-04)~~ ✓ Fixed - only 2 justified remain
 3. **Missing NEWS.md:** Needs creation (REQ-QUAL-01)
-4. **Authors@R:** May need 'cph' role added (REQ-DESC-03)
+4. ~~**Authors@R:** May need 'cph' role added (REQ-DESC-03)~~ ✓ Fixed - 'cph' role added
 
 ---
 
@@ -107,15 +107,15 @@ From research:
 | REQ-DOC-04 | Phase 1 | ✓ Complete |
 | REQ-DOC-05 | Phase 1 | ✓ Complete |
 | REQ-DOC-06 | Phase 1 | ✓ Complete |
-| REQ-NS-01 | Phase 2 | Pending |
-| REQ-NS-02 | Phase 2 | Pending |
-| REQ-NS-03 | Phase 2 | Pending |
-| REQ-NS-04 | Phase 2 | Pending |
-| REQ-DESC-01 | Phase 2 | Pending |
-| REQ-DESC-02 | Phase 2 | Pending |
-| REQ-DESC-03 | Phase 2 | Pending |
-| REQ-DESC-04 | Phase 2 | Pending |
-| REQ-DESC-05 | Phase 2 | Pending |
+| REQ-NS-01 | Phase 2 | ✓ Complete |
+| REQ-NS-02 | Phase 2 | ✓ Complete |
+| REQ-NS-03 | Phase 2 | ✓ Complete |
+| REQ-NS-04 | Phase 2 | ✓ Complete |
+| REQ-DESC-01 | Phase 2 | ✓ Complete |
+| REQ-DESC-02 | Phase 2 | ✓ Complete |
+| REQ-DESC-03 | Phase 2 | ✓ Complete |
+| REQ-DESC-04 | Phase 2 | ✓ Complete |
+| REQ-DESC-05 | Phase 2 | ✓ Complete |
 | REQ-CHK-01 | Phase 3 | Pending |
 | REQ-CHK-02 | Phase 3 | Pending |
 | REQ-CHK-03 | Phase 3 | Pending |
