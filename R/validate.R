@@ -42,10 +42,6 @@
 #' v[2] <- -1
 #' res2 <- validate_contrasts(emodel, weights = v)
 #'
-#' # Validate a custom matrix against a design matrix
-#' X <- as.matrix(design_matrix(emodel))
-#' C <- cbind(c(1, -1, rep(0, ncol(X) - 2)), c(0, 1, -1, rep(0, ncol(X) - 3)))
-#' res3 <- validate_contrasts(X, weights = C)
 #' @export
 validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
   # Helper: normalize X
