@@ -31,10 +31,10 @@ Prepare fmridesign v0.5.0 for CRAN submission as v1.0.0. The package functionali
   4. Every exported function has complete @param documentation (no warnings)
   5. All @examples run without error via `devtools::run_examples()`
   6. \dontrun{} used only for examples requiring external resources or user interaction
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 01-01: Run diagnostic tools and fix findings
+- [ ] 01-01-PLAN.md - Fix spelling (WORDLIST), @return/@examples for residualize, convert \dontrun{} to runnable
 
 ### Phase 2: Namespace & Metadata
 **Goal**: Only user-facing functions exported, DESCRIPTION fully CRAN-compliant
@@ -106,7 +106,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Documentation Quality | 0/1 | Not started | - |
+| 1. Documentation Quality | 0/1 | Planned | - |
 | 2. Namespace & Metadata | 0/1 | Not started | - |
 | 3. Local Validation | 0/1 | Not started | - |
 | 4. Platform Testing | 0/2 | Not started | - |
