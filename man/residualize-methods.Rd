@@ -2,8 +2,51 @@
 % Please edit documentation in R/residualize.R
 \name{residualize-methods}
 \alias{residualize-methods}
+\alias{residualize.matrix}
+\alias{residualize.event_model}
+\alias{residualize.baseline_model}
 \title{Residualize methods}
-\description{
-See \code{residualize()} generic in \code{design_generics.R}.
+\usage{
+\method{residualize}{matrix}(x, data, cols = NULL, ...)
+
+\method{residualize}{event_model}(x, data, cols = NULL, ...)
+
+\method{residualize}{baseline_model}(x, data, cols = NULL, ...)
 }
-\keyword{internal}
+\arguments{
+\item{x}{A design object: matrix, event_model, or baseline_model.}
+
+\item{data}{Numeric vector/matrix/data.frame of observations Y.}
+
+\item{cols}{Optional integer or character vector selecting columns to project out.}
+
+\item{...}{Additional arguments (currently unused).}
+}
+\value{
+A numeric matrix of residuals with the same dimensions as \code{data}.
+}
+\description{
+S3 methods for the \code{residualize()} generic. These methods project data
+onto the orthogonal complement of a design, returning OLS residuals.
+}
+\examples{
+# Residualize with a raw matrix
+X <- cbind(1, 1:10)
+Y <- matrix(rnorm(20), ncol = 2)
+R <- residualize(X, Y)
+dim(R)  # 10 x 2
+
+# Residualize with an event model
+des <- data.frame(
+  onset = c(0, 10, 20, 30),
+  run = 1,
+  cond = factor(c("A", "B", "A", "B"))
+)
+sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
+emod <- event_model(onset ~ hrf(cond), data = des, block = ~run,
+                    sampling_frame = sframe)
+Y_sim <- matrix(rnorm(40 * 2), ncol = 2)
+R_emod <- residualize(emod, Y_sim)
+dim(R_emod)  # 40 x 2
+
+}
