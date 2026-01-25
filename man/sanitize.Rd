@@ -21,3 +21,4 @@ Wraps \code{make.names} but allows control over dot replacement.
 sanitize("a.b c")
 sanitize("a.b c", allow_dot = FALSE)
 }
+\keyword{internal}

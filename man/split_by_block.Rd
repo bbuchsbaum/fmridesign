@@ -33,3 +33,4 @@ emod <- event_model(onset ~ hrf(cond), data = des, block = ~run, sampling_frame 
 # block_list <- split_by_block(emod)
 # length(block_list)  # Should return 2 (for 2 runs)
 }
+\keyword{internal}

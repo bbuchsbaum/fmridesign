@@ -430,6 +430,7 @@ construct <- function(x, ...) UseMethod("construct")
 #' @param x The object.
 #' @param ... Additional arguments.
 #' @return A list split by block/run.
+#' @keywords internal
 #' @examples
 #' # Create experimental design with multiple runs
 #' des <- data.frame(
@@ -445,7 +446,7 @@ construct <- function(x, ...) UseMethod("construct")
 #' # Example usage (when methods are implemented):
 #' # block_list <- split_by_block(emod)
 #' # length(block_list)  # Should return 2 (for 2 runs)
-#' @export
+#' @keywords internal
 split_by_block <- function(x, ...) UseMethod("split_by_block")
 
 #' Split onsets

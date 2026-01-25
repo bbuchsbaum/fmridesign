@@ -20,3 +20,4 @@ Generates the \code{f##} suffix for multi-column continuous events.
 \examples{
 feature_suffix(1:3, 5)
 }
+\keyword{internal}

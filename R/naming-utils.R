@@ -20,7 +20,7 @@ zeropad <- function(i, n_total) {
 #' @param x A character vector.
 #' @param allow_dot Logical, if `FALSE`, dots (`.`) are replaced with underscores (`_`).
 #' @return A sanitized character vector.
-#' @export
+#' @keywords internal
 #' @examples
 #' sanitize("a.b c")
 #' sanitize("a.b c", allow_dot = FALSE)
@@ -65,7 +65,7 @@ sanitize_level <- function(lev) {
 #' @param j Integer vector of basis indices (1-based).
 #' @param nb Total number of basis functions.
 #' @return Character vector of suffixes (e.g., `_b01`, `_b02`).
-#' @export
+#' @keywords internal
 #' @examples
 #' basis_suffix(1:3, 5)
 #' basis_suffix(1:10, 10)
@@ -80,7 +80,7 @@ basis_suffix <- function(j, nb) {
 #' @param j Integer vector of feature indices (1-based).
 #' @param nf Total number of features.
 #' @return Character vector of suffixes (e.g., `f01`, `f02`).
-#' @export
+#' @keywords internal
 #' @examples
 #' feature_suffix(1:3, 5)
 feature_suffix <- function(j, nf) {

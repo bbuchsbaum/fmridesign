@@ -27,3 +27,4 @@ term <- event_term(
 )
 column_groups_by_condition(term, fmrihrf::HRF_SPMG1, NULL)
 }
+\keyword{internal}
