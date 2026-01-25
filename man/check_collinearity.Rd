@@ -19,8 +19,17 @@ offending pairs and their correlations). Invisibly returns the same list.
 Convenience helper to quickly flag highly correlated regressors.
 }
 \examples{
-\dontrun{
+# Create a simple event model
+des <- data.frame(
+  onset = c(0, 10, 20, 30),
+  run = 1,
+  cond = factor(c("A", "B", "A", "B"))
+)
+sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
+emodel <- event_model(onset ~ hrf(cond), data = des, block = ~run,
+                      sampling_frame = sframe)
+
+# Check for multicollinearity
 res <- check_collinearity(design_matrix(emodel), threshold = 0.95)
 if (!res$ok) print(res$pairs)
-}
 }

@@ -20,7 +20,6 @@ The generator produces boxcar HRFs where each event's duration determines
 the boxcar width.
 }
 \examples{
-\dontrun{
 # Events with variable durations
 trial_data <- data.frame(
   onset = c(0, 10, 25),
@@ -32,9 +31,9 @@ sf <- fmrihrf::sampling_frame(blocklens = 50, TR = 2)
 
 emod <- event_model(
   onset ~ hrf(condition, hrf_fun = boxcar_hrf_gen()),
-  data = trial_data, block = ~run, sampling_frame = sf
+  data = trial_data, block = ~run, sampling_frame = sf, durations = trial_data$duration
 )
-}
+print(emod)
 
 }
 \seealso{

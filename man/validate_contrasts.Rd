@@ -37,17 +37,27 @@ Checks include:
 }
 }
 \examples{
-\dontrun{
+# Create a simple event model
+des <- data.frame(
+  onset = c(0, 10, 20, 30),
+  run = 1,
+  cond = factor(c("A", "B", "A", "B"))
+)
+sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
+emodel <- event_model(onset ~ hrf(cond), data = des, block = ~run,
+                      sampling_frame = sframe)
+
 # Validate all attached contrasts on a model
 res <- validate_contrasts(emodel)
 
 # Validate a custom vector against a model
-v <- rep(0, ncol(design_matrix(emodel))); v[1] <- 1; v[2] <- -1
+v <- rep(0, ncol(design_matrix(emodel)))
+v[1] <- 1
+v[2] <- -1
 res2 <- validate_contrasts(emodel, weights = v)
 
 # Validate a custom matrix against a design matrix
 X <- as.matrix(design_matrix(emodel))
-C <- cbind(c(1,-1,rep(0, ncol(X)-2)), c(0,1,-1,rep(0, ncol(X)-3)))
+C <- cbind(c(1, -1, rep(0, ncol(X) - 2)), c(0, 1, -1, rep(0, ncol(X) - 3)))
 res3 <- validate_contrasts(X, weights = C)
-}
 }

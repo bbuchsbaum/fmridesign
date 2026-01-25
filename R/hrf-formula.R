@@ -506,7 +506,6 @@ trialwise <- function(basis   = "spmg1",
 #' @return A function that takes an event data frame and returns a list of HRF objects.
 #'
 #' @examples
-#' \dontrun{
 #' # Events with variable durations
 #' trial_data <- data.frame(
 #'   onset = c(0, 10, 25),
@@ -518,9 +517,9 @@ trialwise <- function(basis   = "spmg1",
 #'
 #' emod <- event_model(
 #'   onset ~ hrf(condition, hrf_fun = boxcar_hrf_gen()),
-#'   data = trial_data, block = ~run, sampling_frame = sf
+#'   data = trial_data, block = ~run, sampling_frame = sf, durations = trial_data$duration
 #' )
-#' }
+#' print(emod)
 #'
 #' @seealso [weighted_hrf_gen()] for weighted impulse HRFs
 #' @export
@@ -549,7 +548,6 @@ boxcar_hrf_gen <- function(normalize = TRUE, min_duration = 0.1) {
 #' @return A function that takes an event data frame and returns a list of HRF objects.
 #'
 #' @examples
-#' \dontrun{
 #' # Events with internal temporal structure
 #' trial_data <- data.frame(
 #'   onset = c(0, 20),
@@ -563,7 +561,7 @@ boxcar_hrf_gen <- function(normalize = TRUE, min_duration = 0.1) {
 #'   onset ~ hrf(onset, hrf_fun = weighted_hrf_gen("sub_times", "sub_weights", relative = TRUE)),
 #'   data = trial_data, block = ~run, sampling_frame = sf
 #' )
-#' }
+#' print(emod)
 #'
 #' @seealso [boxcar_hrf_gen()] for duration-based boxcar HRFs
 #' @export

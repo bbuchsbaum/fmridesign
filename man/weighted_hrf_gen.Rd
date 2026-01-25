@@ -33,7 +33,6 @@ The generator produces weighted impulse HRFs from columns containing lists
 of sub-event times and weights.
 }
 \examples{
-\dontrun{
 # Events with internal temporal structure
 trial_data <- data.frame(
   onset = c(0, 20),
@@ -47,7 +46,7 @@ emod <- event_model(
   onset ~ hrf(onset, hrf_fun = weighted_hrf_gen("sub_times", "sub_weights", relative = TRUE)),
   data = trial_data, block = ~run, sampling_frame = sf
 )
-}
+print(emod)
 
 }
 \seealso{
