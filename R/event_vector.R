@@ -1031,13 +1031,24 @@ convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE, hrf_l
       # Empty regressor - use first HRF from list or single HRF for span info
       ref_hrf <- if (hrf_is_list && length(hrf_list) > 0) hrf_list[[1]] else hrf
       fmrihrf::regressor(onsets = numeric(0), hrf = ref_hrf, amplitude = 0)
+    } else if (hrf_is_list) {
+      # Per-onset HRFs: create individual regressors per event since
+      # fmrihrf::regressor does not accept a list of HRF objects
+      per_event_regs <- lapply(nonzero, function(k) {
+        fmrihrf::regressor(
+          onsets = globons[k],
+          hrf = hrf_list[[k]],
+          amplitude = amp[k],
+          duration = durations[k],
+          summate = summate
+        )
+      })
+      # Tag so caller knows to sum evaluations
+      structure(per_event_regs, class = "per_onset_regressor_set")
     } else {
-      # Subset HRF list if applicable (for non-zero amplitude events only)
-      hrf_for_reg <- if (hrf_is_list) hrf_list[nonzero] else hrf
-
       fmrihrf::regressor(
         onsets = globons[nonzero],
-        hrf = hrf_for_reg,  # Single HRF or list of HRFs
+        hrf = hrf,
         amplitude = amp[nonzero],
         duration = durations[nonzero],
         summate = summate
@@ -1088,7 +1099,8 @@ regressors.event_term <- function(x, hrf, sampling_frame, summate = FALSE, drop.
 #' conv <- convolve(term, fmrihrf::HRF_SPMG1, sf)
 #' names(conv)
 convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
-                                summate = TRUE, precision = 0.3, ...) {
+                                summate = TRUE, precision = 0.3,
+                                normalize = FALSE, ...) {
   # Check for term_tag attribute (should have been added in realise_event_terms)
   term_tag <- attr(x, "term_tag")
   # --- REMOVED FALLBACK LOGIC FOR term_tag ---
@@ -1173,7 +1185,16 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
     sam_all <- fmrihrf::samples(sampling_frame, global = TRUE)
     
     # Evaluate regressors against ALL samples (preserves temporal accuracy)
-    full_block_mat <- do.call(cbind, lapply(reg, function(r) fmrihrf::evaluate(r, sam_all, precision = precision)))
+    # Helper to handle per-onset regressor sets (sum individual evaluations)
+    eval_reg <- function(r, times, prec) {
+      if (inherits(r, "per_onset_regressor_set")) {
+        results <- lapply(r, function(sub_r) fmrihrf::evaluate(sub_r, times, precision = prec))
+        Reduce(`+`, results)
+      } else {
+        fmrihrf::evaluate(r, times, precision = prec)
+      }
+    }
+    full_block_mat <- do.call(cbind, lapply(reg, function(r) eval_reg(r, sam_all, precision)))
     
     # Extract only the rows for this specific block (maintains correct dimensions)
     block_lengths <- fmrihrf::blocklens(sampling_frame)
@@ -1204,7 +1225,17 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
                                .name_repair="minimal", .names_minimal = cn))
   }
   cmat <- do.call(rbind, cmat_list)
-  
+
+  # Peak-normalize each regressor column so max(abs(col)) == 1
+  if (isTRUE(normalize)) {
+    for (j in seq_len(ncol(cmat))) {
+      peak <- max(abs(cmat[, j]))
+      if (peak > 0) {
+        cmat[, j] <- cmat[, j] / peak
+      }
+    }
+  }
+
   # Handle add_sum flag if present (set by trialwise)
   if (isTRUE(attr(x, "add_sum"))) {
     if (ncol(cmat) > 0) { # Ensure there are columns to average

@@ -110,6 +110,11 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #' @param name Optional human-readable name for the term.
 #' @param lag a temporal offset in seconds which is added to onset before convolution
 #' @param summate whether impulse amplitudes sum up when duration is greater than 0.
+#' @param normalize logical; if TRUE, each convolved regressor column is peak-normalized
+#'        so that `max(abs(column)) == 1`. This is useful when events have different durations,
+#'        since longer events produce taller peaks after convolution. Normalizing ensures that
+#'        beta estimates reflect condition differences rather than duration-dependent amplitude
+#'        scaling, which is important for analyses like MVPA or RSA. Default FALSE.
 #' @examples
 #'
 #' ## 'hrf' is typically used in the context of \code{formula}s passed to `event_model`.
@@ -147,7 +152,7 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #' @importFrom rlang enquos enexpr syms is_formula is_quosure is_call as_label %||%
 #' @return an \code{hrfspec} instance
 hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.3,
-                nbasis=1, contrasts=NULL, id=NULL, name=NULL, lag=0, summate=TRUE) {
+                nbasis=1, contrasts=NULL, id=NULL, name=NULL, lag=0, summate=TRUE, normalize=FALSE) {
 
   vars <- rlang::enquos(...) # Capture variables/expressions as quosures
 
@@ -262,6 +267,7 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
     precision = precision,
     contrasts = contrasts, ## Pass validated list of contrast specs
     summate = summate,
+    normalize = normalize,
     id = final_id # Pass the determined ID
     )
 
@@ -318,7 +324,8 @@ hrfspec <- function(vars, label=NULL, basis=fmrihrf::HRF_SPMG1, ...) {
     subset = other_args$subset, # Should be an expression
     precision = other_args$precision %||% 0.3,
     contrasts = other_args$contrasts, # Already validated list or NULL
-    summate = other_args$summate %||% TRUE
+    summate = other_args$summate %||% TRUE,
+    normalize = other_args$normalize %||% FALSE
     # data_env is NOT stored here, added later during evaluation
   )
   
@@ -434,6 +441,11 @@ evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1, ...
 #' @param add_sum If TRUE, append a column that is the average of all
 #'                trialwise columns (useful as a conventional main effect).
 #' @param label Term label / prefix for the generated columns.
+#' @param normalize logical; if TRUE, each trialwise regressor column is peak-normalized
+#'        so that `max(abs(column)) == 1`. When events have different durations, longer events
+#'        produce taller peaks after convolution. Normalizing equalizes amplitudes so that beta
+#'        estimates are comparable across trials regardless of duration. Particularly useful for
+#'        MVPA and RSA analyses. Default FALSE.
 #' @return An `hrfspec` term to be used on the RHS of an event-model formula.
 #' @examples
 #' # Create example trial data for beta-series analysis
@@ -464,7 +476,8 @@ trialwise <- function(basis   = "spmg1",
                       nbasis  = 1,
                       add_sum = FALSE,
                       label   = "trial",
-                      durations = NULL) {
+                      durations = NULL,
+                      normalize = FALSE) {
 
   # Create an expression that will evaluate .trial_factor(length(onsets)) 
   # when the onsets variable is available at evaluation time
@@ -475,6 +488,7 @@ trialwise <- function(basis   = "spmg1",
               lag   = lag,
               nbasis = nbasis,
               durations = durations,
+              normalize = normalize,
               id     = label) # Use id argument for naming
 
   term$add_sum <- isTRUE(add_sum) # flag for construct() to act upon
@@ -527,6 +541,47 @@ boxcar_hrf_gen <- function(normalize = TRUE, min_duration = 0.1) {
   function(d) {
     lapply(d$duration, function(dur) {
       fmrihrf::hrf_boxcar(width = max(dur, min_duration), normalize = normalize)
+    })
+  }
+}
+
+
+#' Create duration-aware normalized HRF generator
+#'
+#' Generator for use with the `hrf_fun` parameter in `hrf()`. Creates per-onset
+#' HRFs by convolving a base HRF with a boxcar of each event's duration, then
+#' normalizing to peak = 1. This preserves the temporal shape of the
+#' duration-modulated response while equalizing amplitude across events.
+#'
+#' @param base Base HRF object. Default `fmrihrf::HRF_SPMG1`.
+#' @param min_duration Minimum duration (prevents zero-width events). Default 0.
+#' @return A function for use with `hrf_fun` in `hrf()`.
+#'
+#' @examples
+#' # Events with variable durations
+#' trial_data <- data.frame(
+#'   onset = c(0, 10, 25),
+#'   duration = c(2, 5, 3),
+#'   condition = c("A", "B", "A"),
+#'   run = 1
+#' )
+#' sf <- fmrihrf::sampling_frame(blocklens = 50, TR = 2)
+#'
+#' emod <- event_model(
+#'   onset ~ hrf(condition, hrf_fun = duration_hrf_gen()),
+#'   data = trial_data, block = ~run, sampling_frame = sf,
+#'   durations = trial_data$duration
+#' )
+#' print(emod)
+#'
+#' @seealso [boxcar_hrf_gen()] for duration-based boxcar HRFs
+#' @export
+duration_hrf_gen <- function(base = fmrihrf::HRF_SPMG1, min_duration = 0) {
+  function(d) {
+    lapply(d$duration, function(dur) {
+      dur <- max(dur, min_duration)
+      if (dur == 0) return(base)
+      fmrihrf::block_hrf(base, width = dur, normalize = TRUE)
     })
   }
 }

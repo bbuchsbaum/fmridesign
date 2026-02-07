@@ -10,7 +10,8 @@ trialwise(
   nbasis = 1,
   add_sum = FALSE,
   label = "trial",
-  durations = NULL
+  durations = NULL,
+  normalize = FALSE
 )
 }
 \arguments{
@@ -23,6 +24,12 @@ trialwise columns (useful as a conventional main effect).}
 
 \item{durations}{Optional durations override (passed to \code{hrf()}). If NULL, uses
 the durations argument from \code{event_model}.}
+
+\item{normalize}{logical; if TRUE, each trialwise regressor column is peak-normalized
+so that \code{max(abs(column)) == 1}. When events have different durations, longer events
+produce taller peaks after convolution. Normalizing equalizes amplitudes so that beta
+estimates are comparable across trials regardless of duration. Particularly useful for
+MVPA and RSA analyses. Default FALSE.}
 }
 \value{
 An \code{hrfspec} term to be used on the RHS of an event-model formula.

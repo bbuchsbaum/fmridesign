@@ -18,7 +18,8 @@ hrf(
   id = NULL,
   name = NULL,
   lag = 0,
-  summate = TRUE
+  summate = TRUE,
+  normalize = FALSE
 )
 }
 \arguments{
@@ -64,6 +65,12 @@ Must be NULL, a single contrast spec, or a \emph{named} list of contrast specs.}
 \item{lag}{a temporal offset in seconds which is added to onset before convolution}
 
 \item{summate}{whether impulse amplitudes sum up when duration is greater than 0.}
+
+\item{normalize}{logical; if TRUE, each convolved regressor column is peak-normalized
+so that \code{max(abs(column)) == 1}. This is useful when events have different durations,
+since longer events produce taller peaks after convolution. Normalizing ensures that
+beta estimates reflect condition differences rather than duration-dependent amplitude
+scaling, which is important for analyses like MVPA or RSA. Default FALSE.}
 }
 \value{
 an \code{hrfspec} instance

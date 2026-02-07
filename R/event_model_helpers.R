@@ -263,8 +263,10 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
       }
       
       # Regular convolution for event_term objects
-      convolve.event_term(term, hrf = hrfspec$hrf, sampling_frame = sampling_frame, 
-                          precision = precision, drop.empty = TRUE)
+      convolve.event_term(term, hrf = hrfspec$hrf, sampling_frame = sampling_frame,
+                          precision = precision, drop.empty = TRUE,
+                          summate = hrfspec$summate %||% TRUE,
+                          normalize = hrfspec$normalize %||% FALSE)
   }
 
   # Apply convolution (potentially in parallel)

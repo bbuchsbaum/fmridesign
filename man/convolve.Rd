@@ -22,6 +22,7 @@ convolve(
   drop.empty = TRUE,
   summate = TRUE,
   precision = 0.3,
+  normalize = FALSE,
   ...
 )
 }
