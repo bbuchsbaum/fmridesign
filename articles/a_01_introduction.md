@@ -1,10 +1,5 @@
 # Introduction to fmridesign
 
-``` r
-library(fmridesign)
-library(ggplot2)
-```
-
 ## Overview
 
 The `fmridesign` package constructs design matrices for fMRI general

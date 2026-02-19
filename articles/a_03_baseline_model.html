@@ -10,7 +10,10 @@
 <link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Modeling Baseline and Nuisance Effects">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<meta property="og:title" content="Modeling Baseline and Nuisance Effects">
+<meta name="description" content="Comprehensive guide to baseline modeling including drift, intercepts, and nuisance regressors.">
+<meta property="og:description" content="Comprehensive guide to baseline modeling including drift, intercepts, and nuisance regressors.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -29,16 +32,19 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="../articles/a_01_introduction.html">Introduction to fmridesign</a></li>
-    <li><a class="dropdown-item" href="../articles/a_03_baseline_model.html">Modeling Baseline and Nuisance Effects</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
+    <li><a class="dropdown-item" href="../articles/a_01_introduction.html">Introduction to fmridesign</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Concepts</h6></li>
     <li><a class="dropdown-item" href="../articles/a_04_event_models.html">Building Event Models</a></li>
-    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts in fmridesign</a></li>
+    <li><a class="dropdown-item" href="../articles/a_03_baseline_model.html">Baseline and Nuisance Effects</a></li>
+    <li><a class="dropdown-item" href="../articles/a_05_contrasts.html">Contrasts</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -59,10 +65,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Modeling Baseline and Nuisance Effects</h1>
-                        <h4 data-toc-skip class="author">Bradley R.
-Buchsbaum</h4>
             
-            <h4 data-toc-skip class="date">2025-11-09</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/vignettes/a_03_baseline_model.Rmd" class="external-link"><code>vignettes/a_03_baseline_model.Rmd</code></a></small>
       <div class="d-none name"><code>a_03_baseline_model.Rmd</code></div>
@@ -70,6 +73,8 @@ Buchsbaum</h4>
 
     
     
+<!-- Removed per-page palette injection; default palette is red via CSS root variables. -->
+<style>:root{--content:80ch}</style>
 <div class="section level2">
 <h2 id="the-purpose-of-a-baseline-model">The Purpose of a Baseline Model<a class="anchor" aria-label="anchor" href="#the-purpose-of-a-baseline-model"></a>
 </h2>
@@ -231,17 +236,17 @@ they uniquely identify a term.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Plot the polynomial regressors (term is named "drift")</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel_poly</span>, term_name <span class="op">=</span> <span class="st">"drift"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_03_baseline_model_files/figure-html/plot_basis-1.png" class="r-plt" alt="Baseline drift regressors (poly, bs, ns) plotted per run over time."></p>
+<p><img src="a_03_baseline_model_files/figure-html/plot_basis-1.png" class="r-plt" alt="Baseline drift regressors (poly, bs, ns) plotted per run over time." width="100%" style="display: block; margin: auto;"></p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Plot the B-spline regressors</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel_bs</span>, term_name <span class="op">=</span> <span class="st">"drift"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_03_baseline_model_files/figure-html/plot_basis-2.png" class="r-plt" alt="Baseline drift regressors (poly, bs, ns) plotted per run over time."></p>
+<p><img src="a_03_baseline_model_files/figure-html/plot_basis-2.png" class="r-plt" alt="Baseline drift regressors (poly, bs, ns) plotted per run over time." width="100%" style="display: block; margin: auto;"></p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Plot the Natural spline regressors</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel_ns</span>, term_name <span class="op">=</span> <span class="st">"drift"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_03_baseline_model_files/figure-html/plot_basis-3.png" class="r-plt" alt="Baseline drift regressors (poly, bs, ns) plotted per run over time."></p>
+<p><img src="a_03_baseline_model_files/figure-html/plot_basis-3.png" class="r-plt" alt="Baseline drift regressors (poly, bs, ns) plotted per run over time." width="100%" style="display: block; margin: auto;"></p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Plotting the Constant (Intercept) term is generally not informative</span></span>
@@ -330,15 +335,15 @@ grouped under the term name <code>"nuisance"</code>.</p>
 <span><span class="co">#&gt;     * Total columns: 14                  </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   Design Matrix Preview                    </span></span>
-<span><span class="co">#&gt;      1.000  0.000 -1.400 -0.387 ...      </span></span>
-<span><span class="co">#&gt;      1.000  0.000  0.255 -0.785 ...      </span></span>
-<span><span class="co">#&gt;      1.000  0.000 -2.437 -1.057 ...      </span></span>
+<span><span class="co">#&gt;      1.000  0.000 -0.560 -0.710 ...      </span></span>
+<span><span class="co">#&gt;      1.000  0.000 -0.230  0.257 ...      </span></span>
+<span><span class="co">#&gt;      1.000  0.000  1.559 -0.247 ...      </span></span>
 <span><span class="co">#&gt; ================================================</span></span>
 <span></span>
 <span><span class="co"># Plot the nuisance regressors (term_name = "nuisance")</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel_nuis_only</span>, term_name <span class="op">=</span> <span class="st">"nuisance"</span><span class="op">)</span> <span class="op">+</span> </span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Nuisance Regressors Only (e.g., Motion)"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_03_baseline_model_files/figure-html/nuisance_list-1.png" class="r-plt" alt="Example nuisance regressors (e.g., motion) plotted per run over time."></p>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Nuisance Regressors Only (e.g., Motion)"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_03_baseline_model_files/figure-html/nuisance_list-1.png" class="r-plt" alt="Example nuisance regressors (e.g., motion) plotted per run over time." width="100%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level2">
 <h2 id="combining-basis-sets-and-nuisance-regressors">Combining Basis Sets and Nuisance Regressors<a class="anchor" aria-label="anchor" href="#combining-basis-sets-and-nuisance-regressors"></a>
@@ -396,14 +401,14 @@ custom nuisance regressors in the same baseline model.</p>
 <span></span>
 <span><span class="co"># Plot the drift terms (polynomial basis)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel_combined</span>, term_name <span class="op">=</span> <span class="st">"drift"</span><span class="op">)</span> <span class="op">+</span> </span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Polynomial Drift Terms (from Combined Model)"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_03_baseline_model_files/figure-html/combined_baseline-1.png" class="r-plt" alt="Combined baseline model plots: polynomial drift and nuisance terms per run."></p>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Polynomial Drift Terms (from Combined Model)"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_03_baseline_model_files/figure-html/combined_baseline-1.png" class="r-plt" alt="Combined baseline model plots: polynomial drift and nuisance terms per run." width="100%" style="display: block; margin: auto;"></p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Plot the nuisance terms (using exact match "nuisance")</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmodel_combined</span>, term_name <span class="op">=</span> <span class="st">"nuisance"</span><span class="op">)</span> <span class="op">+</span> </span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/labs.html" class="external-link">labs</a></span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Nuisance Terms (from Combined Model)"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="a_03_baseline_model_files/figure-html/combined_baseline-2.png" class="r-plt" alt="Combined baseline model plots: polynomial drift and nuisance terms per run."></p>
+<span>  <span class="fu">labs</span><span class="op">(</span>title <span class="op">=</span> <span class="st">"Nuisance Terms (from Combined Model)"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="a_03_baseline_model_files/figure-html/combined_baseline-2.png" class="r-plt" alt="Combined baseline model plots: polynomial drift and nuisance terms per run." width="100%" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level2">
 <h2 id="accessing-the-design-matrix">Accessing the Design Matrix<a class="anchor" aria-label="anchor" href="#accessing-the-design-matrix"></a>
@@ -423,12 +428,12 @@ using <code><a href="../reference/design_matrix.html">design_matrix()</a></code>
 <span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 6 × 8</span></span></span>
 <span><span class="co">#&gt;   base_poly1_block_1 base_poly2_block_1 base_poly3_block_1 base_poly4_block_1</span></span>
 <span><span class="co">#&gt;                <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>              <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>             -<span style="color: #BB0000;">0.171</span>              0.217             -<span style="color: #BB0000;">0.249</span>             0.271 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>             -<span style="color: #BB0000;">0.168</span>              0.204             -<span style="color: #BB0000;">0.219</span>             0.217 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>             -<span style="color: #BB0000;">0.165</span>              0.191             -<span style="color: #BB0000;">0.190</span>             0.167 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>             -<span style="color: #BB0000;">0.161</span>              0.178             -<span style="color: #BB0000;">0.163</span>             0.122 </span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span>             -<span style="color: #BB0000;">0.158</span>              0.166             -<span style="color: #BB0000;">0.137</span>             0.081<span style="text-decoration: underline;">3</span></span></span>
-<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span>             -<span style="color: #BB0000;">0.154</span>              0.154             -<span style="color: #BB0000;">0.113</span>             0.045<span style="text-decoration: underline;">2</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span>         -<span style="color: #BB0000;">0.171</span><span style="color: #BB0000; text-decoration: underline;">481</span><span style="color: #BB0000;">6</span>          0.216<span style="text-decoration: underline;">997</span>6         -<span style="color: #BB0000;">0.249</span><span style="color: #BB0000; text-decoration: underline;">164</span><span style="color: #BB0000;">5</span>         0.271<span style="text-decoration: underline;">442</span>2 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span>         -<span style="color: #BB0000;">0.168</span><span style="color: #BB0000; text-decoration: underline;">017</span><span style="color: #BB0000;">3</span>          0.203<span style="text-decoration: underline;">846</span>2         -<span style="color: #BB0000;">0.218</span><span style="color: #BB0000; text-decoration: underline;">962</span><span style="color: #BB0000;">7</span>         0.216<span style="text-decoration: underline;">605</span>4 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span>         -<span style="color: #BB0000;">0.164</span><span style="color: #BB0000; text-decoration: underline;">553</span><span style="color: #BB0000;">1</span>          0.190<span style="text-decoration: underline;">963</span>2         -<span style="color: #BB0000;">0.190</span><span style="color: #BB0000; text-decoration: underline;">301</span><span style="color: #BB0000;">9</span>         0.166<span style="text-decoration: underline;">804</span>6 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span>         -<span style="color: #BB0000;">0.161</span><span style="color: #BB0000; text-decoration: underline;">088</span><span style="color: #BB0000;">8</span>          0.178<span style="text-decoration: underline;">348</span>6         -<span style="color: #BB0000;">0.163</span><span style="color: #BB0000; text-decoration: underline;">150</span><span style="color: #BB0000;">2</span>         0.121<span style="text-decoration: underline;">797</span>6 </span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span>         -<span style="color: #BB0000;">0.157</span><span style="color: #BB0000; text-decoration: underline;">624</span><span style="color: #BB0000;">5</span>          0.166<span style="text-decoration: underline;">002</span>5         -<span style="color: #BB0000;">0.137</span><span style="color: #BB0000; text-decoration: underline;">475</span><span style="color: #BB0000;">8</span>         0.081<span style="text-decoration: underline;">347</span>07</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span>         -<span style="color: #BB0000;">0.154</span><span style="color: #BB0000; text-decoration: underline;">160</span><span style="color: #BB0000;">2</span>          0.153<span style="text-decoration: underline;">924</span>7         -<span style="color: #BB0000;">0.113</span><span style="color: #BB0000; text-decoration: underline;">247</span><span style="color: #BB0000;">1</span>         0.045<span style="text-decoration: underline;">220</span>89</span></span>
 <span><span class="co">#&gt; <span style="color: #949494;"># ℹ 4 more variables: base_poly5_block_1 &lt;dbl&gt;, base_poly1_block_2 &lt;dbl&gt;,</span></span></span>
 <span><span class="co">#&gt; <span style="color: #949494;">#   base_poly2_block_2 &lt;dbl&gt;, base_poly3_block_2 &lt;dbl&gt;</span></span></span>
 <span></span>

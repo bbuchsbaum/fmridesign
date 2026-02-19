@@ -12,7 +12,9 @@ trialwise(
   lag = 0,
   nbasis = 1,
   add_sum = FALSE,
-  label = "trial"
+  label = "trial",
+  durations = NULL,
+  normalize = FALSE
 )
 ```
 
@@ -31,6 +33,21 @@ trialwise(
 - label:
 
   Term label / prefix for the generated columns.
+
+- durations:
+
+  Optional durations override (passed to
+  [`hrf()`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.md)).
+  If NULL, uses the durations argument from `event_model`.
+
+- normalize:
+
+  logical; if TRUE, each trialwise regressor column is peak-normalized
+  so that `max(abs(column)) == 1`. When events have different durations,
+  longer events produce taller peaks after convolution. Normalizing
+  equalizes amplitudes so that beta estimates are comparable across
+  trials regardless of duration. Particularly useful for MVPA and RSA
+  analyses. Default FALSE.
 
 ## Value
 

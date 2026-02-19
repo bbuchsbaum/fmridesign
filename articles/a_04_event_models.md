@@ -471,6 +471,134 @@ plot(emodel_gen_hrf, term_name = "stim")
 ![Regressors generated using different HRF bases (SPMG, Gaussian,
 spline/tent).](a_04_event_models_files/figure-html/specify_hrf-4.png)
 
+### Per-Onset HRF Specification with `hrf_fun`
+
+For advanced use cases where different events require different HRF
+shapes, you can use the `hrf_fun` parameter. This accepts a generator
+function that receives event data and returns a list of HRF objects (one
+per onset). The generator is called *after* any subsetting, so it only
+sees the events that will actually be modeled.
+
+``` r
+# Generator function that assigns different HRFs based on condition
+cond_hrf_gen <- function(event_data) {
+  lapply(seq_len(nrow(event_data)), function(i) {
+    if (event_data$stim[i] == "face") {
+      HRF_SPMG1
+    } else {
+      HRF_GAMMA
+    }
+  })
+}
+
+emodel_per_onset <- event_model(
+  onset ~ hrf(stim, hrf_fun = cond_hrf_gen),
+  data = simple_design,
+  block = ~ run,
+  sampling_frame = sframe_single_run
+)
+print(emodel_per_onset)
+```
+
+The `hrf_fun` generator receives a data frame containing `onset`,
+`duration`, `blockid`, and any term variables. This enables use cases
+like:
+
+- **Duration-based HRFs**: Use
+  [`boxcar_hrf_gen()`](https://bbuchsbaum.github.io/fmridesign/reference/boxcar_hrf_gen.md)
+  to create boxcar HRFs based on event duration
+- **Weighted sub-event HRFs**: Use
+  [`weighted_hrf_gen()`](https://bbuchsbaum.github.io/fmridesign/reference/weighted_hrf_gen.md)
+  for events with sub-onset timing
+- **Formula syntax**: Reference a column containing HRF objects directly
+  with `hrf_fun = ~my_hrf_column`
+
+``` r
+# Create a design with varying event durations
+boxcar_design <- data.frame(
+  onset = c(0, 20, 45, 70),
+  stim = factor(c("A", "B", "A", "B")),
+  duration = c(2, 4, 3, 5),  # Varying durations
+  run = 1
+)
+
+emodel_boxcar <- event_model(
+  onset ~ hrf(stim, hrf_fun = boxcar_hrf_gen()),
+  data = boxcar_design,
+  durations = boxcar_design$duration,
+  block = ~ run,
+  sampling_frame = sframe_single_run
+)
+print(emodel_boxcar)
+```
+
+### Advanced: Parametric Modulator with FIR HRF and Windowed F-contrast
+
+Sometimes a parametric modulator is modeled with a multi‑basis HRF
+(e.g., FIR) to allow more flexible timing. In that case, the modulator
+produces multiple columns (one per basis bin). You can form an omnibus
+F‑test across a window of bins (e.g., around the expected peak) or
+across all bins.
+
+``` r
+# Toy design with a continuous RT modulator
+set.seed(42)
+n <- 60
+des_pm <- data.frame(
+  onset = sort(runif(n, 0, 260)),
+  RT    = scale(runif(n, 0.4, 0.9))[,1],
+  run   = 1
+)
+sframe_pm <- sampling_frame(blocklens = 140, TR = 2)
+
+# Model RT with an FIR basis (10 bins)
+emod_rt_fir <- event_model(
+  onset ~ hrf(RT, basis = "fir", nbasis = 10),
+  data = des_pm, block = ~ run, sampling_frame = sframe_pm
+)
+
+# Identify the RT columns in the full design matrix
+dm <- design_matrix(emod_rt_fir)
+idx <- term_indices(dm)    # maps term tags -> column indices
+rt_cols <- idx[["RT"]]     # columns for the RT FIR term (b01..b10)
+colnames(dm)[rt_cols][1:5]
+#> [1] "RT_RT_b01" "RT_RT_b02" "RT_RT_b03" "RT_RT_b04" "RT_RT_b05"
+
+# Build a windowed F-contrast over FIR bins 3:5 (peak region example)
+window <- 3:5
+win_cols <- rt_cols[window]
+C_F <- matrix(0, nrow = ncol(dm), ncol = length(win_cols))
+for (j in seq_along(win_cols)) C_F[win_cols[j], j] <- 1
+colnames(C_F) <- paste0("RT_b", sprintf("%02d", window))
+
+# Validate (treat `dm` as X); this reports an F-type contrast because C has multiple columns
+validate_contrasts(dm, weights = C_F)
+#>         name type estimable sum_to_zero orthogonal_to_intercept full_rank
+#> 1 contrast#1    F      TRUE       FALSE                    TRUE      TRUE
+#> 2 contrast#2    F      TRUE       FALSE                    TRUE      TRUE
+#> 3 contrast#3    F      TRUE       FALSE                    TRUE      TRUE
+#>   nonzero_weights
+#> 1               1
+#> 2               1
+#> 3               1
+
+# If you instead want a single t-contrast averaging the window, use 1/|window| weights
+C_avg <- matrix(0, nrow = ncol(dm), ncol = 1)
+C_avg[win_cols, 1] <- 1/length(win_cols)
+colnames(C_avg) <- "RT_peak_avg"
+validate_contrasts(dm, weights = C_avg)
+#>       name type estimable sum_to_zero orthogonal_to_intercept full_rank
+#> 1 contrast    t      TRUE       FALSE                    TRUE        NA
+#>   nonzero_weights
+#> 1               3
+```
+
+This pattern also works for other multi‑basis choices (e.g., SPMG2/3):
+build a contrast matrix that selects the columns for the modulator’s
+basis functions and use
+[`validate_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/validate_contrasts.md)
+to confirm the contrast structure before fitting downstream.
+
 ## Trialwise Models for Beta-Series Analysis
 
 To model each trial individually (e.g., for beta-series correlation),
@@ -564,12 +692,12 @@ head(dmat_events[, 1:6])
 #> # A tibble: 6 × 6
 #>   stim_stim.face stim_stim.object stim_stim.scene stim_stim.tool
 #>            <dbl>            <dbl>           <dbl>          <dbl>
-#> 1              0                0               0         0.0624
-#> 2              0                0               0         1.14  
-#> 3              0                0               0         1.74  
-#> 4              0                0               0         1.20  
-#> 5              0                0               0         0.552 
-#> 6              0                0               0         0.192 
+#> 1              0                0               0     0.06243065
+#> 2              0                0               0     1.137517  
+#> 3              0                0               0     1.743962  
+#> 4              0                0               0     1.202648  
+#> 5              0                0               0     0.5518543 
+#> 6              0                0               0     0.1917313 
 #> # ℹ 2 more variables: stim_RT_centered_stim.face_RT_centered <dbl>,
 #> #   stim_RT_centered_stim.object_RT_centered <dbl>
 

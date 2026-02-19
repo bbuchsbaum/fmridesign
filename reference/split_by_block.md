@@ -25,6 +25,7 @@ A list split by block/run.
 ## Examples
 
 ``` r
+if (FALSE) { # \dontrun{
 # Create experimental design with multiple runs
 des <- data.frame(
   onset = c(0, 10, 20, 30, 5, 15, 25, 35),
@@ -39,4 +40,5 @@ emod <- event_model(onset ~ hrf(cond), data = des, block = ~run, sampling_frame 
 # Example usage (when methods are implemented):
 # block_list <- split_by_block(emod)
 # length(block_list)  # Should return 2 (for 2 runs)
+} # }
 ```

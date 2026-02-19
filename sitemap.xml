@@ -21,6 +21,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/baseline_terms.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/basis_suffix.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/block.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/boxcar_hrf_gen.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/cells.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/check_collinearity.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.html</loc></url>
@@ -50,6 +51,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/dot-fmridesign_extensions.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/dot-trial_factor.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/duration_hrf_gen.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/elements.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/event_basis.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/event_conditions.html</loc></url>
@@ -109,5 +111,6 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/trialwise.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/validate_contrasts.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/weighted_hrf_gen.html</loc></url>
 </urlset>
 

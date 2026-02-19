@@ -25,8 +25,8 @@ A sanitized character vector.
 ## Examples
 
 ``` r
+if (FALSE) { # \dontrun{
 sanitize("a.b c")
-#> [1] "a.b.c"
 sanitize("a.b c", allow_dot = FALSE)
-#> [1] "a_b_c"
+} # }
 ```

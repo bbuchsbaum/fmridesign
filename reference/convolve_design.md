@@ -6,14 +6,14 @@ produce a list of regressors.
 ## Usage
 
 ``` r
-convolve_design(hrf, dmat, globons, durations, summate = TRUE)
+convolve_design(hrf, dmat, globons, durations, summate = TRUE, hrf_list = NULL)
 ```
 
 ## Arguments
 
 - hrf:
 
-  A function representing the HRF.
+  A function representing the HRF (used when hrf_list is NULL).
 
 - dmat:
 
@@ -30,6 +30,12 @@ convolve_design(hrf, dmat, globons, durations, summate = TRUE)
 - summate:
 
   Logical; if TRUE, summate the convolved HRF (default: TRUE).
+
+- hrf_list:
+
+  Optional list of HRF objects, one per event (row in dmat). When
+  provided, allows per-onset HRF specification. The list is subsetted to
+  match non-zero amplitude events for each condition.
 
 ## Value
 

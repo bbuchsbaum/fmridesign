@@ -25,8 +25,8 @@ Character vector of suffixes (e.g., `_b01`, `_b02`).
 ## Examples
 
 ``` r
+if (FALSE) { # \dontrun{
 basis_suffix(1:3, 5)
-#> [1] "_b01" "_b02" "_b03"
 basis_suffix(1:10, 10)
-#>  [1] "_b01" "_b02" "_b03" "_b04" "_b05" "_b06" "_b07" "_b08" "_b09" "_b10"
+} # }
 ```

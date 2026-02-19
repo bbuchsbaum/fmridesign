@@ -90,6 +90,13 @@ vignette("a_05_contrasts", package = "fmridesign")
 
 GPL (\>= 2)
 
+## Albers theme
+
+This package uses the albersdown theme. Vignettes are styled with
+`vignettes/albers.css` and a local `vignettes/albers.js`; the palette
+family is provided via `params$family` (default ‘red’). The pkgdown site
+uses `template: { package: albersdown }`.
+
 # Package index
 
 ## All functions
@@ -127,11 +134,11 @@ GPL (\>= 2)
 - [`baseline_terms()`](https://bbuchsbaum.github.io/fmridesign/reference/baseline_terms.md)
   : Extract baseline terms
 
-- [`basis_suffix()`](https://bbuchsbaum.github.io/fmridesign/reference/basis_suffix.md)
-  : Create Basis Function Suffix
-
 - [`block()`](https://bbuchsbaum.github.io/fmridesign/reference/block.md)
   : Create a Block Variable
+
+- [`boxcar_hrf_gen()`](https://bbuchsbaum.github.io/fmridesign/reference/boxcar_hrf_gen.md)
+  : Create duration-based boxcar HRF generator
 
 - [`cells()`](https://bbuchsbaum.github.io/fmridesign/reference/cells.md)
   : Extract cells from a design object
@@ -141,9 +148,6 @@ GPL (\>= 2)
 
 - [`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md)
   : Column Contrast Specification
-
-- [`column_groups_by_condition()`](https://bbuchsbaum.github.io/fmridesign/reference/column_groups_by_condition.md)
-  : Group column indices by condition for a term/basis pair
 
 - [`columns()`](https://bbuchsbaum.github.io/fmridesign/reference/columns.md)
   : Extract columns
@@ -216,6 +220,9 @@ GPL (\>= 2)
 - [`design_matrix()`](https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.md)
   : Extract or construct a design matrix
 
+- [`duration_hrf_gen()`](https://bbuchsbaum.github.io/fmridesign/reference/duration_hrf_gen.md)
+  : Create duration-aware normalized HRF generator
+
 - [`elements()`](https://bbuchsbaum.github.io/fmridesign/reference/elements.md)
   : Extract elements from an object
 
@@ -248,9 +255,6 @@ GPL (\>= 2)
 
 - [`events()`](https://bbuchsbaum.github.io/fmridesign/reference/events.md)
   : Retrieve canonical event information
-
-- [`feature_suffix()`](https://bbuchsbaum.github.io/fmridesign/reference/feature_suffix.md)
-  : Create Feature Suffix
 
 - [`get_all_external_hrf_functions()`](https://bbuchsbaum.github.io/fmridesign/reference/get_all_external_hrf_functions.md)
   : Get All External HRF Function Names
@@ -358,20 +362,19 @@ GPL (\>= 2)
 - [`requires_external_processing()`](https://bbuchsbaum.github.io/fmridesign/reference/requires_external_processing.md)
   : Check if an Object Requires External Processing
 
+- [`residualize(`*`<matrix>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/residualize-methods.md)
+  [`residualize(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/residualize-methods.md)
+  [`residualize(`*`<baseline_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/residualize-methods.md)
+  : Residualize methods
+
 - [`residualize()`](https://bbuchsbaum.github.io/fmridesign/reference/residualize.md)
   : Residualize Data Against a Design
-
-- [`sanitize()`](https://bbuchsbaum.github.io/fmridesign/reference/sanitize.md)
-  : Sanitize Strings for Use in R Names
 
 - [`shortnames()`](https://bbuchsbaum.github.io/fmridesign/reference/shortnames.md)
   : Extract shortnames
 
 - [`sliding_window_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/sliding_window_contrasts.md)
   : Sliding-Window Contrasts (Disjoint)
-
-- [`split_by_block()`](https://bbuchsbaum.github.io/fmridesign/reference/split_by_block.md)
-  : Split by block
 
 - [`split_onsets()`](https://bbuchsbaum.github.io/fmridesign/reference/split_onsets.md)
   : Split onsets
@@ -397,15 +400,32 @@ GPL (\>= 2)
 - [`validate_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/validate_contrasts.md)
   : Validate contrast weights against a design matrix or event model
 
+- [`weighted_hrf_gen()`](https://bbuchsbaum.github.io/fmridesign/reference/weighted_hrf_gen.md)
+  : Create weighted HRF generator from list columns
+
 # Articles
 
 ### All vignettes
 
 - [Introduction to
   fmridesign](https://bbuchsbaum.github.io/fmridesign/articles/a_01_introduction.md):
+
+  Quick tour of the core workflow for building fMRI design matrices.
+
 - [Modeling Baseline and Nuisance
   Effects](https://bbuchsbaum.github.io/fmridesign/articles/a_03_baseline_model.md):
+
+  Comprehensive guide to baseline modeling including drift, intercepts,
+  and nuisance regressors.
+
 - [Building Event
   Models](https://bbuchsbaum.github.io/fmridesign/articles/a_04_event_models.md):
+
+  Comprehensive guide to event model specification with HRF bases and
+  parametric modulators.
+
 - [Contrasts in
   fmridesign](https://bbuchsbaum.github.io/fmridesign/articles/a_05_contrasts.md):
+
+  Guide to defining and using contrasts for hypothesis testing in fMRI
+  designs.

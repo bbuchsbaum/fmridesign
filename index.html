@@ -10,7 +10,8 @@
 <link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Design Matrix Construction for fMRI Analysis">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><link href="extra.css" rel="stylesheet">
+<meta property="og:title" content="Design Matrix Construction for fMRI Analysis">
 <meta name="description" content="Constructs and inspects design matrices for functional magnetic resonance imaging (fMRI) analyses. Provides a formula interface for specifying event-related designs with flexible hemodynamic response function (HRF) bases, parametric modulators, and trialwise models. Includes facilities for baseline/nuisance regressors, contrast specification, and utilities for naming, validation, and visualization. Intended to support the model-building stage prior to statistical fitting.">
 <meta property="og:description" content="Constructs and inspects design matrices for functional magnetic resonance imaging (fMRI) analyses. Provides a formula interface for specifying event-related designs with flexible hemodynamic response function (HRF) bases, parametric modulators, and trialwise models. Includes facilities for baseline/nuisance regressors, contrast specification, and utilities for naming, validation, and visualization. Intended to support the model-building stage prior to statistical fitting.">
 </head>
@@ -31,16 +32,19 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
-<li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="articles/a_01_introduction.html">Introduction to fmridesign</a></li>
-    <li><a class="dropdown-item" href="articles/a_03_baseline_model.html">Modeling Baseline and Nuisance Effects</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Getting Started</h6></li>
+    <li><a class="dropdown-item" href="articles/a_01_introduction.html">Introduction to fmridesign</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Core Concepts</h6></li>
     <li><a class="dropdown-item" href="articles/a_04_event_models.html">Building Event Models</a></li>
-    <li><a class="dropdown-item" href="articles/a_05_contrasts.html">Contrasts in fmridesign</a></li>
+    <li><a class="dropdown-item" href="articles/a_03_baseline_model.html">Baseline and Nuisance Effects</a></li>
+    <li><a class="dropdown-item" href="articles/a_05_contrasts.html">Contrasts</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -155,6 +159,11 @@
 </h2>
 <p>GPL (&gt;= 2)</p>
 </div>
+<div class="section level2">
+<h2 id="albers-theme">Albers theme<a class="anchor" aria-label="anchor" href="#albers-theme"></a>
+</h2>
+<p>This package uses the albersdown theme. Vignettes are styled with <code>vignettes/albers.css</code> and a local <code>vignettes/albers.js</code>; the palette family is provided via <code>params$family</code> (default ‘red’). The pkgdown site uses <code>template: { package: albersdown }</code>.</p>
+</div>
 </div>
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
@@ -182,7 +191,7 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Bradley Buchsbaum <br><small class="roles"> Author, maintainer </small>   </li>
+<li>Bradley Buchsbaum <br><small class="roles"> Author, maintainer, copyright holder </small>   </li>
 </ul>
 </div>
 

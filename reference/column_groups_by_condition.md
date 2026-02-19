@@ -29,16 +29,12 @@ A named list mapping condition tags to integer indices.
 ## Examples
 
 ``` r
+if (FALSE) { # \dontrun{
 term <- event_term(
   list(condition = factor(c("A", "B"))),
   onsets = c(0, 5),
   blockids = c(1, 1)
 )
 column_groups_by_condition(term, fmrihrf::HRF_SPMG1, NULL)
-#> $condition.A
-#> [1] 1
-#> 
-#> $condition.B
-#> [1] 2
-#> 
+} # }
 ```

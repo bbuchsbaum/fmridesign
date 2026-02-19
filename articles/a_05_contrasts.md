@@ -1,10 +1,5 @@
 # Contrasts in fmridesign
 
-``` r
-library(fmridesign)
-library(ggplot2)
-```
-
 ## Introduction to Contrasts
 
 Contrasts specify linear combinations of GLM parameters (β) to test
@@ -116,8 +111,12 @@ names(contrasts_list)
 
 ### Polynomial Contrasts
 
-Test for linear, quadratic, or higher-order trends across ordered
-conditions:
+Test for linear, quadratic, or higher‑order trends across ordered
+conditions. Note:
+[`poly_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/poly_contrast.md)
+with `degree = k` returns an F‑contrast matrix with k orthogonal columns
+(linear, quadratic, …, k‑th), so you usually only need a single call
+rather than separate one‑by‑one contrasts.
 
 ``` r
 # Parametric design with 4 levels
@@ -125,13 +124,11 @@ set.seed(789)
 intensity_levels <- rep(1:4, each = 12)
 onsets_param <- sort(runif(48, 0, 350))
 
-# Create polynomial contrasts using poly_contrast()
+# Create a single polynomial contrast up to cubic (3 columns: linear/quadratic/cubic)
 emodel_polynomial <- event_model(
-  onset ~ hrf(intensity, 
+  onset ~ hrf(intensity,
               contrasts = list(
-                linear = poly_contrast(~ intensity, name = "linear", degree = 1),
-                quadratic = poly_contrast(~ intensity, name = "quadratic", degree = 2),
-                cubic = poly_contrast(~ intensity, name = "cubic", degree = 3)
+                poly_trend = poly_contrast(~ intensity, name = "poly_trend", degree = 3)
               )),
   data = data.frame(
     onset = onsets_param,
@@ -142,29 +139,26 @@ emodel_polynomial <- event_model(
   sampling_frame = sframe
 )
 
-# Extract polynomial contrast weights
+# Extract polynomial contrast weights (3 columns = linear, quadratic, cubic)
 poly_contrasts <- contrast_weights(emodel_polynomial)
-lapply(poly_contrasts, function(x) round(x$weights, 3))
-#> $`intensity#linear`
-#>             linear_1
-#> intensity.1   -0.671
-#> intensity.2   -0.224
-#> intensity.3    0.224
-#> intensity.4    0.671
-#> 
-#> $`intensity#quadratic`
-#>             quadratic_1 quadratic_2
-#> intensity.1      -0.671         0.5
-#> intensity.2      -0.224        -0.5
-#> intensity.3       0.224        -0.5
-#> intensity.4       0.671         0.5
-#> 
-#> $`intensity#cubic`
-#>             cubic_1 cubic_2 cubic_3
-#> intensity.1  -0.671     0.5  -0.224
-#> intensity.2  -0.224    -0.5   0.671
-#> intensity.3   0.224    -0.5  -0.671
-#> intensity.4   0.671     0.5   0.224
+names(poly_contrasts)
+#> [1] "intensity#poly_trend"
+pc <- poly_contrasts[[1]]
+round(head(pc$weights, 6), 3)
+#>             poly_trend_1 poly_trend_2 poly_trend_3
+#> intensity.1       -0.671          0.5       -0.224
+#> intensity.2       -0.224         -0.5        0.671
+#> intensity.3        0.224         -0.5       -0.671
+#> intensity.4        0.671          0.5        0.224
+
+# If you want a specific component, select a column (e.g., linear = column 1)
+linear_weights <- pc$weights[, 1, drop = FALSE]
+head(linear_weights)
+#>             poly_trend_1
+#> intensity.1   -0.6708204
+#> intensity.2   -0.2236068
+#> intensity.3    0.2236068
+#> intensity.4    0.6708204
 ```
 
 ## Factorial Design Contrasts
@@ -199,8 +193,6 @@ emodel_factorial <- event_model(
 )
 
 interaction_contrasts <- contrast_weights(emodel_factorial)
-#> Warning: Contrast 'A_by_B' for term 'A_B' has unmatched row names: A1_B1,
-#> A2_B1, A1_B2, A2_B2
 lapply(interaction_contrasts, function(x) round(x$weights, 3))
 #> $`A:B#main_A`
 #>           main_A_1
@@ -224,10 +216,14 @@ lapply(interaction_contrasts, function(x) round(x$weights, 3))
 #> A2_B2        1
 ```
 
-## Contrasts with Parametric Modulators
+## Parametric Modulators: Do You Need a Contrast?
 
-When using parametric modulators, contrasts can test both categorical
-and continuous effects:
+For a simple parametric modulator (e.g., `hrf(RT)` with a single‑basis
+HRF), the effect is captured by a single regressor. In standard GLM
+software, the t‑test on that coefficient directly tests the parametric
+effect—no explicit contrast is required. Contrasts are useful if you
+need to combine multiple columns (e.g., multi‑basis HRF, or a set of
+RT‑by‑condition regressors) into a single hypothesis.
 
 ``` r
 # Design with conditions and RT modulation
@@ -238,8 +234,8 @@ pm_onsets <- sort(runif(n_events, 0, 350))
 pm_RT <- rnorm(n_events, mean = ifelse(pm_conditions == "congruent", 0.5, 0.7), sd = 0.1)
 
 emodel_parametric <- event_model(
-  onset ~ hrf(condition, 
-              contrasts = pair_contrast(~ condition == "incongruent", ~ condition == "congruent", name = "incongruent_gt_congruent")) + 
+  onset ~ hrf(condition,
+              contrasts = pair_contrast(~ condition == "incongruent", ~ condition == "congruent", name = "incongruent_gt_congruent")) +
           hrf(RT),
   data = data.frame(
     onset = pm_onsets,
@@ -251,19 +247,14 @@ emodel_parametric <- event_model(
   sampling_frame = sframe
 )
 
-# Get contrasts - includes both categorical and parametric terms
-param_contrasts <- contrast_weights(emodel_parametric)
-print(param_contrasts)
-#> $`condition#incongruent_gt_congruent`
-#> contrast: incongruent_gt_congruent 
-#>  A:  ~condition == "incongruent" 
-#>  B:  ~condition == "congruent" 
-#>  term:  condition 
-#>  weights:  
-#>                       incongruent_gt_congruent
-#> condition.congruent                         -1
-#> condition.incongruent                        1
-#>  conditions:  condition_condition.congruent condition_condition.incongruent RT_RT
+# Categorical contrast (condition) is attached; the RT parametric term is a single regressor.
+# Identify its column(s) for reporting; the model t‑stat on this column tests the parametric effect.
+dm <- design_matrix(emodel_parametric)
+idx <- term_indices(dm)
+idx[["RT"]]
+#> [1] 3
+colnames(dm)[idx[["RT"]]]
+#> [1] "RT_RT"
 ```
 
 ## F-contrasts for Omnibus Tests
@@ -413,62 +404,6 @@ print(sum(scaled_contrast))  # Should be ~0
 #> [1] -5.551115e-17
 ```
 
-### 3. Multiple Comparison Correction
-
-When testing multiple contrasts, consider correction for multiple
-comparisons:
-
-``` r
-# Design with multiple planned contrasts
-emodel_multiple <- event_model(
-  onset ~ hrf(condition,
-              contrasts = contrast_set(
-                pair_contrast(~ condition == "C1", ~ condition == "C2", name = "C1_vs_C2"),
-                pair_contrast(~ condition == "C1", ~ condition == "C3", name = "C1_vs_C3"),
-                pair_contrast(~ condition == "C2", ~ condition == "C3", name = "C2_vs_C3")
-              )),
-  data = data.frame(
-    onset = sort(runif(60, 0, 350)),
-    condition = factor(rep(c("C1", "C2", "C3"), 20)),
-    block = factor(rep(1, 60))
-  ),
-  block = ~ block,
-  sampling_frame = sframe
-)
-
-# Number of contrasts to correct for
-n_contrasts <- length(contrast_weights(emodel_multiple))
-bonferroni_alpha <- 0.05 / n_contrasts
-print(paste("Bonferroni-corrected alpha:", bonferroni_alpha))
-#> [1] "Bonferroni-corrected alpha: 0.0166666666666667"
-```
-
-## Integration with Statistical Analysis
-
-Once contrasts are defined, they can be used in the statistical
-analysis:
-
-``` r
-# Assuming you have:
-# - Y: fMRI time series data
-# - X: design matrix from event_model
-# - C: contrast vector
-
-# Standard GLM analysis
-# fit <- lm(Y ~ X - 1)
-# beta <- coef(fit)
-# contrast_estimate <- t(C) %*% beta
-# contrast_se <- sqrt(t(C) %*% vcov(fit) %*% C)
-# t_stat <- contrast_estimate / contrast_se
-
-# Using the fmridesign contrast
-design_mat <- design_matrix(emodel_with_contrast)
-contrasts <- contrast_weights(emodel_with_contrast)
-
-# Apply contrast to parameter estimates
-# contrast_result <- apply_contrast(fit, contrasts[[1]])
-```
-
 ## Advanced Topics
 
 ### Custom Contrast Functions
@@ -542,13 +477,13 @@ if (!cc$ok) cc$pairs
 
 Define contrasts inline, extract weights cleanly, and validate before
 analysis. Use t-contrasts for directional tests and F-contrasts for
-omnibus effects. 3. **Complex designs**: Handle factorial, parametric,
-and multi-run contrasts 4. **Validation tools**: Ensure contrasts are
-properly specified and estimable
+omnibus effects. - Complex designs: handle factorial, parametric, and
+multi‑run contrasts - Validation tools: ensure contrasts are properly
+specified and estimable
 
 Remember to: - Plan contrasts based on your hypotheses - Validate
-contrast properties before analysis - Consider multiple comparison
-corrections - Document your contrast specifications for reproducibility
+contrast properties before analysis - Document your contrast
+specifications for reproducibility
 
 For more information on event and baseline models, see: -
 [`vignette("a_01_introduction")`](https://bbuchsbaum.github.io/fmridesign/articles/a_01_introduction.md) -

@@ -35,11 +35,11 @@
 - [`baseline_terms()`](https://bbuchsbaum.github.io/fmridesign/reference/baseline_terms.md)
   : Extract baseline terms
 
-- [`basis_suffix()`](https://bbuchsbaum.github.io/fmridesign/reference/basis_suffix.md)
-  : Create Basis Function Suffix
-
 - [`block()`](https://bbuchsbaum.github.io/fmridesign/reference/block.md)
   : Create a Block Variable
+
+- [`boxcar_hrf_gen()`](https://bbuchsbaum.github.io/fmridesign/reference/boxcar_hrf_gen.md)
+  : Create duration-based boxcar HRF generator
 
 - [`cells()`](https://bbuchsbaum.github.io/fmridesign/reference/cells.md)
   : Extract cells from a design object
@@ -49,9 +49,6 @@
 
 - [`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md)
   : Column Contrast Specification
-
-- [`column_groups_by_condition()`](https://bbuchsbaum.github.io/fmridesign/reference/column_groups_by_condition.md)
-  : Group column indices by condition for a term/basis pair
 
 - [`columns()`](https://bbuchsbaum.github.io/fmridesign/reference/columns.md)
   : Extract columns
@@ -124,6 +121,9 @@
 - [`design_matrix()`](https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.md)
   : Extract or construct a design matrix
 
+- [`duration_hrf_gen()`](https://bbuchsbaum.github.io/fmridesign/reference/duration_hrf_gen.md)
+  : Create duration-aware normalized HRF generator
+
 - [`elements()`](https://bbuchsbaum.github.io/fmridesign/reference/elements.md)
   : Extract elements from an object
 
@@ -156,9 +156,6 @@
 
 - [`events()`](https://bbuchsbaum.github.io/fmridesign/reference/events.md)
   : Retrieve canonical event information
-
-- [`feature_suffix()`](https://bbuchsbaum.github.io/fmridesign/reference/feature_suffix.md)
-  : Create Feature Suffix
 
 - [`get_all_external_hrf_functions()`](https://bbuchsbaum.github.io/fmridesign/reference/get_all_external_hrf_functions.md)
   : Get All External HRF Function Names
@@ -266,20 +263,19 @@
 - [`requires_external_processing()`](https://bbuchsbaum.github.io/fmridesign/reference/requires_external_processing.md)
   : Check if an Object Requires External Processing
 
+- [`residualize(`*`<matrix>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/residualize-methods.md)
+  [`residualize(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/residualize-methods.md)
+  [`residualize(`*`<baseline_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/residualize-methods.md)
+  : Residualize methods
+
 - [`residualize()`](https://bbuchsbaum.github.io/fmridesign/reference/residualize.md)
   : Residualize Data Against a Design
-
-- [`sanitize()`](https://bbuchsbaum.github.io/fmridesign/reference/sanitize.md)
-  : Sanitize Strings for Use in R Names
 
 - [`shortnames()`](https://bbuchsbaum.github.io/fmridesign/reference/shortnames.md)
   : Extract shortnames
 
 - [`sliding_window_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/sliding_window_contrasts.md)
   : Sliding-Window Contrasts (Disjoint)
-
-- [`split_by_block()`](https://bbuchsbaum.github.io/fmridesign/reference/split_by_block.md)
-  : Split by block
 
 - [`split_onsets()`](https://bbuchsbaum.github.io/fmridesign/reference/split_onsets.md)
   : Split onsets
@@ -304,3 +300,6 @@
 
 - [`validate_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/validate_contrasts.md)
   : Validate contrast weights against a design matrix or event model
+
+- [`weighted_hrf_gen()`](https://bbuchsbaum.github.io/fmridesign/reference/weighted_hrf_gen.md)
+  : Create weighted HRF generator from list columns

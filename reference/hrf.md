@@ -11,6 +11,7 @@ provided and packages them with HRF/contrast information into an
 hrf(
   ...,
   basis = "spmg1",
+  hrf_fun = NULL,
   onsets = NULL,
   durations = NULL,
   prefix = NULL,
@@ -21,7 +22,8 @@ hrf(
   id = NULL,
   name = NULL,
   lag = 0,
-  summate = TRUE
+  summate = TRUE,
+  normalize = FALSE
 )
 ```
 
@@ -37,6 +39,23 @@ hrf(
   the impulse response function or the name of a pre-supplied function,
   one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian",
   "tent", "bs". Can also be an `HRF` object.
+
+- hrf_fun:
+
+  optional per-onset HRF generator. Can be:
+
+  - A function that takes a data frame of event data (with columns
+    `onset`, `duration`, `blockid`, plus any term variables) and returns
+    either a single HRF object (recycled to all events) or a list of HRF
+    objects (one per event).
+
+  - A formula (e.g., `~hrf_column`) referencing a column in the event
+    data that contains a list of pre-built HRF objects.
+
+  When `hrf_fun` is specified, the `basis` argument is ignored. The
+  generator function is called AFTER any subsetting via `subset=`,
+  ensuring correct alignment between HRFs and events. All returned HRFs
+  must have the same `nbasis` for design matrix consistency.
 
 - onsets:
 
@@ -91,6 +110,15 @@ hrf(
 
   whether impulse amplitudes sum up when duration is greater than 0.
 
+- normalize:
+
+  logical; if TRUE, each convolved regressor column is peak-normalized
+  so that `max(abs(column)) == 1`. This is useful when events have
+  different durations, since longer events produce taller peaks after
+  convolution. Normalizing ensures that beta estimates reflect condition
+  differences rather than duration-dependent amplitude scaling, which is
+  important for analyses like MVPA or RSA. Default FALSE.
+
 ## Value
 
 an `hrfspec` instance
@@ -113,4 +141,13 @@ form3 <- onsets ~ hrf(condition, RT, basis="spmg3")
 library(rlang)
 con1 <- pair_contrast(~ condition == "A", ~ condition == "B", name="AvB")
 form4 <- onsets ~ hrf(condition, Poly(RT, 2), contrasts=con1)
+
+# Per-onset HRF using hrf_fun: variable duration boxcars
+# (requires fmrihrf >= 0.2.0)
+form5 <- onsets ~ hrf(condition, hrf_fun = boxcar_hrf_gen())
+
+# Per-onset HRF using hrf_fun with weighted HRFs for events with internal structure
+# (requires fmrihrf >= 0.2.0)
+form6 <- onsets ~ hrf(condition,
+                      hrf_fun = weighted_hrf_gen("sub_times", "sub_weights"))
 ```
