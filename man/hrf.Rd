@@ -99,18 +99,12 @@ con1 <- pair_contrast(~ condition == "A", ~ condition == "B", name="AvB")
 form4 <- onsets ~ hrf(condition, Poly(RT, 2), contrasts=con1)
 
 # Per-onset HRF using hrf_fun: variable duration boxcars
-form5 <- onsets ~ hrf(condition,
-                      hrf_fun = function(d) {
-                        lapply(d$duration, function(dur) fmrihrf::hrf_boxcar(width = dur))
-                      })
+# (requires fmrihrf >= 0.2.0)
+form5 <- onsets ~ hrf(condition, hrf_fun = boxcar_hrf_gen())
 
 # Per-onset HRF using hrf_fun with weighted HRFs for events with internal structure
-# (e.g., clusters of weighted impulses)
+# (requires fmrihrf >= 0.2.0)
 form6 <- onsets ~ hrf(condition,
-                      hrf_fun = function(d) {
-                        Map(function(times, weights, onset) {
-                          fmrihrf::hrf_weighted(times = times - onset, weights = weights)
-                        }, d$sub_times, d$sub_weights, d$onset)
-                      })
+                      hrf_fun = weighted_hrf_gen("sub_times", "sub_weights"))
 
 }

@@ -1,3 +1,6 @@
 /doc/
 /Meta/
 docs
+.omc/
+Rplots.pdf
+fmridesign_*.tar.gz

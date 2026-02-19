@@ -134,19 +134,13 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #' form4 <- onsets ~ hrf(condition, Poly(RT, 2), contrasts=con1)
 #'
 #' # Per-onset HRF using hrf_fun: variable duration boxcars
-#' form5 <- onsets ~ hrf(condition,
-#'                       hrf_fun = function(d) {
-#'                         lapply(d$duration, function(dur) fmrihrf::hrf_boxcar(width = dur))
-#'                       })
+#' # (requires fmrihrf >= 0.2.0)
+#' form5 <- onsets ~ hrf(condition, hrf_fun = boxcar_hrf_gen())
 #'
 #' # Per-onset HRF using hrf_fun with weighted HRFs for events with internal structure
-#' # (e.g., clusters of weighted impulses)
+#' # (requires fmrihrf >= 0.2.0)
 #' form6 <- onsets ~ hrf(condition,
-#'                       hrf_fun = function(d) {
-#'                         Map(function(times, weights, onset) {
-#'                           fmrihrf::hrf_weighted(times = times - onset, weights = weights)
-#'                         }, d$sub_times, d$sub_weights, d$onset)
-#'                       })
+#'                       hrf_fun = weighted_hrf_gen("sub_times", "sub_weights"))
 #'
 #' @export
 #' @importFrom rlang enquos enexpr syms is_formula is_quosure is_call as_label %||%
@@ -520,6 +514,7 @@ trialwise <- function(basis   = "spmg1",
 #' @return A function that takes an event data frame and returns a list of HRF objects.
 #'
 #' @examples
+#' \donttest{
 #' # Events with variable durations
 #' trial_data <- data.frame(
 #'   onset = c(0, 10, 25),
@@ -534,13 +529,18 @@ trialwise <- function(basis   = "spmg1",
 #'   data = trial_data, block = ~run, sampling_frame = sf, durations = trial_data$duration
 #' )
 #' print(emod)
+#' }
 #'
 #' @seealso [weighted_hrf_gen()] for weighted impulse HRFs
 #' @export
 boxcar_hrf_gen <- function(normalize = TRUE, min_duration = 0.1) {
+  if (!exists("hrf_boxcar", envir = asNamespace("fmrihrf"))) {
+    stop("boxcar_hrf_gen requires fmrihrf >= 0.2.0 (needs hrf_boxcar)", call. = FALSE)
+  }
+  hrf_boxcar_fn <- get("hrf_boxcar", envir = asNamespace("fmrihrf"))
   function(d) {
     lapply(d$duration, function(dur) {
-      fmrihrf::hrf_boxcar(width = max(dur, min_duration), normalize = normalize)
+      hrf_boxcar_fn(width = max(dur, min_duration), normalize = normalize)
     })
   }
 }
@@ -603,6 +603,7 @@ duration_hrf_gen <- function(base = fmrihrf::HRF_SPMG1, min_duration = 0) {
 #' @return A function that takes an event data frame and returns a list of HRF objects.
 #'
 #' @examples
+#' \donttest{
 #' # Events with internal temporal structure
 #' trial_data <- data.frame(
 #'   onset = c(0, 20),
@@ -617,11 +618,16 @@ duration_hrf_gen <- function(base = fmrihrf::HRF_SPMG1, min_duration = 0) {
 #'   data = trial_data, block = ~run, sampling_frame = sf
 #' )
 #' print(emod)
+#' }
 #'
 #' @seealso [boxcar_hrf_gen()] for duration-based boxcar HRFs
 #' @export
 weighted_hrf_gen <- function(times_col = "sub_times", weights_col = "sub_weights",
                               relative = FALSE, method = "constant", normalize = FALSE) {
+  if (!exists("hrf_weighted", envir = asNamespace("fmrihrf"))) {
+    stop("weighted_hrf_gen requires fmrihrf >= 0.2.0 (needs hrf_weighted)", call. = FALSE)
+  }
+  hrf_weighted_fn <- get("hrf_weighted", envir = asNamespace("fmrihrf"))
   function(d) {
     if (!times_col %in% names(d)) {
       stop(sprintf("weighted_hrf_gen: column '%s' not found in event data", times_col), call. = FALSE)
@@ -633,8 +639,8 @@ weighted_hrf_gen <- function(times_col = "sub_times", weights_col = "sub_weights
     Map(function(times, weights, onset) {
       # Convert absolute times to relative if needed
       rel_times <- if (relative) times else times - onset
-      fmrihrf::hrf_weighted(times = rel_times, weights = weights,
-                            method = method, normalize = normalize)
+      hrf_weighted_fn(times = rel_times, weights = weights,
+                      method = method, normalize = normalize)
     }, d[[times_col]], d[[weights_col]], d$onset)
   }
 }

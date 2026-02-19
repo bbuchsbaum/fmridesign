@@ -497,6 +497,68 @@ context:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel_gen_hrf</span>, term_name <span class="op">=</span> <span class="st">"stim"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="a_04_event_models_files/figure-html/specify_hrf-4.png" class="r-plt" alt="Regressors generated using different HRF bases (SPMG, Gaussian, spline/tent)." width="100%" style="display: block; margin: auto;"></p>
 <div class="section level3">
+<h3 id="per-onset-hrf-specification-with-hrf_fun">Per-Onset HRF Specification with <code>hrf_fun</code><a class="anchor" aria-label="anchor" href="#per-onset-hrf-specification-with-hrf_fun"></a>
+</h3>
+<p>For advanced use cases where different events require different HRF
+shapes, you can use the <code>hrf_fun</code> parameter. This accepts a
+generator function that receives event data and returns a list of HRF
+objects (one per onset). The generator is called <em>after</em> any
+subsetting, so it only sees the events that will actually be
+modeled.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Generator function that assigns different HRFs based on condition</span></span>
+<span><span class="va">cond_hrf_gen</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">event_data</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">event_data</span><span class="op">)</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="kw">if</span> <span class="op">(</span><span class="va">event_data</span><span class="op">$</span><span class="va">stim</span><span class="op">[</span><span class="va">i</span><span class="op">]</span> <span class="op">==</span> <span class="st">"face"</span><span class="op">)</span> <span class="op">{</span></span>
+<span>      <span class="va">HRF_SPMG1</span></span>
+<span>    <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span></span>
+<span>      <span class="va">HRF_GAMMA</span></span>
+<span>    <span class="op">}</span></span>
+<span>  <span class="op">}</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">emodel_per_onset</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span>, hrf_fun <span class="op">=</span> <span class="va">cond_hrf_gen</span><span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">simple_design</span>,</span>
+<span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
+<span>  sampling_frame <span class="op">=</span> <span class="va">sframe_single_run</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel_per_onset</span><span class="op">)</span></span></code></pre></div>
+<p>The <code>hrf_fun</code> generator receives a data frame containing
+<code>onset</code>, <code>duration</code>, <code>blockid</code>, and any
+term variables. This enables use cases like:</p>
+<ul>
+<li>
+<strong>Duration-based HRFs</strong>: Use
+<code><a href="../reference/boxcar_hrf_gen.html">boxcar_hrf_gen()</a></code> to create boxcar HRFs based on event
+duration</li>
+<li>
+<strong>Weighted sub-event HRFs</strong>: Use
+<code><a href="../reference/weighted_hrf_gen.html">weighted_hrf_gen()</a></code> for events with sub-onset timing</li>
+<li>
+<strong>Formula syntax</strong>: Reference a column containing HRF
+objects directly with <code>hrf_fun = ~my_hrf_column</code>
+</li>
+</ul>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Create a design with varying event durations</span></span>
+<span><span class="va">boxcar_design</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">20</span>, <span class="fl">45</span>, <span class="fl">70</span><span class="op">)</span>,</span>
+<span>  stim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"A"</span>, <span class="st">"B"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  duration <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">4</span>, <span class="fl">3</span>, <span class="fl">5</span><span class="op">)</span>,  <span class="co"># Varying durations</span></span>
+<span>  run <span class="op">=</span> <span class="fl">1</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">emodel_boxcar</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stim</span>, hrf_fun <span class="op">=</span> <span class="fu"><a href="../reference/boxcar_hrf_gen.html">boxcar_hrf_gen</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">boxcar_design</span>,</span>
+<span>  durations <span class="op">=</span> <span class="va">boxcar_design</span><span class="op">$</span><span class="va">duration</span>,</span>
+<span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>,</span>
+<span>  sampling_frame <span class="op">=</span> <span class="va">sframe_single_run</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel_boxcar</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
 <h3 id="advanced-parametric-modulator-with-fir-hrf-and-windowed-f-contrast">Advanced: Parametric Modulator with FIR HRF and Windowed
 F-contrast<a class="anchor" aria-label="anchor" href="#advanced-parametric-modulator-with-fir-hrf-and-windowed-f-contrast"></a>
 </h3>
@@ -505,7 +567,7 @@ F-contrast<a class="anchor" aria-label="anchor" href="#advanced-parametric-modul
 produces multiple columns (one per basis bin). You can form an omnibus
 F‑test across a window of bins (e.g., around the expected peak) or
 across all bins.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Toy design with a continuous RT modulator</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
 <span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fl">60</span></span>
@@ -569,7 +631,7 @@ confirm the contrast structure before fitting downstream.</p>
 use <code><a href="../reference/trialwise.html">trialwise()</a></code> in the formula. This creates a separate
 regressor for every single event specified by the <code>onset</code>
 variable.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">emodel_trialwise</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/trialwise.html">trialwise</a></span><span class="op">(</span><span class="op">)</span>, </span>
 <span>                                data <span class="op">=</span> <span class="va">simple_design</span>, </span>
 <span>                                block <span class="op">=</span> <span class="op">~</span> <span class="va">run</span>, </span>
@@ -582,7 +644,7 @@ variable.</p>
 <span><span class="co"># It generates one condition per trial. Use label_mode/compactness controls.</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel_trialwise</span>, label_mode <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="a_04_event_models_files/figure-html/create_trialwise-1.png" class="r-plt" alt="Trialwise regressors (one per trial) plotted over time with optional mean column." width="100%" style="display: block; margin: auto;"></p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/interactive.html" class="external-link">interactive</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu">plotly</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/plotly/man/ggplotly.html" class="external-link">ggplotly</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">emodel_trialwise</span>, label_mode <span class="op">=</span> <span class="st">"compact"</span><span class="op">)</span><span class="op">)</span> <span class="co"># Use plotly to explore interactively</span></span>
 <span><span class="op">}</span></span></code></pre></div>
@@ -597,7 +659,7 @@ have one row per scan (sum of <code>blocklens</code>).</p>
 <p>Normally, one would add <code>motion</code> regressors to the
 <code>baseline_model</code> but we use it as an illustrative
 example.</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Create covariates aligned to the sampling frame</span></span>
 <span><span class="va">n_scans</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/blocklens.html" class="external-link">blocklens</a></span><span class="op">(</span><span class="va">sframe_single_run</span><span class="op">)</span><span class="op">)</span></span>
@@ -622,7 +684,7 @@ construction will error with a helpful message.</p>
 </h2>
 <p>Once an <code>event_model</code> is created, you can extract its
 components:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># List the terms in the model (names are now term tags)</span></span>
 <span><span class="va">terms_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/terms.html" class="external-link">terms</a></span><span class="op">(</span><span class="va">emodel_pmod_int</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">terms_list</span><span class="op">)</span><span class="op">)</span></span>
@@ -713,7 +775,7 @@ design matrix; downstream GLM fitting happens in analysis packages
 </h2>
 <p>You can attach contrasts directly to <code><a href="../reference/hrf.html">hrf()</a></code> terms. Here
 are two common patterns.</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Pairwise contrast between two stimulus levels</span></span>
 <span><span class="va">con_face_vs_scene</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">stim</span> <span class="op">==</span> <span class="st">"face"</span>, <span class="op">~</span> <span class="va">stim</span> <span class="op">==</span> <span class="st">"scene"</span>, name <span class="op">=</span> <span class="st">"face_vs_scene"</span><span class="op">)</span></span>
 <span></span>
@@ -744,7 +806,7 @@ are two common patterns.</p>
 </h2>
 <p>To build a full design matrix, bind the event regressors with the
 baseline regressors.</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Baseline model for the same sampling frame</span></span>
 <span><span class="va">bmodel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"poly"</span>, degree <span class="op">=</span> <span class="fl">5</span>, sframe <span class="op">=</span> <span class="va">sframe_two_factor</span><span class="op">)</span></span>
 <span></span>

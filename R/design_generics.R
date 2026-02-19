@@ -64,10 +64,11 @@ conditions <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) UseMetho
 #' @param drop.empty Logical indicating whether to drop columns with all zeros.
 #' @param summate Logical indicating whether to sum convolved signals.
 #' @param precision Numeric specifying the temporal precision for convolution.
+#' @param normalize Logical; if TRUE, each convolved regressor column is peak-normalized. Default FALSE.
 #' @param ... Additional arguments.
 #' @return A matrix-like (often tibble) of convolved regressors.
 #' @export
-convolve <- function(x, hrf, sampling_frame, drop.empty = TRUE, summate = TRUE, precision = .1, ...) UseMethod("convolve")
+convolve <- function(x, hrf, sampling_frame, drop.empty = TRUE, summate = TRUE, precision = .1, normalize = FALSE, ...) UseMethod("convolve")
 
 #' Extract or construct a design matrix
 #' 

@@ -10,8 +10,10 @@ params:
   family: red
   base_size: 13
   content_width: 80
-vignette: |
-  %\VignetteIndexEntry{Modeling Baseline and Nuisance Effects} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+vignette: >
+  %\VignetteIndexEntry{Modeling Baseline and Nuisance Effects}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 css: albers.css
 resource_files:
 - albers.css
@@ -36,9 +38,7 @@ suppressPackageStartupMessages({
   library(tidyr)
   library(Matrix)
 })
-if (requireNamespace("albersdown", quietly = TRUE)) {
-  ggplot2::theme_set(albersdown::theme_albers("red", base_size = params$base_size))
-}
+ggplot2::theme_set(ggplot2::theme_minimal(base_size = params$base_size))
 ```
 
 <!-- Removed per-page palette injection; default palette is red via CSS root variables. -->

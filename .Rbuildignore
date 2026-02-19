@@ -23,3 +23,8 @@
 ^TEST_FIXES\.md$
 ^examples$
 ^fmridesign_cheatsheet_v3\.md$
+^\.omc$
+^\.planning$
+^Rplots\.pdf$
+^data-raw$
+^CRAN-SUBMISSION$

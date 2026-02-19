@@ -12,6 +12,7 @@ convolve(
   drop.empty = TRUE,
   summate = TRUE,
   precision = 0.1,
+  normalize = FALSE,
   ...
 )
 
@@ -38,6 +39,8 @@ convolve(
 \item{summate}{Logical indicating whether to sum convolved signals.}
 
 \item{precision}{Numeric specifying the temporal precision for convolution.}
+
+\item{normalize}{Logical; if TRUE, each convolved regressor column is peak-normalized. Default FALSE.}
 
 \item{...}{Additional arguments.}
 }

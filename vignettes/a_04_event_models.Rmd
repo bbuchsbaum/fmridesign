@@ -10,8 +10,10 @@ params:
   family: red
   base_size: 13
   content_width: 80
-vignette: |
-  %\VignetteIndexEntry{Building Event Models} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+vignette: >
+  %\VignetteIndexEntry{Building Event Models}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 css: albers.css
 resource_files:
 - albers.css
@@ -37,9 +39,7 @@ suppressPackageStartupMessages({
   library(tidyr)
   library(plotly)
 })
-if (requireNamespace("albersdown", quietly = TRUE)) {
-  ggplot2::theme_set(albersdown::theme_albers("red", base_size = params$base_size))
-}
+ggplot2::theme_set(ggplot2::theme_minimal(base_size = params$base_size))
 ```
 
 <!-- Removed per-page palette injection; default palette is red via CSS root variables. -->
@@ -369,7 +369,7 @@ The `hrf_fun` generator receives a data frame containing `onset`, `duration`, `b
 - **Weighted sub-event HRFs**: Use `weighted_hrf_gen()` for events with sub-onset timing
 - **Formula syntax**: Reference a column containing HRF objects directly with `hrf_fun = ~my_hrf_column`
 
-```{r boxcar_example}
+```{r boxcar_example, eval=exists("hrf_boxcar", envir=asNamespace("fmrihrf"))}
 # Create a design with varying event durations
 boxcar_design <- data.frame(
   onset = c(0, 20, 45, 70),

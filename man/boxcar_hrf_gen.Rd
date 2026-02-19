@@ -20,6 +20,7 @@ The generator produces boxcar HRFs where each event's duration determines
 the boxcar width.
 }
 \examples{
+\donttest{
 # Events with variable durations
 trial_data <- data.frame(
   onset = c(0, 10, 25),
@@ -34,6 +35,7 @@ emod <- event_model(
   data = trial_data, block = ~run, sampling_frame = sf, durations = trial_data$duration
 )
 print(emod)
+}
 
 }
 \seealso{

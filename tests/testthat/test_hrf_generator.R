@@ -83,6 +83,12 @@ test_that("hrf_fun respects subset parameter", {
 
 
 test_that("boxcar_hrf_gen creates duration-based HRFs", {
+  skip_if_not_installed("fmrihrf")
+
+  if (!exists("hrf_boxcar", envir = asNamespace("fmrihrf"))) {
+    skip("fmrihrf::hrf_boxcar not available")
+  }
+
   des <- data.frame(
     onset = c(0, 15),
     duration = c(2, 5),

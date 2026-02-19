@@ -9,8 +9,10 @@ params:
   family: red
   base_size: 13
   content_width: 80
-vignette: |
-  %\VignetteIndexEntry{Introduction to fmridesign} %\VignetteEngine{knitr::rmarkdown} %\VignetteEncoding{UTF-8}
+vignette: >
+  %\VignetteIndexEntry{Introduction to fmridesign}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
 css: albers.css
 resource_files:
 - albers.css
@@ -32,9 +34,7 @@ suppressPackageStartupMessages({
   library(fmridesign)
   library(ggplot2)
 })
-if (requireNamespace("albersdown", quietly = TRUE)) {
-  ggplot2::theme_set(albersdown::theme_albers(params$family, base_size = params$base_size))
-}
+ggplot2::theme_set(ggplot2::theme_minimal(base_size = params$base_size))
 ```
 
 ```{r albers-family, echo=FALSE, results='asis'}

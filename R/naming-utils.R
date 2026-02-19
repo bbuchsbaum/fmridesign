@@ -1,7 +1,7 @@
 # Naming Utilities for fmrireg Design Matrix Column Names
 
 # Internal helper for zero-padding numbers
-#' @keywords internal
+#' @export
 #' @noRd
 zeropad <- function(i, n_total) {
   # Handle edge case n_total = 0 or 1 gracefully
