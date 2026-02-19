@@ -84,7 +84,7 @@ basis_suffix <- function(j, nb) {
 #' @param j Integer vector of feature indices (1-based).
 #' @param nf Total number of features.
 #' @return Character vector of suffixes (e.g., `f01`, `f02`).
-#' @keywords internal
+#' @export
 #' @examples
 #' \dontrun{
 #' feature_suffix(1:3, 5)
