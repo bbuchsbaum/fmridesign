@@ -20,7 +20,7 @@ zeropad <- function(i, n_total) {
 #' @param x A character vector.
 #' @param allow_dot Logical, if `FALSE`, dots (`.`) are replaced with underscores (`_`).
 #' @return A sanitized character vector.
-#' @keywords internal
+#' @export
 #' @examples
 #' \dontrun{
 #' sanitize("a.b c")

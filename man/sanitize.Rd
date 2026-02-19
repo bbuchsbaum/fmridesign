@@ -23,4 +23,3 @@ sanitize("a.b c")
 sanitize("a.b c", allow_dot = FALSE)
 }
 }
-\keyword{internal}
