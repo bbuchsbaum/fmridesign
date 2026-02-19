@@ -23,4 +23,3 @@ basis_suffix(1:3, 5)
 basis_suffix(1:10, 10)
 }
 }
-\keyword{internal}

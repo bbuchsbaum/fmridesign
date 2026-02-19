@@ -67,7 +67,7 @@ sanitize_level <- function(lev) {
 #' @param j Integer vector of basis indices (1-based).
 #' @param nb Total number of basis functions.
 #' @return Character vector of suffixes (e.g., `_b01`, `_b02`).
-#' @keywords internal
+#' @export
 #' @examples
 #' \dontrun{
 #' basis_suffix(1:3, 5)
