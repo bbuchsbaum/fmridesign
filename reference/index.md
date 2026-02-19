@@ -286,6 +286,9 @@
 - [`sliding_window_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/sliding_window_contrasts.md)
   : Sliding-Window Contrasts (Disjoint)
 
+- [`split_by_block()`](https://bbuchsbaum.github.io/fmridesign/reference/split_by_block.md)
+  : Split by block
+
 - [`split_onsets()`](https://bbuchsbaum.github.io/fmridesign/reference/split_onsets.md)
   : Split onsets
 
