@@ -431,7 +431,7 @@ construct <- function(x, ...) UseMethod("construct")
 #' @param x The object.
 #' @param ... Additional arguments.
 #' @return A list split by block/run.
-#' @keywords internal
+#' @export
 #' @examples
 #' \dontrun{
 #' # Create experimental design with multiple runs

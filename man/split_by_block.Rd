@@ -35,4 +35,3 @@ emod <- event_model(onset ~ hrf(cond), data = des, block = ~run, sampling_frame 
 # length(block_list)  # Should return 2 (for 2 runs)
 }
 }
-\keyword{internal}
