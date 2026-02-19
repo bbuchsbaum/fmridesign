@@ -277,6 +277,9 @@
 - [`residualize()`](https://bbuchsbaum.github.io/fmridesign/reference/residualize.md)
   : Residualize Data Against a Design
 
+- [`sanitize()`](https://bbuchsbaum.github.io/fmridesign/reference/sanitize.md)
+  : Sanitize Strings for Use in R Names
+
 - [`shortnames()`](https://bbuchsbaum.github.io/fmridesign/reference/shortnames.md)
   : Extract shortnames
 
