@@ -35,6 +35,9 @@
 - [`baseline_terms()`](https://bbuchsbaum.github.io/fmridesign/reference/baseline_terms.md)
   : Extract baseline terms
 
+- [`basis_suffix()`](https://bbuchsbaum.github.io/fmridesign/reference/basis_suffix.md)
+  : Create Basis Function Suffix
+
 - [`block()`](https://bbuchsbaum.github.io/fmridesign/reference/block.md)
   : Create a Block Variable
 
