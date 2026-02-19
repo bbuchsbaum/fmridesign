@@ -160,6 +160,9 @@
 - [`events()`](https://bbuchsbaum.github.io/fmridesign/reference/events.md)
   : Retrieve canonical event information
 
+- [`feature_suffix()`](https://bbuchsbaum.github.io/fmridesign/reference/feature_suffix.md)
+  : Create Feature Suffix
+
 - [`get_all_external_hrf_functions()`](https://bbuchsbaum.github.io/fmridesign/reference/get_all_external_hrf_functions.md)
   : Get All External HRF Function Names
 
