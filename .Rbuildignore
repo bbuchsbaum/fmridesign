@@ -28,3 +28,5 @@
 ^Rplots\.pdf$
 ^data-raw$
 ^CRAN-SUBMISSION$
+^\.ecosystem\.yml$
+^tools$

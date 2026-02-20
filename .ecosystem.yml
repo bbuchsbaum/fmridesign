@@ -1,0 +1,19 @@
+ecosystem: true
+package: fmridesign
+language: R
+role: model
+tags:
+  - fmri
+  - neuroimaging
+  - design-matrix
+  - hrf
+  - glm
+entrypoints:
+  - fmridesign::event_model
+  - fmridesign::baseline_model
+  - fmridesign::design_matrix
+  - fmridesign::hrf
+  - fmridesign::sampling_frame
+  - fmridesign::contrast_weights
+release_tag: eco-atlas
+asset: atlas-pack.tgz
