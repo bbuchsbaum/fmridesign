@@ -22,10 +22,8 @@ zeropad <- function(i, n_total) {
 #' @return A sanitized character vector.
 #' @export
 #' @examples
-#' \dontrun{
 #' sanitize("a.b c")
 #' sanitize("a.b c", allow_dot = FALSE)
-#' }
 sanitize <- function(x, allow_dot = TRUE) {
   # Initial sanitization using make.names (handles invalid starting chars, spaces, etc.)
   sanitized <- make.names(x, unique = FALSE)
@@ -69,10 +67,8 @@ sanitize_level <- function(lev) {
 #' @return Character vector of suffixes (e.g., `_b01`, `_b02`).
 #' @export
 #' @examples
-#' \dontrun{
 #' basis_suffix(1:3, 5)
 #' basis_suffix(1:10, 10)
-#' }
 basis_suffix <- function(j, nb) {
   paste0("_b", zeropad(j, nb))
 }
@@ -86,9 +82,7 @@ basis_suffix <- function(j, nb) {
 #' @return Character vector of suffixes (e.g., `f01`, `f02`).
 #' @export
 #' @examples
-#' \dontrun{
 #' feature_suffix(1:3, 5)
-#' }
 feature_suffix <- function(j, nf) {
   paste0("f", zeropad(j, nf))
 }

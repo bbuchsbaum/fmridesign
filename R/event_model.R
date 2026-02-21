@@ -67,10 +67,11 @@ NULL
 #' head(design_matrix(ev_model_form))
 #' 
 #' # Example using list interface (less common)
-#' # spec1 <- hrf(cond)
-#' # spec2 <- hrf(mod, basis="spmg3")
-#' # ev_model_list <- event_model(list(spec1, spec2), data=des, block=des$run, sampling_frame=sframe)
-#' # print(ev_model_list)                         
+#' spec1 <- hrf(cond)
+#' spec2 <- hrf(mod, basis = "spmg3")
+#' ev_model_list <- event_model(list(spec1, spec2), data = des,
+#'                              block = des$run, sampling_frame = sframe)
+#' print(ev_model_list)
 #'                              
 #' @export
 #' @include event_model_helpers.R

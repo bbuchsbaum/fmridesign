@@ -30,7 +30,8 @@ knitr::opts_chunk$set(
   collapse = TRUE, comment = "#>", fig.align = "center", fig.retina = 2,
   out.width = "100%", fig.width = 7, fig.asp = 0.618, message = FALSE, warning = FALSE
 )
-set.seed(123); options(pillar.sigfig = 7, width = 80)
+set.seed(123)
+old_opts <- options(pillar.sigfig = 7, width = 80)
 suppressPackageStartupMessages({
   library(fmridesign)
   library(ggplot2)
@@ -439,3 +440,7 @@ For more information on event and baseline models, see:
 - `vignette("a_01_introduction")`
 - `vignette("a_03_baseline_model")`
 - `vignette("a_04_event_models")`
+
+```{r cleanup, include=FALSE}
+options(old_opts)
+```

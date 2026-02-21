@@ -29,8 +29,7 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' # In an external package's .onLoad function:
+#' \donttest{
 #' register_hrfspec_extension(
 #'   spec_class = "afni_hrfspec",
 #'   package = "afnireg",

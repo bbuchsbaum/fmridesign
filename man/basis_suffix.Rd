@@ -18,8 +18,6 @@ Character vector of suffixes (e.g., \verb{_b01}, \verb{_b02}).
 Generates the \verb{_b##} suffix for HRF basis functions.
 }
 \examples{
-\dontrun{
 basis_suffix(1:3, 5)
 basis_suffix(1:10, 10)
-}
 }

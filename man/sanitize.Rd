@@ -18,8 +18,6 @@ A sanitized character vector.
 Wraps \code{make.names} but allows control over dot replacement.
 }
 \examples{
-\dontrun{
 sanitize("a.b c")
 sanitize("a.b c", allow_dot = FALSE)
-}
 }

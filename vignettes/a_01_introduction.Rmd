@@ -29,7 +29,8 @@ knitr::opts_chunk$set(
   collapse = TRUE, comment = "#>", fig.align = "center", fig.retina = 2,
   out.width = "100%", fig.width = 7, fig.asp = 0.618, message = FALSE, warning = FALSE
 )
-set.seed(123); options(pillar.sigfig = 7, width = 80)
+set.seed(123)
+old_opts <- options(pillar.sigfig = 7, width = 80)
 suppressPackageStartupMessages({
   library(fmridesign)
   library(ggplot2)
@@ -280,3 +281,7 @@ If you encounter issues or have questions:
 1. Check the function documentation: `?event_model`, `?baseline_model`
 2. Browse all available HRFs: `list_available_hrfs()`
 3. Report issues: [GitHub Issues](https://github.com/bbuchsbaum/fmridesign/issues)
+
+```{r cleanup, include=FALSE}
+options(old_opts)
+```

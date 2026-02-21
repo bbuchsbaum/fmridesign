@@ -9,8 +9,11 @@ Description: Constructs and inspects design matrices for functional magnetic
     specifying event-related designs with flexible hemodynamic response
     function (HRF) bases, parametric modulators, and trialwise models.
     Includes facilities for baseline/nuisance regressors, contrast
-    specification, and utilities for naming, validation, and visualization. Intended to
-    support the model-building stage prior to statistical fitting.
+    specification, and utilities for naming, validation, and visualization.
+    Intended to support the model-building stage prior to statistical fitting.
+    Implements methods described in Friston et al. (1995)
+    <doi:10.1006/nimg.1995.1007> and Lindquist (2008)
+    <doi:10.1214/09-STS282>.
 License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: false

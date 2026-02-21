@@ -105,7 +105,7 @@ make_nuisance_term <- function(nuisance_list,
   colnames(full_mat) <-
     unlist(purrr::imap(nuisance_list, function(mat, i)
       sprintf("%s#%02d_%d",
-              prefix, i, seq_len(ncol(mat)))))
+              prefix, as.integer(i), seq_len(ncol(mat)))))
 
   ## bookkeeping lists
   colind <- get_col_inds(lapply(nuisance_list, as.matrix))

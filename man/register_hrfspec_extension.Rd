@@ -33,8 +33,7 @@ Register a new HRF specification class that can be used in event models.
 This allows external packages to extend fmridesign with their own HRF types.
 }
 \examples{
-\dontrun{
-# In an external package's .onLoad function:
+\donttest{
 register_hrfspec_extension(
   spec_class = "afni_hrfspec",
   package = "afnireg",

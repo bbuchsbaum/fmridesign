@@ -18,7 +18,5 @@ Character vector of suffixes (e.g., \code{f01}, \code{f02}).
 Generates the \code{f##} suffix for multi-column continuous events.
 }
 \examples{
-\dontrun{
 feature_suffix(1:3, 5)
-}
 }
