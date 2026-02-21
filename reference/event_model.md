@@ -190,10 +190,31 @@ head(design_matrix(ev_model_form))
 #> 6      0.192       0.0341    -0.0115      0.0421     0.0739  
 
 # Example using list interface (less common)
-# spec1 <- hrf(cond)
-# spec2 <- hrf(mod, basis="spmg3")
-# ev_model_list <- event_model(list(spec1, spec2), data=des, block=des$run, sampling_frame=sframe)
-# print(ev_model_list)                         
+spec1 <- hrf(cond)
+spec2 <- hrf(mod, basis = "spmg3")
+ev_model_list <- event_model(list(spec1, spec2), data = des,
+                             block = des$run, sampling_frame = sframe)
+print(ev_model_list)
+#> 
+#> ── fMRI Event Model ────────────────────────────────────────────────────────────
+#> Number of Terms: 2
+#> Number of Events: 10
+#> Number of Blocks: 2
+#> Total Scans: 110
+#> Design Matrix Dimensions: 110 x 5
+#> 
+#> ── Terms ──
+#> 
+#> • cond (<event_term>)
+#> • mod (<event_term>)
+#> 
+#> ── Design Matrix Preview ──
+#> 
+#>           cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02
+#>    Scan 1   0.062       0.000      -0.006      -0.020    
+#>    Scan 2   1.138       0.000      -0.117      -0.065    
+#>    Scan 3   1.744       0.000      -0.179       0.007    
+#> ...
                              
 des <- data.frame(
   onset = c(0, 10, 20, 30),

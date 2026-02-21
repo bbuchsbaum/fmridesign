@@ -216,10 +216,31 @@ to ensure uniqueness (e.g., <code>condition</code>, <code>condition#1</code>).</
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>      0.192       0.034<span style="text-decoration: underline;">1</span>    -<span style="color: #BB0000;">0.011</span><span style="color: #BB0000; text-decoration: underline;">5</span>      0.042<span style="text-decoration: underline;">1</span>     0.073<span style="text-decoration: underline;">9</span>  </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Example using list interface (less common)</span></span></span>
-<span class="r-in"><span><span class="co"># spec1 &lt;- hrf(cond)</span></span></span>
-<span class="r-in"><span><span class="co"># spec2 &lt;- hrf(mod, basis="spmg3")</span></span></span>
-<span class="r-in"><span><span class="co"># ev_model_list &lt;- event_model(list(spec1, spec2), data=des, block=des$run, sampling_frame=sframe)</span></span></span>
-<span class="r-in"><span><span class="co"># print(ev_model_list)                         </span></span></span>
+<span class="r-in"><span><span class="va">spec1</span> <span class="op">&lt;-</span> <span class="fu"><a href="hrf.html">hrf</a></span><span class="op">(</span><span class="va">cond</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">spec2</span> <span class="op">&lt;-</span> <span class="fu"><a href="hrf.html">hrf</a></span><span class="op">(</span><span class="va">mod</span>, basis <span class="op">=</span> <span class="st">"spmg3"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">ev_model_list</span> <span class="op">&lt;-</span> <span class="fu">event_model</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">spec1</span>, <span class="va">spec2</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">des</span>,</span></span>
+<span class="r-in"><span>                             block <span class="op">=</span> <span class="va">des</span><span class="op">$</span><span class="va">run</span>, sampling_frame <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">ev_model_list</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">fMRI Event Model</span> <span style="color: #00BBBB;">────────────────────────────────────────────────────────────</span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Number of Terms:</span> 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Number of Events:</span> 10</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Number of Blocks:</span> 2</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Total Scans:</span> 110</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">Design Matrix Dimensions:</span> 110 x 5</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ── <span style="font-weight: bold;">Terms</span> ──</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> • <span style="color: #00BB00;">cond</span> (<span style="color: #0000BB;">&lt;event_term&gt;</span>)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> • <span style="color: #00BB00;">mod</span> (<span style="color: #0000BB;">&lt;event_term&gt;</span>)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ── <span style="font-weight: bold;">Design Matrix Preview</span> ──</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>           cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.062       0.000      -0.006      -0.020    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   1.138       0.000      -0.117      -0.065    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   1.744       0.000      -0.179       0.007    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #B2B2B2;">...</span></span>
 <span class="r-in"><span>                             </span></span>
 <span class="r-in"><span><span class="va">des</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">10</span>, <span class="fl">20</span>, <span class="fl">30</span><span class="op">)</span>,</span></span>

@@ -25,7 +25,6 @@ Character vector of suffixes (e.g., `f01`, `f02`).
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 feature_suffix(1:3, 5)
-} # }
+#> [1] "f01" "f02" "f03"
 ```
