@@ -44,5 +44,5 @@ term2 <- event_term(
   blockids = c(1, 1, 1)
 )
 shortnames(term2)  # Returns: "face:attend" "scene:attend" "face:ignore"
-#> [1] "face:attend"  "scene:attend" "face:ignore" 
+#> [1] "face:attend"  "scene:attend" "face:ignore"  "scene:ignore"
 ```

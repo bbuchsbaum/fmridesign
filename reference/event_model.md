@@ -77,8 +77,10 @@ event_model(
 
 - parallel:
 
-  Logical indicating whether to use parallel processing for term
-  convolution (requires `future.apply`). Default is FALSE.
+  Logical compatibility shim reserved for future use. The current
+  implementation always evaluates terms sequentially; when set to
+  `TRUE`, a warning is emitted and sequential evaluation is used.
+  Default is `FALSE`.
 
 - progress:
 
@@ -148,14 +150,13 @@ This consistent naming scheme replaces the previous `compact` and
 ## Examples
 
 ``` r
-# Example using formula interface
 des <- data.frame(onset = seq(0, 90, by=10),
                   run = rep(1:2, each=5),
                   cond = factor(rep(c("A","B"), 5)),
                   mod = rnorm(10))
 sframe <- fmrihrf::sampling_frame(blocklens=c(50, 60), TR=2)
 
-ev_model_form <- event_model(onset ~ hrf(cond) + hrf(mod, basis="spmg3"), 
+ev_model_form <- event_model(onset ~ hrf(cond) + hrf(mod, basis="spmg3"),
                             data = des, block = ~run, sampling_frame = sframe)
 print(ev_model_form)
 #> 
@@ -174,22 +175,21 @@ print(ev_model_form)
 #> ── Design Matrix Preview ──
 #> 
 #>           cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02
-#>    Scan 1   0.062       0.000      -0.006      -0.020    
-#>    Scan 2   1.138       0.000      -0.117      -0.065    
-#>    Scan 3   1.744       0.000      -0.179       0.007    
+#>    Scan 1   0.062       0.000       0.015       0.047    
+#>    Scan 2   1.138       0.000       0.273       0.153    
+#>    Scan 3   1.744       0.000       0.418      -0.016    
 #> ...
 head(design_matrix(ev_model_form))
 #> # A tibble: 6 × 5
 #>   cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02 mod_mod_b03
 #>         <dbl>       <dbl>       <dbl>       <dbl>       <dbl>
-#> 1      0.0624      0         -0.00641    -0.0203    -0.0420  
-#> 2      1.14        0         -0.117      -0.0653     0.0198  
-#> 3      1.74        0         -0.179       0.00673    0.0328  
-#> 4      1.20        0         -0.123       0.0378     0.000444
-#> 5      0.552       0         -0.0566      0.0262    -0.00839 
-#> 6      0.192       0.0341    -0.0115      0.0421     0.0739  
+#> 1      0.0624      0           0.0150      0.0474     0.0982 
+#> 2      1.14        0           0.273       0.153     -0.0462 
+#> 3      1.74        0           0.418      -0.0157    -0.0767 
+#> 4      1.20        0           0.289      -0.0884    -0.00104
+#> 5      0.552       0           0.132      -0.0613     0.0196 
+#> 6      0.192       0.0341      0.0481     -0.0198     0.0330 
 
-# Example using list interface (less common)
 spec1 <- hrf(cond)
 spec2 <- hrf(mod, basis = "spmg3")
 ev_model_list <- event_model(list(spec1, spec2), data = des,
@@ -211,18 +211,8 @@ print(ev_model_list)
 #> ── Design Matrix Preview ──
 #> 
 #>           cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02
-#>    Scan 1   0.062       0.000      -0.006      -0.020    
-#>    Scan 2   1.138       0.000      -0.117      -0.065    
-#>    Scan 3   1.744       0.000      -0.179       0.007    
+#>    Scan 1   0.062       0.000       0.015       0.047    
+#>    Scan 2   1.138       0.000       0.273       0.153    
+#>    Scan 3   1.744       0.000       0.418      -0.016    
 #> ...
-                             
-des <- data.frame(
-  onset = c(0, 10, 20, 30),
-  run = 1,
-  cond = factor(c("A", "B", "A", "B"))
-)
-sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
-emod <- event_model(onset ~ hrf(cond), data = des, block = ~run, sampling_frame = sframe)
-dim(design_matrix(emod))
-#> [1] 40  2
 ```

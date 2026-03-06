@@ -33,7 +33,6 @@ des <- data.frame(
 sframe <- fmrihrf::sampling_frame(blocklens = c(40, 40), TR = 1)
 emod <- event_model(onset ~ hrf(cond), data = des, block = ~run, sampling_frame = sframe)
 block_list <- split_by_block(emod)
-#> Error in UseMethod("split_by_block"): no applicable method for 'split_by_block' applied to an object of class "c('event_model', 'list')"
 length(block_list)
-#> Error: object 'block_list' not found
+#> [1] 2
 ```

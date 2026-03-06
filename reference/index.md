@@ -61,6 +61,9 @@
 
   Convert an `event_term` to a per-condition basis list
 
+- [`condition_map()`](https://bbuchsbaum.github.io/fmridesign/reference/condition_map.md)
+  : Map Display and Canonical Condition Names
+
 - [`conditions()`](https://bbuchsbaum.github.io/fmridesign/reference/conditions.md)
   : Extract conditions from a design object
 

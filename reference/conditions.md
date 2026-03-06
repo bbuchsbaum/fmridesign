@@ -5,10 +5,19 @@ Extract conditions from a design object
 ## Usage
 
 ``` r
-conditions(x, drop.empty = TRUE, expand_basis = FALSE, ...)
+conditions(
+  x,
+  drop.empty = TRUE,
+  expand_basis = FALSE,
+  style = c("canonical", "display"),
+  ...
+)
+
+# S3 method for class 'event_model'
+conditions(x, drop.empty = TRUE, expand_basis = FALSE, style = c("canonical", "display"), ...)
 
 # S3 method for class 'event_term'
-conditions(x, drop.empty = TRUE, expand_basis = FALSE, ...)
+conditions(x, drop.empty = TRUE, expand_basis = FALSE, style = c("canonical", "display"), ...)
 ```
 
 ## Arguments
@@ -24,6 +33,11 @@ conditions(x, drop.empty = TRUE, expand_basis = FALSE, ...)
 - expand_basis:
 
   Logical whether to expand basis functions (default: FALSE).
+
+- style:
+
+  Naming style. `"canonical"` returns fully qualified internal names,
+  while `"display"` returns shorter user-facing labels.
 
 - ...:
 
@@ -43,6 +57,8 @@ term <- event_term(
 )
 conditions(term)
 #> [1] "condition.A" "condition.B"
+conditions(term, style = "display")
+#> [1] "A" "B"
 conditions(term, expand_basis = TRUE)
 #> [1] "condition.A" "condition.B"
 ```
