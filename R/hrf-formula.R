@@ -116,29 +116,18 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #'        beta estimates reflect condition differences rather than duration-dependent amplitude
 #'        scaling, which is important for analyses like MVPA or RSA. Default FALSE.
 #' @examples
-#'
-#' ## 'hrf' is typically used in the context of \code{formula}s passed to `event_model`.
-#'
-#' # Simple model with one factor
 #' form1 <- onsets ~ hrf(condition, basis="spmg1")
 #'
-#' # Model with factor and continuous modulator, using default SPMG1 for both terms
 #' form2 <- onsets ~ hrf(condition) + hrf(RT)
 #'
-#' # Model with interaction term and SPMG3 basis
 #' form3 <- onsets ~ hrf(condition, RT, basis="spmg3")
 #'
-#' # Model with an expression and contrasts
 #' library(rlang)
 #' con1 <- pair_contrast(~ condition == "A", ~ condition == "B", name="AvB")
 #' form4 <- onsets ~ hrf(condition, Poly(RT, 2), contrasts=con1)
 #'
-#' # Per-onset HRF using hrf_fun: variable duration boxcars
-#' # (requires fmrihrf >= 0.2.0)
 #' form5 <- onsets ~ hrf(condition, hrf_fun = boxcar_hrf_gen())
 #'
-#' # Per-onset HRF using hrf_fun with weighted HRFs for events with internal structure
-#' # (requires fmrihrf >= 0.2.0)
 #' form6 <- onsets ~ hrf(condition,
 #'                       hrf_fun = weighted_hrf_gen("sub_times", "sub_weights"))
 #'
@@ -515,7 +504,6 @@ trialwise <- function(basis   = "spmg1",
 #'
 #' @examples
 #' \donttest{
-#' # Events with variable durations
 #' trial_data <- data.frame(
 #'   onset = c(0, 10, 25),
 #'   duration = c(2, 5, 3),
@@ -604,10 +592,9 @@ duration_hrf_gen <- function(base = fmrihrf::HRF_SPMG1, min_duration = 0) {
 #'
 #' @examples
 #' \donttest{
-#' # Events with internal temporal structure
 #' trial_data <- data.frame(
 #'   onset = c(0, 20),
-#'   sub_times = I(list(c(0, 1, 2), c(0, 3, 6))),  # Times relative to onset
+#'   sub_times = I(list(c(0, 1, 2), c(0, 3, 6))),
 #'   sub_weights = I(list(c(0.2, 0.5, 0.3), c(0.1, 0.6, 0.3))),
 #'   run = 1
 #' )

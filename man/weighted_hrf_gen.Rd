@@ -34,10 +34,9 @@ of sub-event times and weights.
 }
 \examples{
 \donttest{
-# Events with internal temporal structure
 trial_data <- data.frame(
   onset = c(0, 20),
-  sub_times = I(list(c(0, 1, 2), c(0, 3, 6))),  # Times relative to onset
+  sub_times = I(list(c(0, 1, 2), c(0, 3, 6))),
   sub_weights = I(list(c(0.2, 0.5, 0.3), c(0.1, 0.6, 0.3))),
   run = 1
 )

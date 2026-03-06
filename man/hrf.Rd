@@ -81,29 +81,18 @@ It captures the variables/expressions provided and packages them with HRF/contra
 information into an \code{hrfspec} object, which is then processed by \code{event_model}.
 }
 \examples{
-
-## 'hrf' is typically used in the context of \code{formula}s passed to `event_model`.
-
-# Simple model with one factor
 form1 <- onsets ~ hrf(condition, basis="spmg1")
 
-# Model with factor and continuous modulator, using default SPMG1 for both terms
 form2 <- onsets ~ hrf(condition) + hrf(RT)
 
-# Model with interaction term and SPMG3 basis
 form3 <- onsets ~ hrf(condition, RT, basis="spmg3")
 
-# Model with an expression and contrasts
 library(rlang)
 con1 <- pair_contrast(~ condition == "A", ~ condition == "B", name="AvB")
 form4 <- onsets ~ hrf(condition, Poly(RT, 2), contrasts=con1)
 
-# Per-onset HRF using hrf_fun: variable duration boxcars
-# (requires fmrihrf >= 0.2.0)
 form5 <- onsets ~ hrf(condition, hrf_fun = boxcar_hrf_gen())
 
-# Per-onset HRF using hrf_fun with weighted HRFs for events with internal structure
-# (requires fmrihrf >= 0.2.0)
 form6 <- onsets ~ hrf(condition,
                       hrf_fun = weighted_hrf_gen("sub_times", "sub_weights"))
 

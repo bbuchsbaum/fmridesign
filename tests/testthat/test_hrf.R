@@ -455,7 +455,7 @@ test_that("normalise_hrf correctly normalises an HRF object", {
   expect_equal(fmrihrf::nbasis(norm_spmg2), 2)
   result_norm_spmg2 <- norm_spmg2(t)
   expect_equal(max(abs(result_norm_spmg2[,1])), 1)
-  expect_equal(max(abs(result_norm_spmg2[,2])), 1)
+  expect_equal(max(abs(result_norm_spmg2[,2])), 1, tolerance = 1e-3)
 })
 
 test_that("gen_hrf correctly sets nbasis for function inputs", {

@@ -21,7 +21,6 @@ the boxcar width.
 }
 \examples{
 \donttest{
-# Events with variable durations
 trial_data <- data.frame(
   onset = c(0, 10, 25),
   duration = c(2, 5, 3),
