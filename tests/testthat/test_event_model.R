@@ -81,6 +81,55 @@ test_that("event_model (formula) creates correct object structure and attributes
   expect_true(all(unlist(col_indices) >= 1 & unlist(col_indices) <= ncol(dm)))
 })
 
+test_that("event_model with parallel = TRUE falls back to sequential output", {
+  test_data <- create_test_data()
+  events <- test_data$events
+  sf <- test_data$sf
+
+  model_seq <- event_model(
+    formula_or_list = onset ~ hrf(condition) + hrf(modulator),
+    data = events,
+    block = ~block,
+    sampling_frame = sf,
+    parallel = FALSE
+  )
+
+  expect_warning(
+    model_parallel <- event_model(
+      formula_or_list = onset ~ hrf(condition) + hrf(modulator),
+      data = events,
+      block = ~block,
+      sampling_frame = sf,
+      parallel = TRUE
+    ),
+    "reserved for future use"
+  )
+
+  expect_equal(design_matrix(model_parallel), design_matrix(model_seq))
+  expect_equal(attr(design_matrix(model_parallel), "col_indices"),
+               attr(design_matrix(model_seq), "col_indices"))
+})
+
+test_that("condition_map.event_model exposes display and canonical names", {
+  test_data <- create_test_data()
+  events <- test_data$events
+  sf <- test_data$sf
+
+  model <- event_model(
+    onset ~ hrf(condition),
+    data = events,
+    block = ~block,
+    sampling_frame = sf
+  )
+
+  cmap <- condition_map(model)
+  expect_named(cmap, c("term", "display", "canonical", "column_name"))
+  expect_true(all(cmap$term == "condition"))
+  expect_equal(cmap$display, c("a", "b"))
+  expect_equal(cmap$canonical, c("condition.a", "condition.b"))
+  expect_equal(cmap$column_name, c("condition_condition.a", "condition_condition.b"))
+})
+
 test_that("event_model (list) creates correct object structure and attributes", {
   test_data <- create_test_data()
   events <- test_data$events
@@ -958,5 +1007,41 @@ test_that("error when onset length mismatched with data", {
     event_model(bad_onsets ~ hrf(condition), data = events,
                 block = ~block, sampling_frame = sf),
     "Length of extracted onset variable"
+  )
+})
+
+test_that("event_model accepts non-numeric factor block labels", {
+  td <- create_test_data(seed = 444, n_events = 10, n_blocks = 2)
+  events <- td$events
+  sf <- td$sf
+  events$block <- factor(rep(c("runA", "runB"), each = 5))
+
+  model <- event_model(
+    onset ~ hrf(condition),
+    data = events,
+    block = ~block,
+    sampling_frame = sf
+  )
+
+  expect_equal(model$blockids, c(rep(1L, 5), rep(2L, 5)))
+  expect_equal(length(unique(model$blockids)), 2)
+})
+
+test_that("event_model rejects block re-entry for arbitrary labels", {
+  sf <- fmrihrf::sampling_frame(blocklens = c(10, 10), TR = 2)
+  events <- data.frame(
+    onset = c(0, 2, 10, 12),
+    condition = factor(c("a", "b", "a", "b")),
+    block = factor(c("runA", "runB", "runA", "runB"))
+  )
+
+  expect_error(
+    event_model(
+      onset ~ hrf(condition),
+      data = events,
+      block = ~block,
+      sampling_frame = sf
+    ),
+    "blockids.*non-decreasing"
   )
 })

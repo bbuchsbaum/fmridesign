@@ -220,10 +220,9 @@ test_that("balanced factorial designs remain balanced after convolution", {
   # All 9 combinations should be present
   expect_equal(ncol(dmat), 9)
   
-  # All columns should have similar sums (balanced design)
-  sum_range <- range(col_sums)
-  relative_range <- (sum_range[2] - sum_range[1]) / mean(col_sums)
-  expect_true(relative_range < 0.1)
+  # Identical runs should produce identical convolved block slices
+  expect_equal(as.matrix(dmat[1:100, ]), as.matrix(dmat[101:200, ]), tolerance = 1e-10)
+  expect_equal(as.matrix(dmat[1:100, ]), as.matrix(dmat[201:300, ]), tolerance = 1e-10)
   
   # No zero columns
   expect_true(all(col_sums > 0))
@@ -294,6 +293,56 @@ test_that("block-specific sampling preserves global event timing", {
   expect_true(sum(dmat[block1_rows, face_col]) > 0)
   expect_true(sum(dmat[block2_rows, face_col]) > 0)
   expect_true(sum(dmat[block3_rows, face_col]) > 0)
+})
+
+test_that("multi-block convolution matches row-bound single-block designs", {
+  test_events <- data.frame(
+    Onset = c(1.0, 4.0, 7.5,
+              0.5, 3.0, 8.0,
+              2.0, 6.0, 10.0),
+    Run = c(1, 1, 1,
+            2, 2, 2,
+            3, 3, 3),
+    Condition = c("face", "house", "face",
+                  "house", "face", "scene",
+                  "scene", "face", "house"),
+    Duration = c(0.5, 1.0, 1.5,
+                 2.0, 0.5, 1.0,
+                 1.0, 0.5, 2.5),
+    stringsAsFactors = FALSE
+  )
+
+  blocklens <- c(12, 9, 15)
+  full_sframe <- sampling_frame(blocklens = blocklens, TR = 1.0)
+
+  full_model <- event_model(Onset ~ hrf(Condition, durations = Duration),
+                            block = ~ Run,
+                            sampling_frame = full_sframe,
+                            data = test_events)
+  full_dmat <- as.matrix(design_matrix(full_model))
+
+  align_columns <- function(mat, target_cols) {
+    aligned <- matrix(0, nrow = nrow(mat), ncol = length(target_cols))
+    colnames(aligned) <- target_cols
+    aligned[, colnames(mat)] <- mat
+    aligned
+  }
+
+  by_run <- lapply(seq_along(blocklens), function(run_id) {
+    run_events <- subset(test_events, Run == run_id)
+    run_sframe <- sampling_frame(blocklens = blocklens[run_id], TR = 1.0)
+    run_model <- event_model(Onset ~ hrf(Condition, durations = Duration),
+                             block = ~ Run,
+                             sampling_frame = run_sframe,
+                             data = run_events)
+    run_dmat <- as.matrix(design_matrix(run_model))
+    align_columns(run_dmat, colnames(full_dmat))
+  })
+
+  manual_dmat <- do.call(rbind, by_run)
+
+  expect_identical(colnames(full_dmat), colnames(manual_dmat))
+  expect_equal(full_dmat, manual_dmat, tolerance = 1e-10)
 })
 
 test_that("regression test: original problematic case", {

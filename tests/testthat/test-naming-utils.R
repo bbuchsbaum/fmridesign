@@ -142,6 +142,30 @@ test_that("make_cond_tag combines with underscore", {
   expect_equal(fmridesign:::make_cond_tag("cond.A"), "cond.A")
 })
 
+test_that("cell_condition_tags generates canonical condition names", {
+  cells_df <- data.frame(
+    condition = c("A", "B"),
+    attention = c("attend", "ignored"),
+    stringsAsFactors = FALSE
+  )
+
+  expect_equal(
+    fmridesign:::cell_condition_tags(cells_df),
+    c("condition.A_attention.attend", "condition.B_attention.ignored")
+  )
+})
+
+test_that("cell_condition_tags handles degenerate inputs", {
+  one_factor <- data.frame(condition = c("A", "B"), stringsAsFactors = FALSE)
+  empty_cells <- data.frame(condition = character(0), stringsAsFactors = FALSE)
+
+  expect_equal(
+    fmridesign:::cell_condition_tags(one_factor),
+    c("condition.A", "condition.B")
+  )
+  expect_equal(fmridesign:::cell_condition_tags(empty_cells), character(0))
+})
+
 test_that("add_basis expands tags correctly", {
   expect_equal(fmridesign:::add_basis("cond.A", 1), "cond.A")
   expect_equal(fmridesign:::add_basis("cond.A", 3), c("cond.A_b01", "cond.A_b02", "cond.A_b03"))

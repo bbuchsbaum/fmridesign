@@ -506,10 +506,12 @@ cells.convolved_term <- function(x, ...) {
 #' @export
 #' @importFrom tibble tibble
 #' @importFrom rlang :=
-conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) {
+conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
+                                  style = c("canonical", "display"), ...) {
+  style <- match.arg(style)
   
   # --- Caching --- 
-  opts_key <- paste(drop.empty, expand_basis, sep="|") # Keep drop.empty in key for now
+  opts_key <- paste(drop.empty, expand_basis, style, sep="|")
   cached_val <- attr(x, "..conds")
   cached_opts <- attr(x, "..conds_opts")
   
@@ -544,7 +546,11 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE, ..
           levs <- levels(ev) 
           # Handle case where factor might have no levels after subsetting? levels() should return character(0)
           if (length(levs) == 0) return(character(0))
-          level_token(ev$varname, levs)
+          if (identical(style, "canonical")) {
+            level_token(ev$varname, levs)
+          } else {
+            as.character(levs)
+          }
       } else {
           columns(ev) 
       }
@@ -563,7 +569,14 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE, ..
   # --- Combine Tokens using expand.grid and make_cond_tag --- 
   names(comp_tokens_list) <- names(Filter(function(tk) length(tk) > 0, x$events)) # Match names to filtered tokens
   full_grid <- expand.grid(comp_tokens_list, stringsAsFactors = FALSE)
-  base_cond_tags_all <- apply(full_grid, 1, make_cond_tag)
+  if (nrow(full_grid) == 0L) {
+    base_cond_tags_all <- character(0)
+  } else if (ncol(full_grid) == 1L) {
+    base_cond_tags_all <- full_grid[[1L]]
+  } else {
+    sep <- if (identical(style, "canonical")) "_" else ":"
+    base_cond_tags_all <- apply(full_grid, 1, function(row) paste(row, collapse = sep))
+  }
   
   # --- REMOVED drop.empty LOGIC BLOCK --- 
   # The logic relying on cells() was flawed for mixed continuous/categorical terms.
@@ -590,27 +603,22 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE, ..
 #' @method shortnames event_term
 #' @export
 shortnames.event_term <- function(x, drop.empty = TRUE, ...) {
-  # Get the cells (combinations of factor levels)
-  term_cells <- cells(x, drop.empty = drop.empty)
-  
-  if (nrow(term_cells) == 0) {
-    return(character(0))
-  }
-  
-  # For each row, create shortname by joining with ":"
-  shortnames_vec <- apply(term_cells, 1, function(row) {
-    paste(row, collapse = ":")
-  })
-  
-  # Return as character vector
-  as.character(shortnames_vec)
+  conditions(x, drop.empty = drop.empty, style = "display", ...)
 }
 
 #' @method longnames event_term
 #' @export
 longnames.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) {
-  # Use the conditions method which already implements the new naming scheme
-  conditions(x, drop.empty = drop.empty, expand_basis = expand_basis, ...)
+  conditions(x, drop.empty = drop.empty, expand_basis = expand_basis, style = "canonical", ...)
+}
+
+#' @method condition_map event_term
+#' @export
+condition_map.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) {
+  tibble::tibble(
+    display = conditions(x, drop.empty = drop.empty, expand_basis = expand_basis, style = "display", ...),
+    canonical = conditions(x, drop.empty = drop.empty, expand_basis = expand_basis, style = "canonical", ...)
+  )
 }
 
 #' @noRd
@@ -729,15 +737,6 @@ events.convolved_term <- function(x, drop.empty = FALSE, ...) {
 #' @param sampling_frame Unused; present for future compatibility.
 #' @return A named list mapping condition tags to integer indices.
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' term <- event_term(
-#'   list(condition = factor(c("A", "B"))),
-#'   onsets = c(0, 5),
-#'   blockids = c(1, 1)
-#' )
-#' column_groups_by_condition(term, fmrihrf::HRF_SPMG1, NULL)
-#' }
 column_groups_by_condition <- function(term, basis, sampling_frame) {
   nb <- fmrihrf::nbasis(basis)
   base_levels <- as.character(conditions(term, expand_basis = FALSE, drop.empty = FALSE))
@@ -1143,7 +1142,6 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   globons <- fmrihrf::global_onsets(sampling_frame, x$onsets, x$blockids)
   durations <- x$durations
   blockids <- x$blockids
-  nimages <- sum(fmrihrf::blocklens(sampling_frame))
   
   # --- Get Unconvolved Design Matrix (dmat) --- 
   # design_matrix handles dropping empty/rank-deficient columns based on drop.empty
@@ -1161,56 +1159,46 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   }
   
   # --- Convolution per Block --- 
-  block_ids <- unique(blockids)
-  # Precompute global sample times once to avoid buggy blockids handling
-  global_samples <- fmrihrf::samples(sampling_frame, global = TRUE)
+  sample_times <- fmrihrf::samples(sampling_frame, global = TRUE)
   sample_blockids <- fmrihrf::blockids(sampling_frame)
+  block_ids <- unique(sample_blockids)
+  sample_times_by_block <- split(sample_times, sample_blockids)
+  event_rows_by_block <- split(seq_along(blockids), blockids)
+
+  # Helper to handle per-onset regressor sets (sum individual evaluations)
+  eval_reg <- function(r, times, prec) {
+    if (inherits(r, "per_onset_regressor_set")) {
+      results <- lapply(r, function(sub_r) fmrihrf::evaluate(sub_r, times, precision = prec))
+      Reduce(`+`, results)
+    } else {
+      fmrihrf::evaluate(r, times, precision = prec)
+    }
+  }
+
   cmat_list <- lapply(block_ids, function(bid) {
-    idx <- which(blockids == bid)
+    bid_chr <- as.character(bid)
+    block_samples <- sample_times_by_block[[bid_chr]]
+    idx <- event_rows_by_block[[bid_chr]] %||% integer(0)
+
+    if (length(idx) == 0) {
+      return(matrix(0, nrow = length(block_samples), ncol = ncol(dmat)))
+    }
+
     # Ensure we subset the correct dmat based on drop.empty consistency
     dblock <- dmat[idx, , drop = FALSE] 
     globons_block <- globons[idx]
     durations_block <- durations[idx]
     
-    # Skip block if dblock is empty (e.g., no events for this term in this block)
-    if(nrow(dblock) == 0 || ncol(dblock) == 0) return(NULL)
+    if (ncol(dblock) == 0) {
+      return(matrix(0, nrow = length(block_samples), ncol = 0))
+    }
 
     # Subset hrf_list for this block if applicable
     hrf_list_block <- if (!is.null(hrf_list)) hrf_list[idx] else NULL
 
     reg <- convolve_design(hrf, dblock, globons_block, durations_block, summate = summate, hrf_list = hrf_list_block)
-    
-    # FIXED METHOD: Evaluate against all global samples but extract only block-specific rows
-    # This preserves temporal accuracy while maintaining correct dimensions
-    sam_all <- fmrihrf::samples(sampling_frame, global = TRUE)
-    
-    # Evaluate regressors against ALL samples (preserves temporal accuracy)
-    # Helper to handle per-onset regressor sets (sum individual evaluations)
-    eval_reg <- function(r, times, prec) {
-      if (inherits(r, "per_onset_regressor_set")) {
-        results <- lapply(r, function(sub_r) fmrihrf::evaluate(sub_r, times, precision = prec))
-        Reduce(`+`, results)
-      } else {
-        fmrihrf::evaluate(r, times, precision = prec)
-      }
-    }
-    full_block_mat <- do.call(cbind, lapply(reg, function(r) eval_reg(r, sam_all, precision)))
-    
-    # Extract only the rows for this specific block (maintains correct dimensions)
-    block_lengths <- fmrihrf::blocklens(sampling_frame)
-    if (as.integer(bid) == 1) {
-      block_start <- 1
-      block_end <- block_lengths[1]
-    } else {
-      block_start <- sum(block_lengths[1:(as.integer(bid)-1)]) + 1
-      block_end <- sum(block_lengths[1:as.integer(bid)])
-    }
-    block_mat <- full_block_mat[block_start:block_end, , drop = FALSE]
-    block_mat
+    do.call(cbind, lapply(reg, function(r) eval_reg(r, block_samples, precision)))
   })
-  
-  # Remove NULLs (from blocks with no events/cols) and rbind
-  cmat_list <- Filter(Negate(is.null), cmat_list)
   
   # --- Generate Final Column Names --- 
   nb <- fmrihrf::nbasis(hrf)

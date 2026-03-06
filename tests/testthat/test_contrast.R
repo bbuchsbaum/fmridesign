@@ -274,10 +274,11 @@ test_that("can form a simple formula contrast", {
   sframe <- fmrihrf::sampling_frame(blocklens=100, TR=2)
   espec <- event_model(onset ~  hrf(category, attention), data=simple_des, block=~run, sampling_frame=sframe)
   
-  # Use the new naming scheme: term_tag_condition_tag format
-  # The term_tag should be "category_attention" and condition_tags should be "category.face_attention.attend" etc.
-  # But for formula contrasts, we still use shortnames which are the old format for backward compatibility
-  con1 <- contrast(~ (`face:attend` - `face:ignored`) - (`scene:attend` - `scene:ignored`), name="face_scene")
+  con1 <- contrast(
+    ~ (category.face_attention.attend - category.face_attention.ignored) -
+      (category.scene_attention.attend - category.scene_attention.ignored),
+    name = "face_scene"
+  )
   cwts <- contrast_weights(con1, terms(espec)[[1]])
   
   # Now the contrast should work correctly with proper weights
@@ -286,6 +287,40 @@ test_that("can form a simple formula contrast", {
   # Expected: face:attend=1, face:ignored=-1, scene:attend=-1, scene:ignored=1
   expect_equal(as.vector(cwts$weights[,1]), c(1, -1, -1, 1))
   
+})
+
+test_that("formula contrast still accepts legacy shortnames", {
+  simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"), replication=c(1,2))
+  simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
+  simple_des$run <- rep(1,nrow(simple_des))
+  sframe <- fmrihrf::sampling_frame(blocklens=100, TR=2)
+  espec <- event_model(onset ~  hrf(category, attention), data=simple_des, block=~run, sampling_frame=sframe)
+
+  con1 <- contrast(~ (`face:attend` - `face:ignored`) - (`scene:attend` - `scene:ignored`), name="face_scene_legacy")
+  cwts <- contrast_weights(con1, terms(espec)[[1]])
+
+  expect_equal(as.vector(cwts$weights[,1]), c(1, -1, -1, 1))
+})
+
+test_that("formula contrast with where uses canonical row names", {
+  simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"), replication=c(1,2))
+  simple_des$onset <- seq(1,100, length.out=nrow(simple_des))
+  simple_des$run <- rep(1,nrow(simple_des))
+  sframe <- fmrihrf::sampling_frame(blocklens=100, TR=2)
+  espec <- event_model(onset ~  hrf(category, attention), data=simple_des, block=~run, sampling_frame=sframe)
+
+  con1 <- contrast(
+    ~ category.face_attention.attend - category.scene_attention.attend,
+    name = "attend_only",
+    where = ~ attention == "attend"
+  )
+  cwts <- contrast_weights(con1, terms(espec)[[1]])
+
+  expect_equal(
+    rownames(cwts$weights),
+    c("category.face_attention.attend", "category.scene_attention.attend")
+  )
+  expect_equal(as.vector(cwts$weights[,1]), c(1, -1))
 })
 
 test_that("can form formula contrast with 3 terms", {

@@ -8,14 +8,6 @@
 #' @param pattern Character string with the legacy regex.
 #' @return Updated regex string.
 #' @keywords internal
-#' @examples
-#' \dontrun{
-#' # Convert old bracket notation to dot notation
-#' translate_legacy_pattern("condition[A]") # Returns "condition.A"
-#' 
-#' # Convert basis notation
-#' translate_legacy_pattern("term:basis[2]") # Returns "term_b2"
-#' }
 #' @name translate_legacy_pattern
 #' @rdname translate_legacy_pattern
 translate_legacy_pattern <- function(pattern) {
@@ -341,7 +333,7 @@ translate_legacy_pattern <- function(pattern) {
 #' @return A list containing the contrast specification.
 #'
 #' @examples
-#' # A minus B contrast
+#' # A minus B contrast using display labels
 #' contrast(~ A - B, name="A_B")
 #' 
 #' # With subsetting
@@ -366,6 +358,68 @@ contrast <- function(form, name, where=NULL) {
   class(ret) <- c("contrast_formula_spec", "contrast_spec", "list")
   ret
   
+}
+
+#' Build name maps for formula contrasts
+#'
+#' Display names are the primary interface; canonical names are retained as
+#' stable internal aliases.
+#'
+#' @param term An event term.
+#' @return A list with `display` and `canonical` name vectors.
+#' @keywords internal
+#' @noRd
+.contrast_formula_name_map <- function(term) {
+  term_cells <- cells(term, drop.empty = TRUE)
+
+  if (is_continuous(term)) {
+    display <- conditions(term, drop.empty = TRUE, style = "display")
+    canonical <- conditions(term, drop.empty = TRUE, style = "canonical")
+  } else {
+    display <- if (nrow(term_cells) == 0L) {
+      character(0)
+    } else {
+      apply(term_cells, 1, function(row) paste(row, collapse = ":"))
+    }
+
+    canonical <- if (nrow(term_cells) == 0L) {
+      character(0)
+    } else {
+      cell_condition_tags(term_cells)
+    }
+  }
+
+  if (length(canonical) != length(display)) {
+    stop("Internal error: canonical and display contrast name maps have different lengths.", call. = FALSE)
+  }
+
+  list(display = display, canonical = canonical)
+}
+
+#' Build an evaluation environment for formula contrasts
+#'
+#' @param display Character vector of display condition names.
+#' @param canonical Character vector of canonical condition names.
+#' @param parent Parent environment for formula evaluation.
+#' @return An environment containing indicator vectors for each available alias.
+#' @keywords internal
+#' @noRd
+.build_formula_contrast_env <- function(display, canonical, parent) {
+  eval_env <- new.env(parent = parent)
+
+  for (i in seq_along(display)) {
+    indicator <- rep.int(0, length(display))
+    indicator[i] <- 1
+
+    assign(display[i], indicator, envir = eval_env)
+
+    if (!identical(canonical[i], display[i]) &&
+        !exists(canonical[i], envir = eval_env, inherits = FALSE)) {
+      assign(canonical[i], indicator, envir = eval_env)
+    }
+  }
+
+  eval_env
 }
 
 #' Unit Contrast
@@ -1003,11 +1057,7 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
       if (nrow(relevant_cells) == 0) {
           warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
       } else {
-          # Map relevant cells to sanitized condition names
-          term_vars <- names(relevant_cells)
-          token_df <- Map(function(col, nm) level_token(nm, col), relevant_cells, term_vars)
-          token_df <- as.data.frame(token_df, stringsAsFactors = FALSE)
-          target_cond_names <- apply(token_df, 1, make_cond_tag)
+          target_cond_names <- cell_condition_tags(relevant_cells)
           idx <- match(target_cond_names, all_condnames)
 
           mask_A_full <- logical(length(all_condnames))
@@ -1101,11 +1151,7 @@ contrast_weights.oneway_contrast_spec <- function(x, term,...) {
           })
           
           # Map cell rows to proper base condition names
-          # Use the same logic as in poly_contrast to create condition tags
-          term_vars <- names(relevant_cells)
-          token_df <- Map(function(col, nm) level_token(nm, col), relevant_cells, term_vars)
-          token_df <- as.data.frame(token_df, stringsAsFactors = FALSE)
-          cell_names_rel <- apply(token_df, 1, make_cond_tag)
+          cell_names_rel <- cell_condition_tags(relevant_cells)
 
           rownames(cmat) <- cell_names_rel
           colnames(cmat) <- paste(x$name, seq_len(ncol(cmat)), sep="_") # Name F-contrast columns
@@ -1362,10 +1408,7 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
                stop(paste("Contrast '", x$name, "': Error calculating polynomial weights: ", e$message), call.=FALSE)
           })
 
-          term_vars <- names(relevant_cells)
-          token_df <- Map(function(col, nm) level_token(nm, col), relevant_cells, term_vars)
-          token_df <- as.data.frame(token_df, stringsAsFactors = FALSE)
-          target_cond_names <- apply(token_df, 1, make_cond_tag)
+          target_cond_names <- cell_condition_tags(relevant_cells)
           idx <- match(target_cond_names, all_condnames)
           valid_idx <- which(!is.na(idx))
           if (length(valid_idx) > 0) {
@@ -1508,12 +1551,7 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
   mask_B_full <- if (!is.null(keepB_rel)) logical(length(base_condnames_all)) else NULL
   
   if (nrow(relevant_cells) > 0) {
-    # Vectorized construction of condition names for all relevant cells
-    term_vars <- names(relevant_cells)
-    token_df <- Map(function(col, nm) level_token(nm, col), relevant_cells, term_vars)
-    token_df <- as.data.frame(token_df, stringsAsFactors = FALSE)
-    target_cond_names <- apply(token_df, 1, make_cond_tag)
-
+    target_cond_names <- cell_condition_tags(relevant_cells)
     idx_all <- match(target_cond_names, base_condnames_all)
 
     len_A <- min(length(keepA_rel), length(idx_all))
@@ -1715,16 +1753,16 @@ contrast_weights.column_contrast_spec <- function(x, term, ...) {
 contrast_weights.contrast_formula_spec <- function(x, term,...) {
 
   term.cells <- cells(term)
-  condnames <- shortnames(term)
-  count <- attr(term.cells, "count")		
-  term.cells <- subset(term.cells, count > 0)
+  name_map <- .contrast_formula_name_map(term)
+  condnames <- name_map$canonical
+  display_names <- name_map$display
   
   if (!is.null(x$where)) {
     keep <- rlang::eval_tidy(rlang::f_rhs(x$where), data=term.cells)
     assert_that(sum(keep) > 0)
-    term.cells <- term.cells[keep,]
-  } else {
-    keep <- rep(TRUE, nrow(term.cells))
+    term.cells <- term.cells[keep, , drop = FALSE]
+    condnames <- condnames[keep]
+    display_names <- display_names[keep]
   }
   
   if (is_continuous(term)) {
@@ -1733,35 +1771,27 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
     term.cells[,!facs] <- 1
   } 
 
-  # Create a simple environment with shortnames as variables
-  # Each shortname gets a vector with 1 in its position and 0 elsewhere
+  # Display names are primary; canonical names remain available as stable aliases.
   weights <- matrix(0, NROW(term.cells), 1)
-  eval_env <- new.env(parent = rlang::f_env(x$A))
-  
-  # Create indicator variables for each condition using shortnames
-  for (i in seq_along(condnames)) {
-    indicator <- rep(0, length(condnames))
-    indicator[i] <- 1
-    assign(condnames[i], indicator, envir = eval_env)
-  }
+  eval_env <- .build_formula_contrast_env(display_names, condnames, rlang::f_env(x$A))
   
   # Evaluate the contrast formula
   res <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), env=eval_env), error = function(e) {
-       stop(paste("Contrast formula evaluation failed:", e$message, "\nAvailable names:", paste(condnames, collapse=", ")), call.=FALSE)
+       stop(paste("Contrast formula evaluation failed:", e$message, "\nAvailable display names:", paste(display_names, collapse=", ")), call.=FALSE)
   })
   
   # Apply results to weights matrix
-  weights[keep,1] <- as.vector(res)
+  weights[,1] <- as.vector(res)
   
-  # Use longnames for rownames (the new format)
-  row.names(weights) <- longnames(term)[keep]
+  # Canonical condition names are the public row labels.
+  row.names(weights) <- condnames
 
   # Return structure
   ret <- list(
     term=term,
     name=x$name,
     weights=weights,
-    condnames=longnames(term),
+    condnames=condnames,
     contrast_spec=x)
   
   class(ret) <- c("contrast", "list")

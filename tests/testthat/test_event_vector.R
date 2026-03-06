@@ -629,6 +629,41 @@ test_that("conditions.event_term - basic factor term", {
   expect_equal(conds_basis, expected_basis)
 })
 
+test_that("conditions.event_term supports display style", {
+  expect_equal(
+    conditions(term_facA, style = "display"),
+    c("L1", "L2")
+  )
+
+  expect_equal(
+    conditions(term_facAB, style = "display"),
+    c("L1:X", "L2:X", "L1:Y", "L2:Y", "L1:Z", "L2:Z")
+  )
+
+  expect_equal(
+    conditions(term_facA_P2, style = "display"),
+    c("L1:01", "L2:01", "L1:02", "L2:02")
+  )
+
+  expect_equal(
+    conditions(term_facA, style = "display", expand_basis = TRUE),
+    c("L1_b01", "L2_b01", "L1_b02", "L2_b02", "L1_b03", "L2_b03")
+  )
+})
+
+test_that("condition_map.event_term exposes display and canonical names", {
+  cmap <- condition_map(term_facAB)
+
+  expect_named(cmap, c("display", "canonical"))
+  expect_equal(cmap$display, c("L1:X", "L2:X", "L1:Y", "L2:Y", "L1:Z", "L2:Z"))
+  expect_equal(
+    cmap$canonical,
+    c("FacA.L1_FacB.X", "FacA.L2_FacB.X",
+      "FacA.L1_FacB.Y", "FacA.L2_FacB.Y",
+      "FacA.L1_FacB.Z", "FacA.L2_FacB.Z")
+  )
+})
+
 test_that("conditions.event_term - factor interaction", {
   conds <- conditions(term_facAB)
   # Expect: L1_X, L2_X, L1_Y, L2_Y, L1_Z, L2_Z (order from expand.grid)

@@ -1,7 +1,7 @@
 # Naming Utilities for fmrireg Design Matrix Column Names
 
 # Internal helper for zero-padding numbers
-#' @export
+#' @keywords internal
 #' @noRd
 zeropad <- function(i, n_total) {
   # Handle edge case n_total = 0 or 1 gracefully
@@ -238,6 +238,29 @@ continuous_token <- function(colname) {
 #' @noRd
 make_cond_tag <- function(tokens) {
   paste(tokens, collapse = "_")
+}
+
+#' Map cell rows to canonical condition tags
+#'
+#' Converts a cell table with raw factor levels into the canonical condition
+#' names used throughout the design and contrast code.
+#'
+#' @param cells_df A data frame where each row is a cell and each column is a factor.
+#' @return Character vector of condition tags aligned with the rows of `cells_df`.
+#' @keywords internal
+#' @noRd
+cell_condition_tags <- function(cells_df) {
+  if (!inherits(cells_df, "data.frame")) {
+    stop("cells_df must be a data.frame", call. = FALSE)
+  }
+
+  if (nrow(cells_df) == 0L || ncol(cells_df) == 0L) {
+    return(character(0))
+  }
+
+  token_df <- Map(function(col, nm) level_token(nm, col), cells_df, names(cells_df))
+  token_df <- as.data.frame(token_df, stringsAsFactors = FALSE)
+  apply(token_df, 1, make_cond_tag)
 }
 
 #' Add Basis Suffix to Condition Tags

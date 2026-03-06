@@ -2,12 +2,21 @@
 % Please edit documentation in R/design_generics.R, R/event_vector.R
 \name{conditions}
 \alias{conditions}
+\alias{conditions.event_model}
 \alias{conditions.event_term}
 \title{Extract conditions from a design object}
 \usage{
-conditions(x, drop.empty = TRUE, expand_basis = FALSE, ...)
+conditions(
+  x,
+  drop.empty = TRUE,
+  expand_basis = FALSE,
+  style = c("canonical", "display"),
+  ...
+)
 
-\method{conditions}{event_term}(x, drop.empty = TRUE, expand_basis = FALSE, ...)
+\method{conditions}{event_model}(x, drop.empty = TRUE, expand_basis = FALSE, style = c("canonical", "display"), ...)
+
+\method{conditions}{event_term}(x, drop.empty = TRUE, expand_basis = FALSE, style = c("canonical", "display"), ...)
 }
 \arguments{
 \item{x}{The object to extract conditions from.}
@@ -15,6 +24,9 @@ conditions(x, drop.empty = TRUE, expand_basis = FALSE, ...)
 \item{drop.empty}{Logical whether to drop conditions with no events (default: TRUE).}
 
 \item{expand_basis}{Logical whether to expand basis functions (default: FALSE).}
+
+\item{style}{Naming style. \code{"canonical"} returns fully qualified internal names,
+while \code{"display"} returns shorter user-facing labels.}
 
 \item{...}{Additional arguments.}
 }
@@ -31,5 +43,6 @@ term <- event_term(
   blockids = c(1, 1, 1)
 )
 conditions(term)
+conditions(term, style = "display")
 conditions(term, expand_basis = TRUE)
 }

@@ -23,7 +23,10 @@ NULL
 #' @param durations Numeric vector or scalar specifying event durations (seconds). Default is 0.
 #' @param drop_empty Logical indicating whether to drop empty events during term construction. Default is TRUE.
 #' @param precision Numeric precision for HRF sampling/convolution. Default is 0.3.
-#' @param parallel Logical indicating whether to use parallel processing for term convolution (requires `future.apply`). Default is FALSE.
+#' @param parallel Logical compatibility shim reserved for future use. The
+#'   current implementation always evaluates terms sequentially; when set to
+#'   `TRUE`, a warning is emitted and sequential evaluation is used. Default is
+#'   `FALSE`.
 #' @param progress Logical indicating whether to show a progress bar during term realisation. Default is FALSE.
 #' @param ... Additional arguments (currently unused).
 #' 
@@ -53,37 +56,26 @@ NULL
 #' @return An object of class `c("event_model", "list")` containing the terms, design matrix, 
 #'         sampling frame, and other metadata.
 #'         
-#' @examples 
-#' # Example using formula interface
+#' @examples
 #' des <- data.frame(onset = seq(0, 90, by=10),
 #'                   run = rep(1:2, each=5),
 #'                   cond = factor(rep(c("A","B"), 5)),
 #'                   mod = rnorm(10))
 #' sframe <- fmrihrf::sampling_frame(blocklens=c(50, 60), TR=2)
-#' 
-#' ev_model_form <- event_model(onset ~ hrf(cond) + hrf(mod, basis="spmg3"), 
+#'
+#' ev_model_form <- event_model(onset ~ hrf(cond) + hrf(mod, basis="spmg3"),
 #'                             data = des, block = ~run, sampling_frame = sframe)
 #' print(ev_model_form)
 #' head(design_matrix(ev_model_form))
-#' 
-#' # Example using list interface (less common)
+#'
 #' spec1 <- hrf(cond)
 #' spec2 <- hrf(mod, basis = "spmg3")
 #' ev_model_list <- event_model(list(spec1, spec2), data = des,
 #'                              block = des$run, sampling_frame = sframe)
 #' print(ev_model_list)
-#'                              
+#'
 #' @export
 #' @include event_model_helpers.R
-#' @examples
-#' des <- data.frame(
-#'   onset = c(0, 10, 20, 30),
-#'   run = 1,
-#'   cond = factor(c("A", "B", "A", "B"))
-#' )
-#' sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
-#' emod <- event_model(onset ~ hrf(cond), data = des, block = ~run, sampling_frame = sframe)
-#' dim(design_matrix(emod))
 event_model <- function(formula_or_list, data, block, sampling_frame, 
                         durations = 0, drop_empty = TRUE, precision = 0.3, 
                         parallel = FALSE, progress = FALSE, ...) {
@@ -125,6 +117,17 @@ event_model <- function(formula_or_list, data, block, sampling_frame,
 # Deprecated event_model.list removed.
 # Deprecated create_event_model removed.
 
+
+#' @export
+#' @rdname split_by_block
+split_by_block.event_model <- function(x, ...) {
+  sframe <- x$sampling_frame
+  bids <- fmrihrf::blockids(sframe)
+  unique_bids <- unique(bids)
+  lapply(stats::setNames(unique_bids, unique_bids), function(bid) {
+    design_matrix(x, blockid = bid)
+  })
+}
 
 #' @export
 blocklens.event_model <- function(x, ...) {
@@ -207,10 +210,48 @@ term_matrices.event_model <- function(x, ...) {
 }
 
 #' @export
-conditions.event_model <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) {
+conditions.event_model <- function(x, drop.empty = TRUE, expand_basis = FALSE,
+                                   style = c("canonical", "display"), ...) {
+  style <- match.arg(style)
   unlist(lapply(terms(x), function(t) {
-    conditions(t, drop.empty = drop.empty, expand_basis = expand_basis, ...)
+    conditions(t, drop.empty = drop.empty, expand_basis = expand_basis, style = style, ...)
   }), use.names = FALSE)
+}
+
+#' @export
+condition_map.event_model <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) {
+  col_indices <- attr(x$design_matrix, "col_indices")
+  dm_colnames <- colnames(x$design_matrix)
+
+  maps <- lapply(names(x$terms), function(term_name) {
+    term <- x$terms[[term_name]]
+    term_map <- condition_map(term, drop.empty = drop.empty,
+                              expand_basis = expand_basis, ...)
+    if (nrow(term_map) == 0L) {
+      return(tibble::tibble(
+        term = character(0),
+        display = character(0),
+        canonical = character(0),
+        column_name = character(0)
+      ))
+    }
+
+    term_cols <- if (!is.null(col_indices) && !is.null(col_indices[[term_name]])) {
+      dm_colnames[col_indices[[term_name]]]
+    } else {
+      character(0)
+    }
+    column_name <- if (length(term_cols) == nrow(term_map)) term_cols else rep(NA_character_, nrow(term_map))
+
+    tibble::tibble(
+      term = term_name,
+      display = term_map$display,
+      canonical = term_map$canonical,
+      column_name = column_name
+    )
+  })
+
+  dplyr::bind_rows(maps)
 }
 
 #' @export

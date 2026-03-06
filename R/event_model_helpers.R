@@ -49,6 +49,34 @@ find_and_eval_hrf_calls <- function(expr, data, f_env) {
   }
 }
 
+#' Canonicalize and validate block IDs
+#'
+#' Normalizes arbitrary block labels to contiguous integer IDs in order of first
+#' appearance, then checks that the resulting block sequence is non-decreasing.
+#'
+#' @param blockids_raw Raw block labels as returned by the user input.
+#' @param n_events Expected number of events.
+#' @return Integer vector of canonicalized block IDs.
+#' @keywords internal
+#' @noRd
+canonicalize_blockids <- function(blockids_raw, n_events) {
+  if (is.factor(blockids_raw)) {
+    blockids_raw <- as.character(blockids_raw)
+  }
+
+  if (length(blockids_raw) != n_events || any(is.na(blockids_raw))) {
+    stopifnot(length(blockids_raw) == n_events, all(!is.na(blockids_raw)))
+  }
+
+  blockids <- as.integer(match(blockids_raw, unique(blockids_raw)))
+
+  if (is.unsorted(blockids, strictly = FALSE)) {
+    stop("'blockids' must be non-decreasing.", call. = FALSE)
+  }
+
+  blockids
+}
+
 
 #' Parse fmri model formula (Internal Helper for EM-2)
 #'
@@ -223,7 +251,8 @@ construct_event_term <- function(hrfspec, model_spec) {
 #' @param terms A named list of `event_term` objects.
 #' @param sampling_frame The fmri sampling_frame object.
 #' @param precision Numeric precision for convolution.
-#' @param parallel Logical indicating whether to use parallel processing (requires `future.apply`).
+#' @param parallel Logical compatibility shim reserved for future use. The
+#'   current implementation always evaluates terms sequentially.
 #' @return A tibble representing the full event model design matrix, with 
 #'         `term_spans` and `col_indices` attributes.
 #' @keywords internal
@@ -233,6 +262,10 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
   if (length(terms) == 0) {
     warning("No terms provided to build design matrix.", call. = FALSE)
     return(tibble::tibble(.rows = sum(fmrihrf::blocklens(sampling_frame))))
+  }
+
+  if (isTRUE(parallel)) {
+    warning("Argument `parallel` is reserved for future use; using sequential evaluation.", call. = FALSE)
   }
 
   # Convolution function for a single term
@@ -269,18 +302,13 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
                           normalize = hrfspec$normalize %||% FALSE)
   }
 
-  # Apply convolution (potentially in parallel)
-  term_matrices <- if (parallel) {
-      warning("Parallel processing not fully implemented yet, using sequential lapply.", call. = FALSE)
-      lapply(terms, convolve_one_term)
-  } else {
-      lapply(terms, convolve_one_term)
-  }
+  term_matrices <- lapply(terms, convolve_one_term)
+  term_is_null <- vapply(term_matrices, is.null, logical(1))
+  term_ncols_full <- vapply(term_matrices, function(mat) if (is.null(mat)) 0L else ncol(mat), integer(1))
 
   # Filter out NULL matrices (from external terms that don't contribute to design matrix)
-  non_null_indices <- which(!sapply(term_matrices, is.null))
+  non_null_indices <- which(!term_is_null)
   term_matrices_filtered <- term_matrices[non_null_indices]
-  terms_filtered <- terms[non_null_indices]
   
   # Handle case where all terms are NULL (all external terms)
   if (length(term_matrices_filtered) == 0) {
@@ -292,24 +320,16 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
     return(empty_dm)
   }
 
-  # Calculate col_indices based on term_ncols before combining matrices
-  term_ncols <- vapply(term_matrices_filtered, ncol, integer(1))
-  term_spans <- cumsum(term_ncols)
-  col_indices <- vector("list", length(terms))
-  start_idx <- 1
-  for (i in seq_along(terms)) {
-      if (i %in% non_null_indices) {
-        # Find position in filtered list
-        filtered_pos <- which(non_null_indices == i)
-        end_idx <- if (filtered_pos == 1) term_ncols[1] else term_spans[filtered_pos]
-        col_indices[[i]] <- seq.int(start_idx, end_idx)
-        start_idx <- end_idx + 1
-      } else {
-        # AFNI term - no columns
-        col_indices[[i]] <- integer(0)
-      }
-  }
+  term_offsets <- cumsum(c(0L, head(term_ncols_full, -1L)))
+  col_indices <- Map(function(offset, ncols) {
+    if (ncols <= 0L) {
+      integer(0)
+    } else {
+      seq.int(offset + 1L, length.out = ncols)
+    }
+  }, term_offsets, term_ncols_full)
   names(col_indices) <- names(terms) # Names are now the term_tags
+  term_spans <- cumsum(term_ncols_full[non_null_indices])
 
   # --- Combine convolved term matrices --- 
   # Store original names before potential modification by cbind/tibble
@@ -555,20 +575,7 @@ parse_event_model <- function(formula_or_list, data, block, durations = 0) {
     blockids_raw <- block
   }
   
-  if (is.factor(blockids_raw)) {
-    blockids_raw <- as.integer(as.character(blockids_raw))
-  }
-  
-  stopifnot(length(blockids_raw) == length(onsets),
-            all(!is.na(blockids_raw))) 
-            
-  # Use stopifnot for non-decreasing check for better trace
-  if (is.unsorted(blockids_raw, strictly = FALSE)) {
-       stop("'blockids' must be non-decreasing.", call. = FALSE)
-  }
-  
-  # Canonicalize blockids
-  blockids <- as.integer(match(blockids_raw, unique(blockids_raw)))
+  blockids <- canonicalize_blockids(blockids_raw, length(onsets))
   
   if (is.null(durations)) durations <- 0 
   durations_proc <- recycle_or_error(durations, length(onsets), "durations")

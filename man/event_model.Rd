@@ -47,7 +47,10 @@ or needed by the \code{hrfspec} objects.}
 
 \item{precision}{Numeric precision for HRF sampling/convolution. Default is 0.3.}
 
-\item{parallel}{Logical indicating whether to use parallel processing for term convolution (requires \code{future.apply}). Default is FALSE.}
+\item{parallel}{Logical compatibility shim reserved for future use. The
+current implementation always evaluates terms sequentially; when set to
+\code{TRUE}, a warning is emitted and sequential evaluation is used. Default is
+\code{FALSE}.}
 
 \item{progress}{Logical indicating whether to show a progress bar during term realisation. Default is FALSE.}
 
@@ -101,31 +104,21 @@ This consistent naming scheme replaces the previous \code{compact} and \code{qua
 }
 }
 \examples{
-# Example using formula interface
 des <- data.frame(onset = seq(0, 90, by=10),
                   run = rep(1:2, each=5),
                   cond = factor(rep(c("A","B"), 5)),
                   mod = rnorm(10))
 sframe <- fmrihrf::sampling_frame(blocklens=c(50, 60), TR=2)
 
-ev_model_form <- event_model(onset ~ hrf(cond) + hrf(mod, basis="spmg3"), 
+ev_model_form <- event_model(onset ~ hrf(cond) + hrf(mod, basis="spmg3"),
                             data = des, block = ~run, sampling_frame = sframe)
 print(ev_model_form)
 head(design_matrix(ev_model_form))
 
-# Example using list interface (less common)
 spec1 <- hrf(cond)
 spec2 <- hrf(mod, basis = "spmg3")
 ev_model_list <- event_model(list(spec1, spec2), data = des,
                              block = des$run, sampling_frame = sframe)
 print(ev_model_list)
-                             
-des <- data.frame(
-  onset = c(0, 10, 20, 30),
-  run = 1,
-  cond = factor(c("A", "B", "A", "B"))
-)
-sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
-emod <- event_model(onset ~ hrf(cond), data = des, block = ~run, sampling_frame = sframe)
-dim(design_matrix(emod))
+
 }

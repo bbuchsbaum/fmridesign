@@ -43,6 +43,8 @@ cells <- function(x, drop.empty = TRUE, ...) UseMethod("cells")
 #' @param x The object to extract conditions from.
 #' @param drop.empty Logical whether to drop conditions with no events (default: TRUE).
 #' @param expand_basis Logical whether to expand basis functions (default: FALSE).
+#' @param style Naming style. `"canonical"` returns fully qualified internal names,
+#'   while `"display"` returns shorter user-facing labels.
 #' @param ... Additional arguments.
 #' @return A character vector of condition names.
 #' @examples
@@ -52,9 +54,31 @@ cells <- function(x, drop.empty = TRUE, ...) UseMethod("cells")
 #'   blockids = c(1, 1, 1)
 #' )
 #' conditions(term)
+#' conditions(term, style = "display")
 #' conditions(term, expand_basis = TRUE)
 #' @export
-conditions <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) UseMethod("conditions")
+conditions <- function(x, drop.empty = TRUE, expand_basis = FALSE,
+                       style = c("canonical", "display"), ...) UseMethod("conditions")
+
+#' Map Display and Canonical Condition Names
+#'
+#' @param x The object to inspect.
+#' @param drop.empty Logical whether to drop empty conditions (default: TRUE).
+#' @param expand_basis Logical whether to expand basis functions (default: FALSE).
+#' @param ... Additional arguments.
+#' @return A tibble mapping display names to canonical names.
+#' @examples
+#' term <- event_term(
+#'   list(
+#'     category = factor(c("face", "scene", "face")),
+#'     attention = factor(c("attend", "attend", "ignore"))
+#'   ),
+#'   onsets = c(0, 10, 20),
+#'   blockids = c(1, 1, 1)
+#' )
+#' condition_map(term)
+#' @export
+condition_map <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) UseMethod("condition_map")
 
 #' Convolve events with a hemodynamic response function
 #' 
@@ -305,6 +329,8 @@ is_continuous <- function(x, ...) UseMethod("is_continuous")
 
 #' Extract longnames
 #'
+#' Superseded by `conditions(x, style = "canonical")`.
+#'
 #' @param x The object.
 #' @param ... Additional arguments.
 #' @return Character vector of long (fully qualified) names.
@@ -334,6 +360,8 @@ is_continuous <- function(x, ...) UseMethod("is_continuous")
 longnames <- function(x, ...) UseMethod("longnames")
 
 #' Extract shortnames
+#'
+#' Superseded by `conditions(x, style = "display")`.
 #'
 #' @param x The object.
 #' @param ... Additional arguments.
