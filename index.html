@@ -11,7 +11,7 @@
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><link href="extra.css" rel="stylesheet">
-<meta property="og:title" content="Design Matrix Construction for fMRI Analysis">
+<script src="extra.js"></script><meta property="og:title" content="Design Matrix Construction for fMRI Analysis">
 <meta name="description" content="Constructs and inspects design matrices for functional magnetic resonance imaging (fMRI) analyses. Provides a formula interface for specifying event-related designs with flexible hemodynamic response function (HRF) bases, parametric modulators, and trialwise models. Includes facilities for baseline/nuisance regressors, contrast specification, and utilities for naming, validation, and visualization. Intended to support the model-building stage prior to statistical fitting. Implements methods described in Friston et al. (1995) &lt;doi:10.1006/nimg.1995.1007&gt; and Lindquist (2008) &lt;doi:10.1214/09-STS282&gt;.">
 <meta property="og:description" content="Constructs and inspects design matrices for functional magnetic resonance imaging (fMRI) analyses. Provides a formula interface for specifying event-related designs with flexible hemodynamic response function (HRF) bases, parametric modulators, and trialwise models. Includes facilities for baseline/nuisance regressors, contrast specification, and utilities for naming, validation, and visualization. Intended to support the model-building stage prior to statistical fitting. Implements methods described in Friston et al. (1995) &lt;doi:10.1006/nimg.1995.1007&gt; and Lindquist (2008) &lt;doi:10.1214/09-STS282&gt;.">
 </head>
@@ -61,6 +61,8 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="fmridesign">fmridesign<a class="anchor" aria-label="anchor" href="#fmridesign"></a>
 </h1></div>
+<!-- badges: start -->
+
 <p>Design Matrix Construction for fMRI Analysis</p>
 <div class="section level2">
 <h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
@@ -158,11 +160,12 @@
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
 </h2>
 <p>GPL (&gt;= 2)</p>
+<!-- albersdown:theme-note:start -->
 </div>
 <div class="section level2">
 <h2 id="albers-theme">Albers theme<a class="anchor" aria-label="anchor" href="#albers-theme"></a>
 </h2>
-<p>This package uses the albersdown theme. Vignettes are styled with <code>vignettes/albers.css</code> and a local <code>vignettes/albers.js</code>; the palette family is provided via <code>params$family</code> (default ‘red’). The pkgdown site uses <code>template: { package: albersdown }</code>.</p>
+<p>This package uses the albersdown theme. Existing vignette theme hooks are replaced so <code>albers.css</code> and local <code>albers.js</code> render consistently on CRAN and GitHub Pages. The defaults are configured via <code>params$family</code> and <code>params$preset</code> (family = ‘lapis’, preset = ‘adobe’). The pkgdown site uses <code>template: { package: albersdown }</code>. <!-- albersdown:theme-note:end --></p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -195,7 +198,13 @@
 </ul>
 </div>
 
-
+<div class="dev-status">
+<h2 data-toc-skip>Dev status</h2>
+<ul class="list-unstyled">
+<li><a href="https://github.com/bbuchsbaum/fmridesign/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/bbuchsbaum/fmridesign/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://bbuchsbaum.github.io/fmridesign/"><img src="https://github.com/bbuchsbaum/fmridesign/actions/workflows/pkgdown.yaml/badge.svg" alt="pkgdown"></a></li>
+</ul>
+</div>
 
   </aside>
 </div>

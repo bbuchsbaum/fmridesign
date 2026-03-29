@@ -1,16 +1,10 @@
 # Map Display and Canonical Condition Names
 
-Map display and canonical condition names.
+Map Display and Canonical Condition Names
 
 ## Usage
 
 ``` r
-condition_map(x, drop.empty = TRUE, expand_basis = FALSE, ...)
-
-# S3 method for class 'event_term'
-condition_map(x, drop.empty = TRUE, expand_basis = FALSE, ...)
-
-# S3 method for class 'event_model'
 condition_map(x, drop.empty = TRUE, expand_basis = FALSE, ...)
 ```
 
@@ -34,9 +28,7 @@ condition_map(x, drop.empty = TRUE, expand_basis = FALSE, ...)
 
 ## Value
 
-A tibble mapping display labels to canonical names. For event models,
-the result also includes the term name and, when available, the
-corresponding design-matrix column name.
+A tibble mapping display names to canonical names.
 
 ## Examples
 
@@ -49,7 +41,6 @@ term <- event_term(
   onsets = c(0, 10, 20),
   blockids = c(1, 1, 1)
 )
-
 condition_map(term)
 #> # A tibble: 4 × 2
 #>   display      canonical                      

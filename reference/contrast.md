@@ -30,7 +30,7 @@ A list containing the contrast specification.
 ## Examples
 
 ``` r
-# A minus B contrast
+# A minus B contrast using display labels
 contrast(~ A - B, name="A_B")
 #> contrast: A_B 
 #>  A:  ~A - B 

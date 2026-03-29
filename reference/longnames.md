@@ -1,6 +1,6 @@
 # Extract longnames
 
-Extract longnames
+Superseded by `conditions(x, style = "canonical")`.
 
 ## Usage
 

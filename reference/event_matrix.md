@@ -74,7 +74,7 @@ print(eset)
 #> 
 #> ── Values ──
 #> 
-#> * Value Range: -2.10 - 1.89
+#> * Value Range: -2.45 - 2.65
 columns(eset) # Alias for levels
 #> [1] "Val1" "Val2"
 ```

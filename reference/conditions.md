@@ -13,11 +13,14 @@ conditions(
   ...
 )
 
-# S3 method for class 'event_model'
-conditions(x, drop.empty = TRUE, expand_basis = FALSE, style = c("canonical", "display"), ...)
-
 # S3 method for class 'event_term'
-conditions(x, drop.empty = TRUE, expand_basis = FALSE, style = c("canonical", "display"), ...)
+conditions(
+  x,
+  drop.empty = TRUE,
+  expand_basis = FALSE,
+  style = c("canonical", "display"),
+  ...
+)
 ```
 
 ## Arguments

@@ -6,6 +6,9 @@ Split by block
 
 ``` r
 split_by_block(x, ...)
+
+# S3 method for class 'event_model'
+split_by_block(x, ...)
 ```
 
 ## Arguments

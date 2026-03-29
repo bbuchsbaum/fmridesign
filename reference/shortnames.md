@@ -1,6 +1,6 @@
 # Extract shortnames
 
-Extract shortnames
+Superseded by `conditions(x, style = "display")`.
 
 ## Usage
 
