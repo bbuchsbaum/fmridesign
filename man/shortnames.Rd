@@ -15,7 +15,7 @@ shortnames(x, ...)
 Character vector of short names.
 }
 \description{
-Extract shortnames
+Superseded by \code{conditions(x, style = "display")}.
 }
 \examples{
 # Create a simple event term with one condition factor

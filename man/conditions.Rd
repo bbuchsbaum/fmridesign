@@ -2,7 +2,6 @@
 % Please edit documentation in R/design_generics.R, R/event_vector.R
 \name{conditions}
 \alias{conditions}
-\alias{conditions.event_model}
 \alias{conditions.event_term}
 \title{Extract conditions from a design object}
 \usage{
@@ -14,9 +13,13 @@ conditions(
   ...
 )
 
-\method{conditions}{event_model}(x, drop.empty = TRUE, expand_basis = FALSE, style = c("canonical", "display"), ...)
-
-\method{conditions}{event_term}(x, drop.empty = TRUE, expand_basis = FALSE, style = c("canonical", "display"), ...)
+\method{conditions}{event_term}(
+  x,
+  drop.empty = TRUE,
+  expand_basis = FALSE,
+  style = c("canonical", "display"),
+  ...
+)
 }
 \arguments{
 \item{x}{The object to extract conditions from.}

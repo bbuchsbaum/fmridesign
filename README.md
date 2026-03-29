@@ -1,5 +1,10 @@
 # fmridesign
 
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/bbuchsbaum/fmridesign/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmridesign/actions/workflows/R-CMD-check.yaml)
+[![pkgdown](https://github.com/bbuchsbaum/fmridesign/actions/workflows/pkgdown.yaml/badge.svg)](https://bbuchsbaum.github.io/fmridesign/)
+<!-- badges: end -->
+
 Design Matrix Construction for fMRI Analysis
 
 ## Overview

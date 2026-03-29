@@ -20,7 +20,7 @@ A list containing the contrast specification.
 Define a linear contrast using a formula expression.
 }
 \examples{
-# A minus B contrast
+# A minus B contrast using display labels
 contrast(~ A - B, name="A_B")
 
 # With subsetting

@@ -15,7 +15,7 @@ longnames(x, ...)
 Character vector of long (fully qualified) names.
 }
 \description{
-Extract longnames
+Superseded by \code{conditions(x, style = "canonical")}.
 }
 \examples{
 # Create a simple event term with one condition factor
