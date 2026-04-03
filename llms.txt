@@ -88,7 +88,7 @@ vignette("a_05_contrasts", package = "fmridesign")
 
 ## License
 
-GPL (\>= 2)
+MIT
 
 ## Albers theme
 

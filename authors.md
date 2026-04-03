@@ -7,16 +7,16 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/bbuchsbaum/fmridesign/blob/main/DESCRIPTION)
+[`inst/CITATION`](https://github.com/bbuchsbaum/fmridesign/blob/main/inst/CITATION)
 
 Buchsbaum B (2026). *fmridesign: Design Matrix Construction for fMRI
 Analysis*. R package version 0.5.0,
-<https://github.com/bbuchsbaum/fmridesign>.
+<https://bbuchsbaum.github.io/fmridesign/>.
 
     @Manual{,
       title = {fmridesign: Design Matrix Construction for fMRI Analysis},
       author = {Bradley Buchsbaum},
       year = {2026},
       note = {R package version 0.5.0},
-      url = {https://github.com/bbuchsbaum/fmridesign},
+      url = {https://bbuchsbaum.github.io/fmridesign/},
     }
