@@ -345,6 +345,96 @@ test_that("multi-block convolution matches row-bound single-block designs", {
   expect_equal(full_dmat, manual_dmat, tolerance = 1e-10)
 })
 
+test_that("block boundary: event at end of run 1 has zero contribution to run 2 columns", {
+  # Event near end of run 1; its HRF tail would extend into run 2 time window
+  # (e.g., onset at 38s, HRF span ~32s → tail extends to ~70s; run 2 starts at 40s)
+  # Block-wise convolution must NOT let this tail appear in run 2's design rows.
+  sframe <- fmrihrf::sampling_frame(blocklens = c(40, 40), TR = 1)
+
+  events <- data.frame(
+    Onset    = c(38, 5),           # run 1: late event; run 2: early event (different cond)
+    Run      = c(1L, 2L),
+    Cond     = c("A", "B"),
+    stringsAsFactors = FALSE
+  )
+
+  emodel <- event_model(
+    Onset ~ hrf(Cond),
+    block = ~ Run,
+    sampling_frame = sframe,
+    data = events
+  )
+
+  dmat <- design_matrix(emodel)
+
+  # Run 2 rows are rows 41-80; condition A had an event only in run 1
+  run2_rows <- 41:80
+  cond_A_col <- grep("Cond\\.A", colnames(dmat), value = TRUE)
+  expect_length(cond_A_col, 1)
+
+  # All run 2 values for condition A must be exactly zero
+  expect_equal(
+    as.numeric(dmat[[cond_A_col]][run2_rows]),
+    rep(0, 40),
+    label = "Run 2 rows for condition A (event only in run 1) must be zero"
+  )
+})
+
+test_that("block boundary: event at start of run 2 has zero contribution to run 1 columns", {
+  # An event in run 2 is causal — HRF(t < onset) = 0 — so it cannot affect run 1.
+  # Run 1 global times are all before run 2 begins, so run 1 rows must be zero.
+  sframe <- fmrihrf::sampling_frame(blocklens = c(40, 40), TR = 1)
+
+  events <- data.frame(
+    Onset    = c(5, 2),            # run 1: early event (diff cond); run 2: early event
+    Run      = c(1L, 2L),
+    Cond     = c("A", "B"),
+    stringsAsFactors = FALSE
+  )
+
+  emodel <- event_model(
+    Onset ~ hrf(Cond),
+    block = ~ Run,
+    sampling_frame = sframe,
+    data = events
+  )
+
+  dmat <- design_matrix(emodel)
+
+  # Run 1 rows are rows 1-40; condition B had an event only in run 2
+  run1_rows <- 1:40
+  cond_B_col <- grep("Cond\\.B", colnames(dmat), value = TRUE)
+  expect_length(cond_B_col, 1)
+
+  # All run 1 values for condition B must be exactly zero (HRF causality + block isolation)
+  expect_equal(
+    as.numeric(dmat[[cond_B_col]][run1_rows]),
+    rep(0, 40),
+    label = "Run 1 rows for condition B (event only in run 2) must be zero"
+  )
+})
+
+test_that("block boundary: design matrix row count equals sum of block lengths", {
+  sframe <- fmrihrf::sampling_frame(blocklens = c(30, 45, 25), TR = 2)
+
+  events <- data.frame(
+    Onset = c(5, 10, 5, 20, 5),
+    Run   = c(1L, 1L, 2L, 2L, 3L),
+    Cond  = c("A", "B", "A", "B", "A"),
+    stringsAsFactors = FALSE
+  )
+
+  emodel <- event_model(
+    Onset ~ hrf(Cond),
+    block = ~ Run,
+    sampling_frame = sframe,
+    data = events
+  )
+
+  dmat <- design_matrix(emodel)
+  expect_equal(nrow(dmat), 30 + 45 + 25)
+})
+
 test_that("regression test: original problematic case", {
   skip_if_not(file.exists("events_testdat.txt"),
               message = "Original test data file not found")
