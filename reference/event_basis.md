@@ -56,7 +56,7 @@ blockids <- rep(1, length(onsets))
 ebasis <- event_basis(basis, onsets=onsets, blockids=blockids)
 print(ebasis)
 #> 
-#> ── Event Sequence: bs_. ────────────────────────────────────────────────────────
+#> ── Event Sequence: bs_1.21 ─────────────────────────────────────────────────────
 #> * Type: Continuous
 #> * Columns: 01, 02, 03
 #> * Events: 21
