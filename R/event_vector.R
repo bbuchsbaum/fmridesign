@@ -1157,6 +1157,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
       # Proceed to generate names for an empty matrix
       base_cnames <- character(0) # Use empty names
   }
+  nb <- fmrihrf::nbasis(hrf)
   
   # --- Convolution per Block --- 
   sample_times <- fmrihrf::samples(sampling_frame, global = TRUE)
@@ -1181,7 +1182,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
     idx <- event_rows_by_block[[bid_chr]] %||% integer(0)
 
     if (length(idx) == 0) {
-      return(matrix(0, nrow = length(block_samples), ncol = ncol(dmat)))
+      return(matrix(0, nrow = length(block_samples), ncol = ncol(dmat) * nb))
     }
 
     # Ensure we subset the correct dmat based on drop.empty consistency
@@ -1201,7 +1202,6 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   })
   
   # --- Generate Final Column Names --- 
-  nb <- fmrihrf::nbasis(hrf)
   # Use the base_cnames derived directly from the dmat that was convolved
   cn <- make_column_names(term_tag, base_cnames, nb)
   
@@ -1594,14 +1594,30 @@ print.fmri_term <- function(x, ...) {
 #' @export
 #' @rdname print
 print.convolved_term <- function(x, ...) {
+  dm <- x$design_matrix %||% tryCatch(design_matrix(x), error = function(e) NULL)
+  formula_text <- tryCatch(
+    paste(as.character(formula(x$evterm)), collapse = " "),
+    error = function(e) x$varname %||% "<unknown>"
+  )
+  n_events <- if (!is.null(x$evterm$event_table)) nrow(x$evterm$event_table) else if (!is.null(dm)) nrow(dm) else NA_integer_
+  cond_text <- tryCatch(
+    paste(conditions(x), collapse = ", "),
+    error = function(e) if (!is.null(dm)) paste(colnames(dm), collapse = ", ") else "<unavailable>"
+  )
+  term_types <- if (!is.null(x$evterm$events)) {
+    paste(purrr::map_chr(x$evterm$events, ~ class(.)[[1]]), collapse = ", ")
+  } else {
+    class(x$evterm)[[1]]
+  }
   cat("fmri_term: ", class(x)[[1]], "\n")
   cat("  Term Name: ", x$varname, "\n")
-  cat("  Formula:  ", as.character(formula(x$evterm)), "\n")
-  cat("  Num Events: ", nrow(x$evterm$event_table), "\n")
-  cat("  Num Rows: ", nrow(design_matrix(x)), "\n")
-  cat("  Num Columns: ", ncol(design_matrix(x)), "\n")
-  cat("  Conditions: ", conditions(x), "\n")
-  cat("  Term Types: ", paste(purrr::map_chr(x$evterm$events, ~ class(.)[[1]])), "\n")
+  cat("  Formula:  ", formula_text, "\n")
+  cat("  Num Events: ", n_events, "\n")
+  cat("  Num Rows: ", if (!is.null(dm)) nrow(dm) else NA_integer_, "\n")
+  cat("  Num Columns: ", if (!is.null(dm)) ncol(dm) else NA_integer_, "\n")
+  cat("  Conditions: ", cond_text, "\n")
+  cat("  Term Types: ", term_types, "\n")
+  invisible(x)
 }
 
 

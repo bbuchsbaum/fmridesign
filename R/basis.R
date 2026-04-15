@@ -13,6 +13,10 @@ dctbasis <- function(n, p=n, const=FALSE) {
   ret
 }
 
+.basis_arg_label <- function(expr) {
+  deparse1(expr)
+}
+
 
 #' sub_basis
 #'
@@ -125,7 +129,7 @@ Ident <- function(...) {
 #' @export 
 Poly <- function(x, degree) {
   mc <- match.call()
-  argname <- as.character(mc[["x"]])
+  argname <- .basis_arg_label(mc[["x"]])
   pres <- poly(x,degree)
   n <- paste0("poly_", argname)
   ret <- list(x=x,y=pres,fun="poly",argname=argname, 
@@ -182,6 +186,7 @@ Poly <- function(x, degree) {
 #' @export 
 Standardized <- function(x) {
   mc <- match.call()
+  argname <- .basis_arg_label(mc[["x"]])
   
   # Remove NAs for computing mean and sd
   x_clean <- x[!is.na(x)]
@@ -193,11 +198,11 @@ Standardized <- function(x) {
   standardized <- (x - x_mean) / x_sd
   standardized[is.na(standardized)] <- 0
   
-  n <- paste0("std", "_", as.character(mc[["x"]]))
+  n <- paste0("std", "_", argname)
   ret <- list(x=x, y=matrix(standardized, ncol=1, dimnames=list(NULL, n)),
               mean=x_mean, sd=x_sd,
               fun="standardized", 
-              argname=as.character(mc[["x"]]), 
+              argname=argname, 
               name=n)
   class(ret) <- c("Standardized", "ParametricBasis")
   ret
@@ -256,7 +261,7 @@ columns.Standardized <- function(x, ...) {
 #' bs_obj$name
 BSpline <- function(x, degree) {
   mc <- match.call()
-  argname <- as.character(mc[["x"]])[1]
+  argname <- .basis_arg_label(mc[["x"]])
   pres <- bs(x, degree = degree)
   n <- paste0("bs_", argname)
   ret <- list(x=x, y=pres, fun="bs", argname=argname, 
@@ -397,7 +402,7 @@ nbasis.Poly <- function(x,...) {
 #' @export
 Scale <- function(x) {
   mc <- match.call()
-  varname <- as.character(mc[["x"]])
+  varname <- .basis_arg_label(mc[["x"]])
   mu <- mean(x, na.rm = TRUE)
   sd_ <- stats::sd(x, na.rm = TRUE)
   if (is.na(sd_) || sd_ == 0) sd_ <- 1e-6 # Add guard for sd_ == 0 or NA
@@ -474,8 +479,8 @@ columns.Scale <- function(x, ...) {
 #' @export
 ScaleWithin <- function(x, g) {
   mc <- match.call()
-  varname <- as.character(mc[["x"]])
-  grpname <- as.character(mc[["g"]])
+  varname <- .basis_arg_label(mc[["x"]])
+  grpname <- .basis_arg_label(mc[["g"]])
   stopifnot(length(x) == length(g))
   g <- as.factor(g)
   
@@ -564,7 +569,7 @@ columns.ScaleWithin <- function(x, ...) {
 #' @export
 RobustScale <- function(x) {
   mc <- match.call()
-  varname <- as.character(mc[["x"]])
+  varname <- .basis_arg_label(mc[["x"]])
   med <- stats::median(x, na.rm = TRUE)
   mad_ <- stats::mad(x, na.rm = TRUE)  # Default constant=1.4826
   if (is.na(mad_) || mad_ == 0) mad_ <- 1e-6 # Handle zero MAD
