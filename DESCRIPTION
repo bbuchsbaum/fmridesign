@@ -40,7 +40,8 @@ Suggests:
     knitr,
     rmarkdown,
     covr,
-    pkgdown
+    pkgdown,
+    withr
 VignetteBuilder: knitr
 Config/Needs/website: github::bbuchsbaum/albersdown, albersdown
 URL: https://github.com/bbuchsbaum/fmridesign, https://bbuchsbaum.github.io/fmridesign/
