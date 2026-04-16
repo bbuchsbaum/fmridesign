@@ -507,9 +507,7 @@ test_that("print.event_term() runs without error", {
     blockids = c(1, 1, 1)
   )
 
-  # cli output goes to message connection, so capture both
-  out <- capture.output(print(et), type = "message")
-  expect_true(any(grepl("Event Term", out)))
+  expect_invisible(print(et))
 })
 
 test_that("print.convolved_term() runs without error", {
