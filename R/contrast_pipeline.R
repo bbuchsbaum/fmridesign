@@ -30,13 +30,8 @@
 #' @noRd
 .expand_and_filter_basis <- function(weights_out, term, contrast_name,
                                      basis_spec = NULL, basis_weights = NULL) {
-  hrfspec <- attr(term, "hrfspec")
-  nb_try <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
-    try(fmrihrf::nbasis(hrfspec$hrf), silent = TRUE)
-  } else NA
-  multi_basis <- !inherits(nb_try, "try-error") && is.numeric(nb_try) && nb_try > 1L
-
-  if (!multi_basis || nrow(weights_out) == 0L) {
+  nb <- .detect_nbasis(term)
+  if (!nb$expand_basis || nrow(weights_out) == 0L) {
     return(list(weights = weights_out, condnames = rownames(weights_out)))
   }
 

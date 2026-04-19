@@ -45,118 +45,24 @@
 design_colmap.event_model <- function(x, ...) {
   dm <- design_matrix(x)
   n_cols <- ncol(dm)
-  if (is.null(n_cols) || n_cols == 0L) {
-    return(.empty_col_metadata())
-  }
+  if (is.null(n_cols) || n_cols == 0L) return(.empty_col_metadata())
 
-  # Fast path: use metadata produced during construction.
   cm <- attr(dm, "col_metadata")
-  if (!is.null(cm) && nrow(cm) == n_cols) {
-    out <- cm
+  if (is.null(cm) || nrow(cm) != n_cols) {
+    warning("design_colmap.event_model: design matrix missing 'col_metadata' attribute ",
+            "or metadata doesn't match column count. Returning schema-only metadata; ",
+            "was this design matrix built outside event_model()?", call. = FALSE)
+    out <- .empty_col_metadata()[rep(NA_integer_, n_cols), , drop = FALSE]
+    out$col <- seq_len(n_cols)
     out$name <- colnames(dm)
-    out$pretty_name <- .pretty_names_from_metadata(out)
+    out$model_source <- "event"
+    out$role <- "task"
+    out$pretty_name <- out$name
     return(out)
   }
 
-  # Fallback: legacy reconstruction path (kept for backward compat with
-  # design matrices not produced via the standard pipeline).
-  cn <- colnames(dm)
-  terms_list <- event_terms(x)
-  col_inds <- attr(dm, "col_indices")
-
-  # Map each column to its term index and term tag
-  term_index_by_col <- rep(NA_integer_, n_cols)
-  term_tag_by_col   <- rep(NA_character_, n_cols)
-  if (is.list(col_inds) && length(col_inds) > 0) {
-    for (i in seq_along(col_inds)) {
-      idx <- col_inds[[i]]
-      if (length(idx)) {
-        term_index_by_col[idx] <- i
-        term_tag_by_col[idx]   <- names(col_inds)[i]
-      }
-    }
-  }
-
-  # Per-term basis info (from HRF object when available)
-  per_term_basis_name  <- rep(NA_character_, length(terms_list))
-  per_term_basis_total <- rep(NA_integer_,  length(terms_list))
-  per_term_mod_type    <- rep(NA_character_, length(terms_list))
-  per_term_mod_id      <- rep(NA_character_, length(terms_list))
-
-  # Pull known parametric prefixes from the registry rather than hardcoding,
-  # so that user-registered bases are detected automatically.
-  known_param_prefix <- .parametric_prefixes()
-
-  for (i in seq_along(terms_list)) {
-    ti <- terms_list[[i]]
-    # Default modulation classification from term tag
-    ttag <- names(terms_list)[i]
-    if (!is.null(ttag) && isTRUE(any(startsWith(ttag, known_param_prefix)))) {
-      per_term_mod_type[i] <- "parametric"
-      # Strip the first prefix and underscore to recover variable identifier
-      per_term_mod_id[i] <- sub("^[^_]+_", "", ttag)
-    } else if (inherits(ti, "covariate_convolved_term")) {
-      per_term_mod_type[i] <- "covariate"
-      per_term_mod_id[i]   <- ti$varname %||% NA_character_
-    } else {
-      per_term_mod_type[i] <- "amplitude"
-      per_term_mod_id[i]   <- NA_character_
-    }
-
-    if (inherits(ti, "covariate_convolved_term")) {
-      per_term_basis_name[i]  <- NA_character_
-      per_term_basis_total[i] <- NA_integer_
-    } else {
-      hrfspec <- attr(ti, "hrfspec")
-      if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
-        per_term_basis_total[i] <- tryCatch(fmrihrf::nbasis(hrfspec$hrf), error = function(...) NA_integer_)
-        # Use the primary class name as a compact basis identifier
-        bname <- class(hrfspec$hrf)
-        per_term_basis_name[i] <- if (length(bname)) as.character(bname[[1]]) else NA_character_
-      } else {
-        per_term_basis_name[i]  <- NA_character_
-        per_term_basis_total[i] <- NA_integer_
-      }
-    }
-  }
-
-  # Parse basis_ix and condition per column using term tag knowledge
-  basis_ix <- rep(NA_integer_, n_cols)
-  base_no_basis <- sub("_b([0-9]+)$", "", cn)
-  has_basis <- grepl("_b([0-9]+)$", cn)
-  if (any(has_basis)) {
-    basis_ix[has_basis] <- suppressWarnings(as.integer(sub(".*_b([0-9]+)$", "\\1", cn[has_basis])))
-  }
-
-  condition <- base_no_basis
-  # Remove `term_tag_` prefix when present to recover condition tag
-  to_strip <- !is.na(term_tag_by_col) & startsWith(base_no_basis, paste0(term_tag_by_col, "_"))
-  condition[to_strip] <- substring(base_no_basis[to_strip], nchar(term_tag_by_col[to_strip]) + 2L)
-
-  basis_label <- vapply(seq_len(n_cols), function(i) {
-    bi <- term_index_by_col[i]
-    if (is.na(bi)) return(NA_character_)
-    .basis_label(per_term_basis_name[bi], basis_ix[i])
-  }, character(1))
-
-  out <- tibble::tibble(
-    col = seq_len(n_cols),
-    name = cn,
-    term_tag = term_tag_by_col,
-    term_index = term_index_by_col,
-    condition = condition,
-    run = as.integer(NA),
-    role = rep("task", n_cols),
-    model_source = rep("event", n_cols),
-    basis_name = per_term_basis_name[term_index_by_col],
-    basis_ix = basis_ix,
-    basis_total = per_term_basis_total[term_index_by_col],
-    basis_label = basis_label,
-    is_block_diagonal = rep(FALSE, n_cols),
-    modulation_type = per_term_mod_type[term_index_by_col],
-    modulation_id   = per_term_mod_id[term_index_by_col]
-  )
-
+  out <- cm
+  out$name <- colnames(dm)
   out$pretty_name <- .pretty_names_from_metadata(out)
   out
 }

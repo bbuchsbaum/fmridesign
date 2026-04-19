@@ -1136,9 +1136,14 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   # Handle case where convolution results in an empty matrix
   if (length(cmat_list) == 0) {
       warning(sprintf("Convolution resulted in an empty matrix for term '%s\'.\n  Returning tibble with correct names but 0 rows.", term_tag), call.=FALSE)
-      # Return empty tibble with correct names and 0 rows
-      return(tibble::as_tibble(matrix(numeric(0), nrow=0, ncol=length(cn)), 
-                               .name_repair="minimal", .names_minimal = cn))
+      out_empty <- tibble::as_tibble(matrix(numeric(0), nrow=0, ncol=length(cn)),
+                                     .name_repair="minimal", .names_minimal = cn)
+      # Still attach proper metadata so the design_colmap fast path works.
+      attr(out_empty, "col_metadata") <- .term_col_metadata(
+        term = x, hrf = hrf, base_cnames = base_cnames, nb = nb,
+        term_tag = term_tag, colnames_final = cn
+      )
+      return(out_empty)
   }
   cmat <- do.call(rbind, cmat_list)
 
