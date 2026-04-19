@@ -46,14 +46,20 @@ design_colmap.event_model <- function(x, ...) {
   dm <- design_matrix(x)
   n_cols <- ncol(dm)
   if (is.null(n_cols) || n_cols == 0L) {
-    return(tibble::tibble(
-      col = integer(0), name = character(0), term_tag = character(0), term_index = integer(0),
-      condition = character(0), run = integer(0), role = character(0), model_source = character(0),
-      basis_name = character(0), basis_ix = integer(0), basis_total = integer(0), basis_label = character(0),
-      is_block_diagonal = logical(0), modulation_type = character(0), modulation_id = character(0)
-    ))
+    return(.empty_col_metadata())
   }
 
+  # Fast path: use metadata produced during construction.
+  cm <- attr(dm, "col_metadata")
+  if (!is.null(cm) && nrow(cm) == n_cols) {
+    out <- cm
+    out$name <- colnames(dm)
+    out$pretty_name <- .pretty_names_from_metadata(out)
+    return(out)
+  }
+
+  # Fallback: legacy reconstruction path (kept for backward compat with
+  # design matrices not produced via the standard pipeline).
   cn <- colnames(dm)
   terms_list <- event_terms(x)
   col_inds <- attr(dm, "col_indices")
@@ -77,7 +83,9 @@ design_colmap.event_model <- function(x, ...) {
   per_term_mod_type    <- rep(NA_character_, length(terms_list))
   per_term_mod_id      <- rep(NA_character_, length(terms_list))
 
-  known_param_prefix <- c("poly_", "bs_", "z_", "std_", "robz_")
+  # Pull known parametric prefixes from the registry rather than hardcoding,
+  # so that user-registered bases are detected automatically.
+  known_param_prefix <- .parametric_prefixes()
 
   for (i in seq_along(terms_list)) {
     ti <- terms_list[[i]]
@@ -125,24 +133,11 @@ design_colmap.event_model <- function(x, ...) {
   to_strip <- !is.na(term_tag_by_col) & startsWith(base_no_basis, paste0(term_tag_by_col, "_"))
   condition[to_strip] <- substring(base_no_basis[to_strip], nchar(term_tag_by_col[to_strip]) + 2L)
 
-  # basis_label heuristics for common HRFs
-  basis_label <- rep(NA_character_, n_cols)
-  for (i in seq_len(n_cols)) {
+  basis_label <- vapply(seq_len(n_cols), function(i) {
     bi <- term_index_by_col[i]
-    if (is.na(bi)) next
-    bname <- per_term_basis_name[bi]
-    bix   <- basis_ix[i]
-    if (is.na(bix)) next
-    if (!is.na(bname) && grepl("SPMG3", bname, fixed = TRUE)) {
-      basis_label[i] <- c("canonical", "derivative", "dispersion")[pmin(pmax(bix, 1L), 3L)]
-    } else if (!is.na(bname) && grepl("SPMG2", bname, fixed = TRUE)) {
-      basis_label[i] <- c("canonical", "derivative")[pmin(pmax(bix, 1L), 2L)]
-    } else if (!is.na(bname) && grepl("FIR", bname, fixed = TRUE)) {
-      basis_label[i] <- sprintf("lag_%02d", bix - 1L)
-    } else {
-      basis_label[i] <- sprintf("component_%02d", bix)
-    }
-  }
+    if (is.na(bi)) return(NA_character_)
+    .basis_label(per_term_basis_name[bi], basis_ix[i])
+  }, character(1))
 
   out <- tibble::tibble(
     col = seq_len(n_cols),
@@ -162,22 +157,41 @@ design_colmap.event_model <- function(x, ...) {
     modulation_id   = per_term_mod_id[term_index_by_col]
   )
 
-  # Derive a human-friendly display label without duplicated tags for common cases
-  pretty_name <- out$name
-  is_param <- out$modulation_type == "parametric"
-  # Single-basis parametric: just use the modulator id (e.g., "RT")
-  mask_single <- is_param & (is.na(out$basis_ix) | !is.finite(out$basis_ix))
-  pretty_name[mask_single & !is.na(out$modulation_id)] <- out$modulation_id[mask_single & !is.na(out$modulation_id)]
-  # Multi-basis parametric: include basis label when available, otherwise _bXX
-  mask_multi <- is_param & is.finite(out$basis_ix)
-  pretty_name[mask_multi] <- ifelse(
-    !is.na(out$basis_label[mask_multi]) & nzchar(out$basis_label[mask_multi]),
-    paste0(out$modulation_id[mask_multi], "_", out$basis_label[mask_multi]),
-    paste0(out$modulation_id[mask_multi], "_b", sprintf("%02d", out$basis_ix[mask_multi]))
-  )
-
-  out$pretty_name <- pretty_name
+  out$pretty_name <- .pretty_names_from_metadata(out)
   out
+}
+
+#' Derive concise display names from a metadata tibble
+#'
+#' Single-basis parametric columns become the bare modulator id (e.g., "RT");
+#' multi-basis parametric columns get appended with the basis label (or
+#' `_b##`). Other columns are returned unchanged.
+#'
+#' @param meta A metadata tibble with at least
+#'   `name`, `modulation_type`, `modulation_id`, `basis_ix`, `basis_label`.
+#' @return Character vector of pretty names aligned with `meta$name`.
+#' @keywords internal
+#' @noRd
+.pretty_names_from_metadata <- function(meta) {
+  pretty_name <- meta$name
+  is_param <- !is.na(meta$modulation_type) & meta$modulation_type == "parametric"
+  if (!any(is_param)) return(pretty_name)
+  has_id <- !is.na(meta$modulation_id)
+
+  mask_single <- is_param & has_id & (is.na(meta$basis_ix) | !is.finite(meta$basis_ix))
+  pretty_name[mask_single] <- meta$modulation_id[mask_single]
+
+  mask_multi <- is_param & has_id & is.finite(meta$basis_ix)
+  total_for_pad <- suppressWarnings(max(meta$basis_total[mask_multi], 1L, na.rm = TRUE))
+  fallback <- paste0(meta$modulation_id[mask_multi],
+                     basis_suffix(meta$basis_ix[mask_multi], total_for_pad))
+  has_label <- !is.na(meta$basis_label[mask_multi]) & nzchar(meta$basis_label[mask_multi])
+  pretty_name[mask_multi] <- ifelse(
+    has_label,
+    paste0(meta$modulation_id[mask_multi], "_", meta$basis_label[mask_multi]),
+    fallback
+  )
+  pretty_name
 }
 
 #' @export
@@ -185,12 +199,7 @@ design_colmap.baseline_model <- function(x, ...) {
   dm <- design_matrix(x)
   n_cols <- ncol(dm)
   if (is.null(n_cols) || n_cols == 0L) {
-    return(tibble::tibble(
-      col = integer(0), name = character(0), term_tag = character(0), term_index = integer(0),
-      condition = character(0), run = integer(0), role = character(0), model_source = character(0),
-      basis_name = character(0), basis_ix = integer(0), basis_total = integer(0), basis_label = character(0),
-      is_block_diagonal = logical(0), modulation_type = character(0), modulation_id = character(0)
-    ))
+    return(.empty_col_metadata())
   }
 
   cn <- colnames(dm)
