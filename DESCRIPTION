@@ -48,15 +48,17 @@ URL: https://github.com/bbuchsbaum/fmridesign, https://bbuchsbaum.github.io/fmri
 BugReports: https://github.com/bbuchsbaum/fmridesign/issues
 RoxygenNote: 7.3.3
 Roxygen: list(markdown = TRUE)
-Collate: 
+Collate:
     'baseline_model.R'
     'basis.R'
     'condition_basis_list.R'
     'contrast.R'
+    'contrast_pipeline.R'
     'covariate.R'
     'design_colmap.R'
     'design_generics.R'
     'design_map.R'
+    'design_metadata.R'
     'utils-internal.R'
     'event-classes.R'
     'event_model_helpers.R'
@@ -72,3 +74,4 @@ Collate:
     'residualize.R'
     'sampling_frame.R'
     'validate.R'
+    'zzz.R'

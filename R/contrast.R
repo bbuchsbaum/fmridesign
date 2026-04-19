@@ -198,7 +198,7 @@ translate_legacy_pattern <- function(pattern) {
 
     for (base_name in base_names) {
       # Find all rows corresponding to this base condition with selected bases
-      pattern <- paste0("^", gsub("([.+*?^$(){}|\\[\\]])", "\\\\\\1", base_name), "_b\\d+$")
+      pattern <- paste0("^", .regex_escape(base_name), "_b\\d+$")
       matching_rows <- grep(pattern, rownames(weights_mat), perl = TRUE)
       matching_filtered <- rownames(weights_mat)[matching_rows] %in% filtered_condnames
 
@@ -1161,52 +1161,11 @@ contrast_weights.oneway_contrast_spec <- function(x, term,...) {
       }
   }
 
-  # --- Basis Expansion and Filtering ---
-  # Check if term has multi-basis HRF
-  nbasis <- 1L
-  expand_basis <- FALSE
-  hrfspec <- attr(term, "hrfspec")
-  if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
-    hrf_fun <- hrfspec$hrf
-    if (!inherits(try(fmrihrf::nbasis(hrf_fun), silent=TRUE), "try-error") &&
-        fmrihrf::nbasis(hrf_fun) > 1) {
-      nbasis <- fmrihrf::nbasis(hrf_fun)
-      expand_basis <- TRUE
-    }
-  }
-
-  # If basis expansion is needed, expand the weights matrix
-  if (expand_basis && nrow(weights_out) > 0) {
-    # Get base and expanded condition names
-    base_condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = FALSE), silent = TRUE)
-    expanded_condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = TRUE), silent = TRUE)
-
-    if (!inherits(base_condnames, "try-error") && !inherits(expanded_condnames, "try-error") &&
-        length(expanded_condnames) > 0) {
-      # Create expanded weights matrix
-      expanded_weights <- matrix(0, nrow = length(expanded_condnames), ncol = ncol(weights_out))
-      rownames(expanded_weights) <- expanded_condnames
-      colnames(expanded_weights) <- colnames(weights_out)
-
-      # For each base cell name, find all corresponding expanded names and replicate weights
-      for (i in seq_len(nrow(weights_out))) {
-        base_name <- rownames(weights_out)[i]
-        # Match using exact base name + optional basis suffix
-        pattern <- paste0("^", gsub("([.+*?^$(){}|\\[\\]])", "\\\\\\1", base_name), "(_b\\d+)?$")
-        matching_indices <- grep(pattern, expanded_condnames, perl = TRUE)
-        if (length(matching_indices) > 0) {
-          # Replicate the weights across all basis functions for this cell
-          expanded_weights[matching_indices, ] <- matrix(rep(weights_out[i, ], length(matching_indices)),
-                                                          nrow = length(matching_indices), byrow = TRUE)
-        }
-      }
-
-      # Apply basis filtering using unified helper
-      filtered <- .apply_basis_filter(expanded_weights, term, x$basis, x$name, expanded_condnames, x$basis_weights)
-      weights_out <- filtered$weights
-      cell_names_out <- filtered$condnames
-    }
-  }
+  expanded <- .expand_and_filter_basis(weights_out, term, x$name,
+                                        basis_spec    = x$basis,
+                                        basis_weights = x$basis_weights)
+  weights_out    <- expanded$weights
+  cell_names_out <- expanded$condnames
 
   # Return structure focused on cell-based weights
   ret <- list(
@@ -1417,48 +1376,11 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
       }
   }
 
-  # --- Basis Expansion and Filtering ---
-  # Check if term has multi-basis HRF
-  nbasis <- 1L
-  expand_basis <- FALSE
-  hrfspec <- attr(term, "hrfspec")
-  if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
-    hrf_fun <- hrfspec$hrf
-    if (!inherits(try(fmrihrf::nbasis(hrf_fun), silent=TRUE), "try-error") &&
-        fmrihrf::nbasis(hrf_fun) > 1) {
-      nbasis <- fmrihrf::nbasis(hrf_fun)
-      expand_basis <- TRUE
-    }
-  }
-
-  # If basis expansion is needed, expand the weights matrix
-  if (expand_basis && nrow(weights_out) > 0) {
-    # Get expanded condition names
-    expanded_condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = TRUE), silent = TRUE)
-    if (!inherits(expanded_condnames, "try-error") && length(expanded_condnames) > 0) {
-      # Create expanded weights matrix
-      expanded_weights <- matrix(0, nrow = length(expanded_condnames), ncol = ncol(weights_out))
-      rownames(expanded_weights) <- expanded_condnames
-      colnames(expanded_weights) <- colnames(weights_out)
-
-      # For each base condition name, find all corresponding expanded names and replicate weights
-      for (i in seq_len(nrow(weights_out))) {
-        base_name <- rownames(weights_out)[i]
-        pattern <- paste0("^", base_name, "(_b\\d+)?$")
-        matching_indices <- grep(pattern, expanded_condnames, perl = TRUE)
-        if (length(matching_indices) > 0) {
-          # Replicate the weights across all basis functions for this condition
-          expanded_weights[matching_indices, ] <- matrix(rep(weights_out[i, ], length(matching_indices)),
-                                                          nrow = length(matching_indices), byrow = TRUE)
-        }
-      }
-
-      # Apply basis filtering using unified helper
-      filtered <- .apply_basis_filter(expanded_weights, term, x$basis, x$name, expanded_condnames, x$basis_weights)
-      weights_out <- filtered$weights
-      all_condnames <- filtered$condnames
-    }
-  }
+  expanded <- .expand_and_filter_basis(weights_out, term, x$name,
+                                        basis_spec    = x$basis,
+                                        basis_weights = x$basis_weights)
+  weights_out   <- expanded$weights
+  all_condnames <- expanded$condnames
 
   ret <- list(
     term = term,
@@ -1490,21 +1412,10 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
 contrast_weights.pair_contrast_spec <- function(x, term,...) {
   # Get cells (only categorical combinations) for evaluating formulas A & B
   term_cells <- cells(term)
-  
-  # Determine if basis expansion is needed
-  expand_basis <- FALSE
-  nbasis <- 1L
-  hrfspec <- attr(term, "hrfspec")
-  if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
-    hrf_fun <- hrfspec$hrf
-    # Check nbasis using the nbasis generic
-    if (!inherits(try(fmrihrf::nbasis(hrf_fun), silent=TRUE), "try-error") && fmrihrf::nbasis(hrf_fun) > 1) {
-       nbasis <- fmrihrf::nbasis(hrf_fun)
-       expand_basis <- TRUE
-    }
-  }
-  
-  # Get base condition names (pre-expansion) - these are the targets for weights
+
+  # Get base condition names (pre-expansion) - these are the targets for weights.
+  # Basis expansion is handled by the unified .expand_and_filter_basis() helper
+  # that runs after we build the base mask.
   base_condnames_all <- try(conditions(term, drop.empty=FALSE, expand_basis=FALSE), silent=TRUE)
   if (inherits(base_condnames_all, "try-error") || length(base_condnames_all) == 0) {
       warning(paste("Contrast '", x$name, "': Failed to get base condition names for term '", term$varname, "'. Skipping."), call. = FALSE)
@@ -1573,54 +1484,16 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
   # Calculate base weights relative to the full set of base conditions
   base_weights_named <- .calculate_mask_weights(base_condnames_all, mask_A_full, mask_B_full)
 
-  # --- Basis Expansion ---
-  if (expand_basis) {
-     # Get expanded condition names
-     expanded_condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = TRUE), silent = TRUE)
-     if (inherits(expanded_condnames, "try-error") || length(expanded_condnames) == 0) {
-         warning(paste("Contrast '", x$name, "': Failed to get expanded condition names for term '", term$varname, "'. Skipping expansion."), call. = FALSE)
-         weights_out <- matrix(base_weights_named, ncol = 1)
-         rownames(weights_out) <- names(base_weights_named)
-         colnames(weights_out) <- x$name
-         cell_names_out <- names(base_weights_named)
-     } else if (length(expanded_condnames) != length(base_weights_named) * nbasis) {
-          warning(paste("Contrast '", x$name, "': Mismatch between expanded names (", length(expanded_condnames),
-                        ") and expected from base weights * nbasis (", length(base_weights_named) * nbasis, "). Skipping expansion."), call. = FALSE)
-          weights_out <- matrix(base_weights_named, ncol = 1)
-          rownames(weights_out) <- names(base_weights_named)
-          colnames(weights_out) <- x$name
-          cell_names_out <- names(base_weights_named)
-     } else {
-         # --- Expand base weights to all basis functions ---
-         weights_out <- matrix(0, nrow = length(expanded_condnames), ncol = 1)
-         rownames(weights_out) <- expanded_condnames
-         colnames(weights_out) <- x$name
-         # Find expanded names corresponding to non-zero base weights
-         base_names_with_weight <- names(base_weights_named)[base_weights_named != 0]
+  # Package as base mask matrix and delegate basis expansion / filtering.
+  weights_base <- matrix(base_weights_named, ncol = 1)
+  rownames(weights_base) <- names(base_weights_named)
+  colnames(weights_base) <- x$name
 
-         for(i in seq_along(base_names_with_weight)){
-             base_name <- base_names_with_weight[i]
-             weight_val <- base_weights_named[base_name]
-             # Find all expanded conditions that start with this base name
-             pattern <- paste0("^", base_name, "(_b\\d+)?$")
-             matching_expanded_indices <- grep(pattern, expanded_condnames, perl = TRUE)
-            if(length(matching_expanded_indices) > 0){
-                 weights_out[matching_expanded_indices, 1] <- weight_val
-             }
-         }
-
-         # --- Apply basis filtering using unified helper ---
-         filtered <- .apply_basis_filter(weights_out, term, x$basis, x$name, expanded_condnames, x$basis_weights)
-         weights_out <- filtered$weights
-         cell_names_out <- filtered$condnames
-     }
-  } else {
-     # No expansion needed
-     weights_out <- matrix(base_weights_named, ncol = 1)
-     rownames(weights_out) <- names(base_weights_named)
-     colnames(weights_out) <- x$name
-     cell_names_out <- names(base_weights_named)
-  }
+  expanded <- .expand_and_filter_basis(weights_base, term, x$name,
+                                        basis_spec    = x$basis,
+                                        basis_weights = x$basis_weights)
+  weights_out    <- expanded$weights
+  cell_names_out <- expanded$condnames
 
   # Return structure focused on cell-based weights
   ret <- list(

@@ -1242,12 +1242,12 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   if (length(cn) == ncol(cmat)) {
     colnames(cmat) <- cn
   } else {
-      warning(sprintf("Final column name count (%d) mismatch with convolved matrix columns (%d) for term '%s'. Using generic names.", 
+      warning(sprintf("Final column name count (%d) mismatch with convolved matrix columns (%d) for term '%s'. Using generic names.",
                       length(cn), ncol(cmat), term_tag), call. = FALSE)
       colnames(cmat) <- make.names(paste0("col_", seq_len(ncol(cmat))), unique=TRUE)
   }
-  
-  # --- Optional Debug Validation --- 
+
+  # --- Optional Debug Validation ---
   if (getOption("fmrireg.debug", FALSE)) {
      fn <- get0("is_valid_heading", mode = "function")
      if (!is.null(fn)){
@@ -1256,9 +1256,30 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
         warning("fmrireg.debug=TRUE: is_valid_heading helper not found for validation.")
      }
   }
-  
-  # --- Return Result --- 
-  suppressMessages(tibble::as_tibble(cmat, .name_repair = "minimal"))
+
+  base_meta <- .term_col_metadata(
+    term            = x,
+    hrf             = hrf,
+    base_cnames     = base_cnames,
+    nb              = nb,
+    term_tag        = term_tag,
+    colnames_final  = cn[seq_len(min(length(cn), length(base_cnames) * nb))]
+  )
+  if (isTRUE(attr(x, "add_sum")) && ncol(cmat) > nrow(base_meta)) {
+    extra_names <- setdiff(colnames(cmat), base_meta$name)
+    extra <- .term_col_metadata(
+      term           = x, hrf = hrf,
+      base_cnames    = "mean", nb = 1L,
+      term_tag       = term_tag,
+      colnames_final = extra_names
+    )
+    extra$basis_label <- "mean"
+    base_meta <- dplyr::bind_rows(base_meta, extra)
+  }
+
+  out <- suppressMessages(tibble::as_tibble(cmat, .name_repair = "minimal"))
+  attr(out, "col_metadata") <- base_meta
+  out
 }
 
 ## ============================================================================

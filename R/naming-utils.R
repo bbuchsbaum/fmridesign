@@ -110,20 +110,14 @@ make_unique_tags <- function(tags) {
 #' @keywords internal
 #' @noRd
 make_term_tag <- function(hrfspec, existing_tags = character()) {
-  # List of basis function names that inherit from ParametricBasis
-  # This list is derived from all classes in basis.R that extend ParametricBasis
-  parametric_basis_functions <- c("Poly", "BSpline", "Scale", "Standardized", 
-                                  "ScaleWithin", "RobustScale")
-
   if (!is.null(hrfspec$id)) {
     tag_base <- sanitize(hrfspec$id, allow_dot = FALSE)
   } else if (!is.null(hrfspec$prefix)) {
     # If no explicit id but prefix is provided, use prefix as the term tag
     tag_base <- sanitize(hrfspec$prefix, allow_dot = FALSE)
   } else {
-    is_ident_only <- FALSE
-    is_parametric_basis <- FALSE
     parsed_basis_tag_base <- NULL
+    basis_entry <- NULL
 
     if (length(hrfspec$vars) == 1) {
        expr <- rlang::quo_get_expr(hrfspec$vars[[1]])
@@ -132,41 +126,22 @@ make_term_tag <- function(hrfspec, existing_tags = character()) {
        if (rlang::is_call(target_expr)) {
           call_nm <- rlang::call_name(target_expr)
           if (!is.null(call_nm)) {
-            if (call_nm == "Ident") {
-              is_ident_only <- TRUE
-            } else if (call_nm %in% parametric_basis_functions) {
-              is_parametric_basis <- TRUE
-              # Attempt to parse: BasisFunction(VarName, ...)
-              if (length(rlang::call_args(target_expr)) >= 1) {
-                var_expr <- rlang::call_args(target_expr)[[1]]
-                var_name_label <- rlang::as_label(var_expr)
-                
-                # Generate appropriate prefix based on the basis type
-                # This mirrors the naming convention used in each basis class
-                basis_prefix <- switch(call_nm,
-                  "Poly" = "poly",
-                  "BSpline" = "bs", 
-                  "Scale" = "z",
-                  "Standardized" = "std",
-                  "ScaleWithin" = "z",  # ScaleWithin uses z_ prefix like Scale
-                  "RobustScale" = "robz",
-                  tolower(call_nm)  # fallback to lowercase
-                )
-                
-                sanitized_var_name <- sanitize(var_name_label, allow_dot = FALSE)
-                parsed_basis_tag_base <- paste(basis_prefix, sanitized_var_name, sep = "_")
-              } else {
-                # Fallback if parsing fails
-                is_parametric_basis <- FALSE # Treat as generic
+            basis_entry <- get_basis_entry(call_nm)
+            if (!is.null(basis_entry) && length(rlang::call_args(target_expr)) >= 1L) {
+              if (is.null(basis_entry$prefix)) {
+                # Identity-style basis (e.g. Ident): no term tag prefix, variables become columns
+                return(NULL)
               }
+              var_expr <- rlang::call_args(target_expr)[[1]]
+              var_name_label <- rlang::as_label(var_expr)
+              sanitized_var_name <- sanitize(var_name_label, allow_dot = FALSE)
+              parsed_basis_tag_base <- paste(basis_entry$prefix, sanitized_var_name, sep = "_")
             }
           }
        }
     }
-    
-    if (is_ident_only) {
-       return(NULL) 
-    } else if (is_parametric_basis && !is.null(parsed_basis_tag_base)) {
+
+    if (!is.null(parsed_basis_tag_base)) {
         tag_base <- parsed_basis_tag_base
     } else {
        # Default: build tag from variable names/labels in original quosures

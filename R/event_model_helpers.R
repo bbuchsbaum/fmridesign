@@ -278,23 +278,24 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
           if (is.null(colnames(dm))) {
               colnames(dm) <- paste0("cov_", seq_len(ncol(dm)))
           }
+          attr(dm, "col_metadata") <- .covariate_term_col_metadata(term)
           return(dm)
       }
-      
+
       # Check if this term requires external processing (e.g., AFNI)
       if (requires_external_processing(term)) {
           # External terms are handled by external tools, not R's convolution
           # Return NULL to indicate this term should not contribute columns to the design matrix
           return(NULL)
       }
-      
+
       # For regular event_term objects, check for hrfspec and convolve
       hrfspec <- attr(term, "hrfspec")
       if (is.null(hrfspec) || is.null(hrfspec$hrf)) {
-          stop(sprintf("Cannot convolve term '%s': missing attached hrfspec or HRF object within spec.", 
+          stop(sprintf("Cannot convolve term '%s': missing attached hrfspec or HRF object within spec.",
                        attr(term, "term_tag") %||% term$varname %||% "Unnamed"), call. = FALSE)
       }
-      
+
       # Regular convolution for event_term objects
       convolve.event_term(term, hrf = hrfspec$hrf, sampling_frame = sampling_frame,
                           precision = precision, drop.empty = TRUE,
@@ -387,7 +388,7 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
       warning("Column mismatch after combining term matrices. Check names/cbind.", call. = FALSE)
   }
   
-  # --- Attach Attributes --- 
+  # --- Attach Attributes ---
   # Attach term_spans: vector for formula interface, matrix for list interface
   interface_type <- attr(terms, "interface") %||% "formula"
   if (interface_type == "list") {
@@ -400,7 +401,23 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
   attr(dm, "col_indices") <- col_indices
   # Add flag indicating names are final according to new grammar
   attr(dm, "colnames_final") <- TRUE
-  
+
+  # Combine per-term metadata into design-wide metadata. Pass original term
+  # indices (into `terms`) so `term_index` matches `terms(x)` ordering rather
+  # than position among contributing (non-external) terms. If any term lacks
+  # metadata (e.g. external/empty), drop the attribute and let
+  # `design_colmap()` fall back to legacy parsing.
+  per_term_meta <- lapply(term_matrices_filtered, function(mat) attr(mat, "col_metadata"))
+  combined_meta <- .combine_col_metadata(
+    per_term_meta,
+    names(col_indices)[non_null_indices],
+    term_indices = non_null_indices
+  )
+  if (nrow(combined_meta) == ncol(dm)) {
+    combined_meta$name <- colnames(dm)
+    attr(dm, "col_metadata") <- combined_meta
+  }
+
   dm
 }
 
