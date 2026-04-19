@@ -339,36 +339,14 @@ formula.event_term <- function(x, ...) {
 #' @rdname cells
 #' @export
 cells.event_term <- function(x, drop.empty = TRUE, ...) {
-  ## ----------------------------------------------------------------
-  ## 0. fast cache ---------------------------------------------------
-  # Use fixed name as levels rarely change post-construction
-  cache_attr_name <- "..cells" 
-  if (!is.null(cached <- attr(x, cache_attr_name))) {
-    cnt <- attr(cached, "count")
-    # Need to handle potential NULL count if cache is invalid
-    if(is.null(cnt)) {
-        warning("Invalid cache detected for cells.event_term, recomputing.")
-    } else {
-        return(if (drop.empty) cached[cnt > 0, , drop = FALSE] else cached)
-    }
-  }
-
-  ## ----------------------------------------------------------------
-  ## 1. categorical events only -------------------------------------
-  # Use Filter and Negate for conciseness
   cats <- Filter(Negate(is_continuous), x$events)
 
   if (length(cats) == 0) {                  # no factors => one big cell
-    # Use a more descriptive name if needed, maybe based on varname
-    # Consistent with cells.event: use the (first/only) varname
     var_name_cont <- if (length(x$events) > 0) x$events[[1]]$varname else "all_events"
-    out <- tibble::tibble(!!var_name_cont := var_name_cont) # Use varname for column
+    out <- tibble::tibble(!!var_name_cont := var_name_cont)
     count_val <- length(x$onsets)
+    names(count_val) <- var_name_cont
     attr(out, "count") <- count_val
-    # Assign name to the count attribute
-    names(attr(out, "count")) <- var_name_cont 
-    
-    attr(x, cache_attr_name) <- out # Cache the result
     return(out)
   }
 
@@ -426,9 +404,7 @@ cells.event_term <- function(x, drop.empty = TRUE, ...) {
   } # Else count is likely integer(0) and doesn't need names
   # --- End adding names ---
 
-  attr(out, "count") <- count # Attach the now named count vector
-
-  attr(x, cache_attr_name) <- out # Cache the result (with named counts)
+  attr(out, "count") <- count
 
   # Filter based on drop.empty
   if (drop.empty) {
@@ -509,95 +485,47 @@ cells.convolved_term <- function(x, ...) {
 conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
                                   style = c("canonical", "display"), ...) {
   style <- match.arg(style)
-  
-  # --- Caching --- 
-  opts_key <- paste(drop.empty, expand_basis, style, sep="|")
-  cached_val <- attr(x, "..conds")
-  cached_opts <- attr(x, "..conds_opts")
-  
-  # --- RE-ENABLE CACHE --- 
-  if (!is.null(cached_val) && !is.null(cached_opts) && identical(cached_opts, opts_key)) {
-    return(cached_val)
+
+  hrfspec <- attr(x, "hrfspec")
+  nb <- if (expand_basis && !is.null(hrfspec) && !is.null(hrfspec$hrf)) {
+    fmrihrf::nbasis(hrfspec$hrf)
+  } else {
+    1L
   }
-  # message("--- conditions.event_term: Cache bypassed/missed, recalculating ---") # Keep commented out
-  # --- END RE-ENABLE ---
-  
-  # --- Shortcut for single continuous event with one column --- 
-  if (length(x$events) == 1 && is_continuous(x$events[[1]])) {
-    cols <- try(columns(x$events[[1]]), silent=TRUE)
-    if (!inherits(cols, "try-error") && length(cols) == 1) {
-        base_cond_tags <- cols 
-        if (expand_basis) {
-            hrfspec <- attr(x, "hrfspec")
-            nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
-            final_cond_tags <- add_basis(base_cond_tags, nb)
-        } else {
-            final_cond_tags <- base_cond_tags
-        }
-        attr(x, "..conds") <- final_cond_tags
-        attr(x, "..conds_opts") <- opts_key
-        return(final_cond_tags)
+
+  # Shortcut: a single continuous event whose `columns()` returns one name.
+  if (length(x$events) == 1L && is_continuous(x$events[[1]])) {
+    cols <- try(columns(x$events[[1]]), silent = TRUE)
+    if (!inherits(cols, "try-error") && length(cols) == 1L) {
+      return(if (expand_basis) add_basis(cols, nb) else cols)
     }
   }
-  
-  # --- Generate Tokens for Each Component --- 
+
   comp_tokens_list <- lapply(x$events, function(ev) {
-      if (is_categorical(ev)) {
-          levs <- levels(ev) 
-          # Handle case where factor might have no levels after subsetting? levels() should return character(0)
-          if (length(levs) == 0) return(character(0))
-          if (identical(style, "canonical")) {
-            level_token(ev$varname, levs)
-          } else {
-            as.character(levs)
-          }
-      } else {
-          columns(ev) 
-      }
+    if (is_categorical(ev)) {
+      levs <- levels(ev)
+      if (length(levs) == 0L) return(character(0))
+      if (identical(style, "canonical")) level_token(ev$varname, levs) else as.character(levs)
+    } else {
+      columns(ev)
+    }
   })
-  
-  # Filter out components that returned empty tokens (e.g., factors with no levels)
-  comp_tokens_list <- Filter(function(tk) length(tk) > 0, comp_tokens_list)
-  
-  if (length(comp_tokens_list) == 0) { # If ALL components became empty
-       final_out <- character(0)
-       attr(x, "..conds") <- final_out
-       attr(x, "..conds_opts") <- opts_key
-       return(final_out)
-  }
-  
-  # --- Combine Tokens using expand.grid and make_cond_tag --- 
-  names(comp_tokens_list) <- names(Filter(function(tk) length(tk) > 0, x$events)) # Match names to filtered tokens
+
+  comp_tokens_list <- Filter(function(tk) length(tk) > 0L, comp_tokens_list)
+  if (length(comp_tokens_list) == 0L) return(character(0))
+
+  names(comp_tokens_list) <- names(Filter(function(tk) length(tk) > 0L, x$events))
   full_grid <- expand.grid(comp_tokens_list, stringsAsFactors = FALSE)
-  if (nrow(full_grid) == 0L) {
-    base_cond_tags_all <- character(0)
+  base_cond_tags_all <- if (nrow(full_grid) == 0L) {
+    character(0)
   } else if (ncol(full_grid) == 1L) {
-    base_cond_tags_all <- full_grid[[1L]]
+    full_grid[[1L]]
   } else {
     sep <- if (identical(style, "canonical")) "_" else ":"
-    base_cond_tags_all <- apply(full_grid, 1, function(row) paste(row, collapse = sep))
+    apply(full_grid, 1, function(row) paste(row, collapse = sep))
   }
-  
-  # --- REMOVED drop.empty LOGIC BLOCK --- 
-  # The logic relying on cells() was flawed for mixed continuous/categorical terms.
-  # Dropping based on actual matrix rank deficiency is handled by design_matrix() / model.matrix().
-  base_cond_tags_final <- base_cond_tags_all
-  
-  # --- Handle expand_basis --- 
-  if (expand_basis) {
-      hrfspec <- attr(x, "hrfspec")
-      nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
-      final_cond_tags <- add_basis(base_cond_tags_final, nb)
-  } else {
-      final_cond_tags <- base_cond_tags_final
-  }
-  
-  # --- Cache and Return --- 
-  final_out <- as.vector(final_cond_tags)
-  attr(x, "..conds") <- final_out
-  attr(x, "..conds_opts") <- opts_key
-  
-  return(final_out)
+
+  as.vector(if (expand_basis) add_basis(base_cond_tags_all, nb) else base_cond_tags_all)
 }
 
 #' @method shortnames event_term

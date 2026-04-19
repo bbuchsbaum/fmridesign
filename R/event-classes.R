@@ -468,34 +468,14 @@ cells.event <- function(x, drop.empty = TRUE, ...) {
 #' @rdname elements
 #' @export
 elements.event <- function(x, what = c("values", "labels"), transformed = TRUE, ...) {
-  
+
   what <- match.arg(what)
-  var_name_sanitized <- .sanitizeName(x$varname)
-  
-  element_data <- NULL
-  
+
   if (what == "values") {
-      # --- Handle VALUES --- 
-      
-      # Check cache first
-      cache_val_attr <- paste0("_elements_cache_", what) # Unique cache attribute name
-      cached_data <- attr(x, cache_val_attr)
-      if (!is.null(cached_data)) {
-          # Return cached data wrapped in a named list
-          return(stats::setNames(list(cached_data), var_name_sanitized))
-      }
-      
-      # Handle basis 'transformed' case (although !transformed is tricky)
       if (!is.null(x$meta$basis) && !transformed) {
           warning("'transformed = FALSE' for basis elements is not reliably supported, returning the transformed basis matrix.")
-          element_data <- x$value
-      } else {
-           element_data <- x$value # This is always an N x K matrix (or 0xK)
       }
-      
-      # Store in cache before returning
-      attr(x, cache_val_attr) <- element_data
-      
+      element_data <- x$value
   } else {
       # --- Handle LABELS --- 
       # Return descriptive names/levels for EACH event instance

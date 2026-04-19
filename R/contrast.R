@@ -313,12 +313,57 @@ translate_legacy_pattern <- function(pattern) {
   w
 }
 
-# Backward compatibility aliases (will be deprecated in future)
-.mask_to_weights <- .calculate_mask_weights
-.make_weights <- .calculate_mask_weights
+# Validate the `basis` and `basis_weights` arguments shared by
+# `pair_contrast()`, `oneway_contrast()`, and `poly_contrast()`. Detailed
+# length validation happens later in `.apply_basis_filter()` once the actual
+# number of selected bases is known.
+#' @keywords internal
+#' @noRd
+.validate_basis_args <- function(basis, basis_weights) {
+  if (!is.null(basis) && !identical(basis, "all")) {
+    if (!is.numeric(basis) || any(basis < 1) || anyNA(basis)) {
+      stop("basis must be NULL, 'all', or a positive integer vector", call. = FALSE)
+    }
+  }
+  if (!is.null(basis_weights)) {
+    if (!is.numeric(basis_weights) || anyNA(basis_weights)) {
+      stop("basis_weights must be a numeric vector without NAs", call. = FALSE)
+    }
+    if (any(basis_weights < 0)) {
+      stop("basis_weights must be non-negative", call. = FALSE)
+    }
+  }
+}
 
+# Evaluate a contrast spec's `where` formula against the term's cells.
+# Returns a logical vector of length nrow(term_cells); on error, returns
+# all-FALSE and warns. NULL `where` => all TRUE.
+#' @keywords internal
+#' @noRd
+.eval_where <- function(spec, term_cells) {
+  if (is.null(spec$where)) return(rep(TRUE, nrow(term_cells)))
+  tryCatch(
+    rlang::eval_tidy(rlang::f_rhs(spec$where), data = term_cells),
+    error = function(e) {
+      warning(sprintf("Contrast '%s': Error evaluating 'where' clause: %s",
+                      spec$name, e$message), call. = FALSE)
+      rep(FALSE, nrow(term_cells))
+    }
+  )
+}
 
-
+# Subset a term's cells by the spec's `where` clause and warn if empty.
+# Returns the filtered cells data frame (possibly 0 rows).
+#' @keywords internal
+#' @noRd
+.relevant_cells <- function(spec, term_cells) {
+  rc <- term_cells[.eval_where(spec, term_cells), , drop = FALSE]
+  if (nrow(rc) == 0L && nrow(term_cells) > 0L) {
+    warning(sprintf("Contrast '%s' resulted in no relevant cells after applying the 'where' clause.",
+                    spec$name), call. = FALSE)
+  }
+  rc
+}
 
 
 #' Contrast Specification
@@ -709,24 +754,7 @@ pair_contrast <- function(A, B, name, where = NULL, basis = NULL, basis_weights 
                 msg = "where must be a formula")
   }
 
-  # Validate basis argument (detailed validation happens in .filter_basis)
-  if (!is.null(basis) && !identical(basis, "all")) {
-    if (!is.numeric(basis) || any(basis < 1) || anyNA(basis)) {
-      stop("basis must be NULL, 'all', or a positive integer vector", call. = FALSE)
-    }
-  }
-
-  # Validate basis_weights argument
-  if (!is.null(basis_weights)) {
-    if (!is.numeric(basis_weights) || anyNA(basis_weights)) {
-      stop("basis_weights must be a numeric vector without NAs", call. = FALSE)
-    }
-    if (any(basis_weights < 0)) {
-      stop("basis_weights must be non-negative", call. = FALSE)
-    }
-    # Length validation will happen when we know the actual number of selected bases
-    # Just store the weights for now
-  }
+  .validate_basis_args(basis, basis_weights)
 
   ret <- list(A=A,
               B=B,
@@ -781,22 +809,7 @@ oneway_contrast <- function(A, name, where = NULL, basis = NULL, basis_weights =
                 msg = "where must be a formula")
   }
 
-  # Validate basis argument
-  if (!is.null(basis) && !identical(basis, "all")) {
-    if (!is.numeric(basis) || any(basis < 1) || anyNA(basis)) {
-      stop("basis must be NULL, 'all', or a positive integer vector", call. = FALSE)
-    }
-  }
-
-  # Validate basis_weights argument
-  if (!is.null(basis_weights)) {
-    if (!is.numeric(basis_weights) || anyNA(basis_weights)) {
-      stop("basis_weights must be a numeric vector without NAs", call. = FALSE)
-    }
-    if (any(basis_weights < 0)) {
-      stop("basis_weights must be non-negative", call. = FALSE)
-    }
-  }
+  .validate_basis_args(basis, basis_weights)
 
   structure(
     list(A=A,
@@ -984,22 +997,7 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, b
                 msg = "value_map must be a list")
   }
 
-  # Validate basis argument
-  if (!is.null(basis) && !identical(basis, "all")) {
-    if (!is.numeric(basis) || any(basis < 1) || anyNA(basis)) {
-      stop("basis must be NULL, 'all', or a positive integer vector", call. = FALSE)
-    }
-  }
-
-  # Validate basis_weights argument
-  if (!is.null(basis_weights)) {
-    if (!is.numeric(basis_weights) || anyNA(basis_weights)) {
-      stop("basis_weights must be a numeric vector without NAs", call. = FALSE)
-    }
-    if (any(basis_weights < 0)) {
-      stop("basis_weights must be non-negative", call. = FALSE)
-    }
-  }
+  .validate_basis_args(basis, basis_weights)
 
   ret <- list(
     A=A,
@@ -1042,33 +1040,18 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
 
   term_cells <- cells(term)
   if (nrow(term_cells) > 0 && length(all_condnames) > 0) {
-      # Apply 'where' clause
-      keep <- if (!is.null(x$where)) {
-        tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
-            warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
-            rep(FALSE, nrow(term_cells))
-        })
-      } else {
-        rep(TRUE, nrow(term_cells))
-      }
-
-      relevant_cells <- term_cells[keep, , drop = FALSE]
-
-      if (nrow(relevant_cells) == 0) {
-          warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
-      } else {
+      relevant_cells <- .relevant_cells(x, term_cells)
+      if (nrow(relevant_cells) > 0) {
           target_cond_names <- cell_condition_tags(relevant_cells)
           idx <- match(target_cond_names, all_condnames)
 
           mask_A_full <- logical(length(all_condnames))
           mask_A_full[idx[!is.na(idx)]] <- TRUE
 
-          weights_named <- .calculate_mask_weights(all_condnames, mask_A_full)
-          weights_out[,1] <- weights_named
+          weights_out[,1] <- .calculate_mask_weights(all_condnames, mask_A_full)
       }
   }
 
-  # Return structure focused on cell-based weights
   ret <- list(
     term=term,
     name=x$name,
@@ -1076,7 +1059,7 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
     condnames=all_condnames,
     contrast_spec=x
   )
-  
+
   class(ret) <- c("unit_contrast", "cell_contrast", "contrast", "list")
   ret
 }
@@ -1108,27 +1091,14 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
 #' @rdname contrast_weights
 #' @export
 contrast_weights.oneway_contrast_spec <- function(x, term,...) {
-  # Get cells (categorical only)
   term_cells <- cells(term)
   if (nrow(term_cells) == 0) {
        warning(paste("Contrast '", x$name, "': Term '", term$varname, "' has no categorical cells."), call. = FALSE)
-       weights_out <- matrix(numeric(0), nrow = 0, ncol = 0) # F-contrast, ncol unknown yet
+       weights_out <- matrix(numeric(0), nrow = 0, ncol = 0)
        cell_names_out <- character(0)
-  } else { 
-      # Apply 'where' clause
-      keep <- if (!is.null(x$where)) {
-        tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
-            warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
-            rep(FALSE, nrow(term_cells))
-        })
-      } else {
-        rep(TRUE, nrow(term_cells))
-      }
-      
-      relevant_cells <- term_cells[keep, , drop = FALSE]
-      
+  } else {
+      relevant_cells <- .relevant_cells(x, term_cells)
       if (nrow(relevant_cells) == 0) {
-          warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
           weights_out <- matrix(numeric(0), nrow = 0, ncol = 0)
           cell_names_out <- character(0)
       } else {
@@ -1196,27 +1166,14 @@ contrast_weights.oneway_contrast_spec <- function(x, term,...) {
 #' @rdname contrast_weights
 #' @export
 contrast_weights.interaction_contrast_spec <- function(x, term,...) {
-  # Get cells (categorical only)
   term_cells <- cells(term)
   if (nrow(term_cells) == 0) {
        warning(paste("Contrast '", x$name, "': Term '", term$varname, "' has no categorical cells for interaction."), call. = FALSE)
        weights_out <- matrix(numeric(0), nrow = 0, ncol = 0)
        cell_names_out <- character(0)
   } else {
-      # Apply 'where' clause
-      keep <- if (!is.null(x$where)) {
-        tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
-            warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
-            rep(FALSE, nrow(term_cells))
-        })
-      } else {
-        rep(TRUE, nrow(term_cells))
-      }
-      
-      relevant_cells <- term_cells[keep, , drop = FALSE]
-      
+      relevant_cells <- .relevant_cells(x, term_cells)
       if (nrow(relevant_cells) == 0) {
-          warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
           weights_out <- matrix(numeric(0), nrow = 0, ncol = 0)
           cell_names_out <- character(0)
       } else {
@@ -1261,15 +1218,21 @@ contrast_weights.interaction_contrast_spec <- function(x, term,...) {
   ret
 }
 
+# Per-cell Helmert weights for one factor: indicator x Helmert basis.
+# Returns an n x (k-1) matrix where n = nrow(cells), k = nlevels(factor).
+#' @keywords internal
+#' @noRd
+.helmert_weights <- function(cells_df, fac_name) {
+  f <- factor(cells_df[[fac_name]])
+  k <- nlevels(f)
+  if (k < 2L) stop(sprintf("Need at least 2 levels for factor '%s'", fac_name), call. = FALSE)
+  model.matrix(~ f - 1) %*% stats::contr.helmert(k)
+}
+
 # Internal: build main-effect contrast matrix over cells
 #' @keywords internal
 generate_main_effect_contrast <- function(relevant_cells, fac_name) {
-  f <- factor(relevant_cells[[fac_name]])
-  k <- nlevels(f)
-  if (k < 2) stop("Need at least 2 levels to form a main-effect contrast")
-  G <- model.matrix(~ f - 1)                # n x k indicator for levels
-  H <- stats::contr.helmert(k)              # k x (k-1) Helmert basis
-  W <- G %*% H                              # n x (k-1) weights per cell
+  W <- .helmert_weights(relevant_cells, fac_name)
   colnames(W) <- paste0(fac_name, "_h", seq_len(ncol(W)))
   W
 }
@@ -1278,25 +1241,11 @@ generate_main_effect_contrast <- function(relevant_cells, fac_name) {
 #' @keywords internal
 generate_interaction_contrast <- function(relevant_cells, factors) {
   if (length(factors) < 2) stop("At least two factors required for interaction contrast")
-  # For simplicity, handle the first two factors; extensions can generalize further
-  f1 <- factor(relevant_cells[[factors[1]]])
-  f2 <- factor(relevant_cells[[factors[2]]])
-  k1 <- nlevels(f1); k2 <- nlevels(f2)
-  if (k1 < 2 || k2 < 2) stop("Each factor needs >= 2 levels for interaction")
-  E1 <- model.matrix(~ f1 - 1)              # n x k1
-  E2 <- model.matrix(~ f2 - 1)              # n x k2
-  H1 <- stats::contr.helmert(k1)            # k1 x (k1-1)
-  H2 <- stats::contr.helmert(k2)            # k2 x (k2-1)
-  A <- E1 %*% H1                             # n x (k1-1)
-  B <- E2 %*% H2                             # n x (k2-1)
-  # All pairwise products of columns of A and B
-  cols <- list()
-  for (i in seq_len(ncol(A))) {
-    for (j in seq_len(ncol(B))) {
-      cols[[length(cols) + 1]] <- A[, i] * B[, j]
-    }
-  }
-  W <- do.call(cbind, cols)
+  A <- .helmert_weights(relevant_cells, factors[1])
+  B <- .helmert_weights(relevant_cells, factors[2])
+  W <- do.call(cbind, lapply(seq_len(ncol(A)), function(i) {
+    A[, i] * B   # n x ncol(B), column-wise multiplication
+  }))
   colnames(W) <- paste0(factors[1], "_h", rep(seq_len(ncol(A)), each = ncol(B)),
                         ":", factors[2], "_h", rep(seq_len(ncol(B)), times = ncol(A)))
   W
@@ -1328,20 +1277,8 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
 
   term_cells <- cells(term)
   if (nrow(term_cells) > 0 && length(all_condnames) > 0) {
-      keep <- if (!is.null(x$where)) {
-        tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
-            warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
-            rep(FALSE, nrow(term_cells))
-        })
-      } else {
-        rep(TRUE, nrow(term_cells))
-      }
-
-      relevant_cells <- term_cells[keep, , drop = FALSE]
-
-      if (nrow(relevant_cells) == 0) {
-          warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
-      } else {
+      relevant_cells <- .relevant_cells(x, term_cells)
+      if (nrow(relevant_cells) > 0) {
           vals_fac <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = relevant_cells), error = function(e) {
               stop(paste("Contrast '", x$name, "': Error evaluating formula A: ", e$message), call.=FALSE)
           })
@@ -1428,22 +1365,8 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
       warning(paste("Contrast '", x$name, "': Term '", term$varname, "' has no observed categorical cells. Contrast weights might be all zero."), call. = FALSE)
   }
   
-  # Evaluate 'where' clause on term_cells
-  keep <- if (!is.null(x$where)) {
-      tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
-          warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
-          rep(FALSE, nrow(term_cells)) # Default to FALSE on error
-      })
-  } else {
-      rep(TRUE, nrow(term_cells)) # Keep all if no 'where'
-  }
-  relevant_cells <- term_cells[keep, , drop = FALSE]
-  
-  if (nrow(relevant_cells) == 0 && nrow(term_cells) > 0) {
-       warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
-       # Proceed, but weights will likely be zero
-  }
-  
+  relevant_cells <- .relevant_cells(x, term_cells)
+
   # Evaluate A and B formulas on the relevant cells
   keepA_rel <- if(nrow(relevant_cells) > 0) tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = relevant_cells), error = function(e) {
       warning(paste("Contrast '", x$name, "': Error evaluating formula A: ", e$message), call. = FALSE)
@@ -1998,63 +1921,16 @@ plot_contrasts.event_model <- function(
   ) +
     ggplot2::geom_tile(...)
   
-  # Decide on color scale
   scale_mode <- match.arg(scale_mode)
   wmin <- min(df_long$Weight, na.rm = TRUE)
   wmax <- max(df_long$Weight, na.rm = TRUE)
-  
-  # If user set absolute_limits=TRUE, we might forcibly use [-1,1] or [0,1]
-  # but let's allow scale_mode to override as well.
-  if (scale_mode == "diverging") {
-    # Diverging scale, centered on 0
-    lim_low  <- if (absolute_limits) -1 else wmin
-    lim_high <- if (absolute_limits)  1 else wmax
-    midpt <- 0
-    
-    plt <- plt + ggplot2::scale_fill_gradient2(
-      limits   = c(lim_low, lim_high),
-      midpoint = midpt,
-      low      = "blue",
-      mid      = "white",
-      high     = "red"
-    )
-    
-  } else if (scale_mode == "one_sided") {
-    # One-sided scale for 0..1 or 0..something
-    lim_low  <- if (absolute_limits) 0 else wmin
-    lim_high <- if (absolute_limits) 1 else wmax
-    
-    plt <- plt + ggplot2::scale_fill_gradient(
-      limits = c(lim_low, lim_high),
-      low    = "white",
-      high   = "red"
-    )
-    
+  effective_mode <- if (scale_mode == "auto") {
+    if (wmin < 0) "diverging" else "one_sided"
   } else {
-    # scale_mode == "auto"
-    # If we detect any negative weight, do diverging; otherwise do one-sided
-    if (wmin < 0) {
-      # diverging
-      lim_low  <- if (absolute_limits) -1 else wmin
-      lim_high <- if (absolute_limits)  1 else wmax
-      plt <- plt + ggplot2::scale_fill_gradient2(
-        limits   = c(lim_low, lim_high),
-        midpoint = 0,
-        low      = "blue",
-        mid      = "white",
-        high     = "red"
-      )
-    } else {
-      # one-sided
-      lim_low  <- if (absolute_limits) 0 else wmin
-      lim_high <- if (absolute_limits) 1 else wmax
-      plt <- plt + ggplot2::scale_fill_gradient(
-        limits = c(lim_low, lim_high),
-        low    = "white",
-        high   = "red"
-      )
-    }
+    scale_mode
   }
+
+  plt <- plt + .contrast_fill_scale(effective_mode, wmin, wmax, absolute_limits)
   
   # 5) Theming
   plt <- plt +
@@ -2085,7 +1961,7 @@ plot_contrasts.event_model <- function(
 }
 
 #' A small utility to preserve factor order in ggplot
-#' 
+#'
 #' Makes a factor from a character vector but preserves the order of appearance.
 #' If `reverse=TRUE`, it reverses that order.
 #' @keywords internal
@@ -2094,6 +1970,25 @@ ReorderFactor <- function(x, reverse=FALSE) {
   levs <- unique(as.character(x))
   if (reverse) levs <- rev(levs)
   factor(x, levels=levs)
+}
+
+# Build a ggplot fill scale for `plot_contrasts()`. `mode` is "diverging"
+# (blue-white-red, midpoint 0) or "one_sided" (white-red). `absolute_limits`
+# clamps to [-1, 1] or [0, 1] respectively.
+#' @keywords internal
+#' @noRd
+.contrast_fill_scale <- function(mode, wmin, wmax, absolute_limits) {
+  if (mode == "diverging") {
+    lo <- if (absolute_limits) -1 else wmin
+    hi <- if (absolute_limits)  1 else wmax
+    ggplot2::scale_fill_gradient2(limits = c(lo, hi), midpoint = 0,
+                                   low = "blue", mid = "white", high = "red")
+  } else {
+    lo <- if (absolute_limits) 0 else wmin
+    hi <- if (absolute_limits) 1 else wmax
+    ggplot2::scale_fill_gradient(limits = c(lo, hi),
+                                  low = "white", high = "red")
+  }
 }
 
 #' Contrast Weights for a Contrast Set
