@@ -1,35 +1,6 @@
 # Internal constants
 .CONTRAST_TOLERANCE <- 1e-8
 
-#' Translate legacy contrast regex patterns
-#'
-#' Convert older column-naming patterns to the current naming scheme.
-#'
-#' @param pattern Character string with the legacy regex.
-#' @return Updated regex string.
-#' @keywords internal
-#' @name translate_legacy_pattern
-#' @rdname translate_legacy_pattern
-translate_legacy_pattern <- function(pattern) {
-  # Input validation
-  if (!is.character(pattern) || length(pattern) != 1) {
-    stop("pattern must be a single character string", call. = FALSE)
-  }
-  
-  # 1. Replace Var[Level] -> Var.Level (Do this first)
-  # Handles VarName[LevelName] -> VarName.LevelName
-  pattern <- gsub("([A-Za-z0-9_\\.]+)\\[([^]]+)\\]", "\\1.\\2", pattern, perl = TRUE)
-
-  # 2. Replace :basis[digits] -> _b<digits>
-  # Handles :basis[3] -> _b3
-  pattern <- gsub(":basis\\[(\\d+)\\](\\$?)$", "_b\\1\\2", pattern, perl = TRUE)
-  # 3. Replace standalone : -> _ (interaction separator)
-  # Uses lookarounds to avoid replacing potential future :: syntax
-  pattern <- gsub("(?<!:):(?!:)", "_", pattern, perl = TRUE)
-  
-  pattern
-}
-
 #' Get condition names for a term
 #' Wraps conditions() with standard arguments for internal use.
 #' @param term An event_term object.
@@ -1023,42 +994,38 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, b
 #'
 #' @rdname contrast_weights
 #' @export
-contrast_weights.unit_contrast_spec <- function(x, term,...) {
-  # All possible condition names (pre-basis expansion)
+#' @export
+#' @rdname contrast_mask
+contrast_mask.unit_contrast_spec <- function(x, term, ...) {
   all_condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = FALSE), silent = TRUE)
   if (inherits(all_condnames, "try-error") || length(all_condnames) == 0) {
-      warning(paste("Contrast '", x$name, "': Failed to get condition names for term '", term$varname, "'."), call. = FALSE)
-      all_condnames <- character(0)
+    warning(sprintf("Contrast '%s': Failed to get condition names for term '%s'.",
+                    x$name, term$varname), call. = FALSE)
+    all_condnames <- character(0)
   }
 
-  weights_out <- matrix(0, nrow = length(all_condnames), ncol = 1)
-  rownames(weights_out) <- all_condnames
-  colnames(weights_out) <- x$name
+  weights_out <- matrix(0, nrow = length(all_condnames), ncol = 1L,
+                        dimnames = list(all_condnames, x$name))
 
   term_cells <- cells(term)
-  if (nrow(term_cells) > 0 && length(all_condnames) > 0) {
-      relevant_cells <- .relevant_cells(x, term_cells)
-      if (nrow(relevant_cells) > 0) {
-          target_cond_names <- cell_condition_tags(relevant_cells)
-          idx <- match(target_cond_names, all_condnames)
-
-          mask_A_full <- logical(length(all_condnames))
-          mask_A_full[idx[!is.na(idx)]] <- TRUE
-
-          weights_out[,1] <- .calculate_mask_weights(all_condnames, mask_A_full)
-      }
+  if (nrow(term_cells) > 0L && length(all_condnames) > 0L) {
+    relevant_cells <- .relevant_cells(x, term_cells)
+    if (nrow(relevant_cells) > 0L) {
+      idx <- match(cell_condition_tags(relevant_cells), all_condnames)
+      mask_A_full <- logical(length(all_condnames))
+      mask_A_full[idx[!is.na(idx)]] <- TRUE
+      weights_out[, 1] <- .calculate_mask_weights(all_condnames, mask_A_full)
+    }
   }
 
-  ret <- list(
-    term=term,
-    name=x$name,
-    weights=weights_out,
-    condnames=all_condnames,
-    contrast_spec=x
-  )
+  list(weights = weights_out, condnames = all_condnames)
+}
 
-  class(ret) <- c("unit_contrast", "cell_contrast", "contrast", "list")
-  ret
+#' @rdname contrast_weights
+#' @export
+contrast_weights.unit_contrast_spec <- function(x, term, ...) {
+  contrast_from_mask(contrast_mask(x, term, ...), x, term,
+                     classes = "unit_contrast")
 }
 
 
@@ -1144,57 +1111,48 @@ contrast_weights.oneway_contrast_spec <- function(x, term, ...) {
 #'
 #' @rdname contrast_weights
 #' @export
-contrast_weights.interaction_contrast_spec <- function(x, term,...) {
+#' @export
+#' @rdname contrast_mask
+contrast_mask.interaction_contrast_spec <- function(x, term, ...) {
   term_cells <- cells(term)
-  if (nrow(term_cells) == 0) {
-       warning(paste("Contrast '", x$name, "': Term '", term$varname, "' has no categorical cells for interaction."), call. = FALSE)
-       weights_out <- matrix(numeric(0), nrow = 0, ncol = 0)
-       cell_names_out <- character(0)
-  } else {
-      relevant_cells <- .relevant_cells(x, term_cells)
-      if (nrow(relevant_cells) == 0) {
-          weights_out <- matrix(numeric(0), nrow = 0, ncol = 0)
-          cell_names_out <- character(0)
-      } else {
-          # Identify factors for interaction
-          factors <- all.vars(rlang::f_rhs(x$A))
-          if (length(factors) < 2) {
-              stop(paste("Contrast '", x$name, "': Interaction contrast requires at least two factors."), call.=FALSE)
-          }
-          if (!all(factors %in% names(relevant_cells))) {
-              missing_facs <- factors[!factors %in% names(relevant_cells)]
-              stop(paste("Contrast '", x$name, "': Factor(s)", paste(missing_facs, collapse=", "), "not found in relevant cells."), call.=FALSE)
-          }
-          
-          # Generate interaction contrast matrix relative to relevant cells
-          # Assuming generate_interaction_contrast works on cell structure
-          cmat <- tryCatch(generate_interaction_contrast(relevant_cells, factors), error = function(e) {
-              stop(paste("Contrast '", x$name, "': Error generating interaction contrast: ", e$message), call.=FALSE)
-          })
-          
-          # Ensure rownames match cell identifiers
-          cell_names_rel <- apply(relevant_cells, 1, paste, collapse = "_")
-          rownames(cmat) <- cell_names_rel
-          colnames(cmat) <- paste(x$name, seq_len(ncol(cmat)), sep="_") # Name F-contrast columns
-          
-          weights_out <- cmat
-          cell_names_out <- cell_names_rel
-      }
+  if (nrow(term_cells) == 0L) {
+    warning(sprintf("Contrast '%s': Term '%s' has no categorical cells for interaction.",
+                    x$name, term$varname), call. = FALSE)
+    return(list(weights = matrix(numeric(0), nrow = 0, ncol = 0),
+                condnames = character(0)))
   }
-  
-  # Return structure focused on cell-based weights
-  ret <- list(
-    term = term,
-    name = x$name,
-    weights = weights_out, # Weights matrix relative to relevant cells
-    condnames = cell_names_out, # Names of relevant cells
-    contrast_spec = x
-  )
-  
-  # Classify as Fcontrast (interactions usually are)
-  base_class <- if(is.null(ncol(weights_out)) || ncol(weights_out) > 1) "Fcontrast" else "contrast"
-  class(ret) <- c("interaction_contrast", base_class, "cell_contrast", "contrast", "list")
-  ret
+  relevant_cells <- .relevant_cells(x, term_cells)
+  if (nrow(relevant_cells) == 0L) {
+    return(list(weights = matrix(numeric(0), nrow = 0, ncol = 0),
+                condnames = character(0)))
+  }
+
+  factors <- all.vars(rlang::f_rhs(x$A))
+  if (length(factors) < 2L) {
+    stop(sprintf("Contrast '%s': Interaction contrast requires at least two factors.",
+                 x$name), call. = FALSE)
+  }
+  missing_facs <- setdiff(factors, names(relevant_cells))
+  if (length(missing_facs) > 0L) {
+    stop(sprintf("Contrast '%s': Factor(s) %s not found in relevant cells.",
+                 x$name, paste(missing_facs, collapse = ", ")), call. = FALSE)
+  }
+
+  cmat <- tryCatch(generate_interaction_contrast(relevant_cells, factors),
+                   error = function(e) {
+                     stop(sprintf("Contrast '%s': Error generating interaction contrast: %s",
+                                  x$name, e$message), call. = FALSE)
+                   })
+  rownames(cmat) <- apply(relevant_cells, 1, paste, collapse = "_")
+  colnames(cmat) <- paste(x$name, seq_len(ncol(cmat)), sep = "_")
+  list(weights = cmat, condnames = rownames(cmat))
+}
+
+#' @rdname contrast_weights
+#' @export
+contrast_weights.interaction_contrast_spec <- function(x, term, ...) {
+  contrast_from_mask(contrast_mask(x, term, ...), x, term,
+                     classes = "interaction_contrast")
 }
 
 # Per-cell Helmert weights for one factor: indicator x Helmert basis.

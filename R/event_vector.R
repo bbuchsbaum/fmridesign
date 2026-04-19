@@ -1222,85 +1222,63 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
 #' @export
 Fcontrasts.event_term <- function(x, max_inter = 4L, ...) {
 
-  ## --- helpers -------------------------------------------------------------
-  .is_cat <- function(ev) !is_continuous(ev)
-  .Dmat   <- function(n) {
-      if (n < 2) stop("Need at least 2 levels for contrasts.")
-      con <- stats::contr.sum(n)
-      colnames(con) <- paste0("c", 1:(n - 1))
-      con
+  .Dmat <- function(n) {
+    if (n < 2) stop("Need at least 2 levels for contrasts.")
+    con <- stats::contr.sum(n)
+    colnames(con) <- paste0("c", seq_len(n - 1L))
+    con
   }
-  .Cvec   <- function(n) matrix(1, nrow = n, ncol = 1)
+  .Cvec <- function(n) matrix(1, nrow = n, ncol = 1L)
 
-  ## --- preparation ---------------------------------------------------------
-  evs_cat <- Filter(.is_cat, x$events)
-  if (!length(evs_cat)) stop("No categorical variables found in term '", x$varname, "' for Fcontrasts.", call.=FALSE)
+  evs_cat <- Filter(function(ev) !is_continuous(ev), x$events)
+  if (!length(evs_cat)) stop("No categorical variables found in term '", x$varname, "' for Fcontrasts.", call. = FALSE)
 
   C <- lapply(evs_cat, function(ev) .Cvec(length(levels(ev))))
   D <- lapply(evs_cat, function(ev) .Dmat(length(levels(ev))))
   names(C) <- names(D) <- names(evs_cat)
 
-  # --- Get expected row names in Kronecker order ---------------------------
-  cat_levels_list <- lapply(evs_cat, levels)
-  # --- build Cartesian product of levels (Kronecker order) ------------------ 
-  lvl_grid        <- do.call(expand.grid, cat_levels_list)
-  cat_cond_names  <- apply(lvl_grid, 1, paste, collapse = ":")
-  expected_rows   <- nrow(lvl_grid)
-  # Try to align with the canonical condition tags used in design_matrix()
-  cond_tags <- try(conditions(x, drop.empty = FALSE, expand_basis = FALSE), silent = TRUE)
-  if (!inherits(cond_tags, "try-error") && length(cond_tags) == expected_rows) {
-    cat_cond_names <- cond_tags
-  }
-  # ---------------------------------------------------------------------- 
-
-  ## --- Compute main effects matrices (without rownames yet) ---------------
-  main <- Map(function(i) {
-      mat_list <- C
-      mat_list[[i]] <- D[[i]] 
-      Reduce(kronecker, mat_list)
-  }, seq_along(D)) |> 
-    stats::setNames(names(evs_cat))
-
-  ## --- Compute interaction effects matrices (without rownames yet) -------
-  final_contrasts_list <- if (length(D) > 1 && length(D) <= max_inter) {
-      inter <- unlist(lapply(2:length(D), function(k) {
-          combn(length(D), k, simplify = FALSE, FUN = function(ix) {
-              mat_list <- C
-              mat_list[ix] <- D[ix] 
-              M <- Reduce(kronecker, mat_list)
-              attr(M, "name") <- paste(names(evs_cat)[ix], collapse=":")
-              M
-          })
-      }), recursive = FALSE)
-      names(inter) <- vapply(inter, attr, "", "name")
-      c(main, inter)
-  } else {
-      main
-  }
-  
-  ## --- Assign correct categorical rownames to all matrices -------
-  final_contrasts_named <- lapply(seq_along(final_contrasts_list), function(i) {
-       M <- final_contrasts_list[[i]]
-       mat_name <- names(final_contrasts_list)[i]
-       if (!is.matrix(M)) { 
-            warning(paste("Skipping rownames for invalid matrix in Fcontrasts list element:", mat_name))
-            return(M)
-       }
-       # Compare nrow(M) to expected rows from CATEGORICAL grid/interaction
-       if (nrow(M) == expected_rows) {
-            # Use dimnames[[1]] <- assignment (should be correct now)
-            dimnames(M)[[1]] <- cat_cond_names
-       } else {
-           # This warning should be less likely now, but keep for safety
-           warning(paste("Dimension mismatch for contrast '", mat_name, "': expected ", 
-                         expected_rows, " rows (from categorical interaction), but matrix has ", nrow(M), ". Rownames not assigned."))
-       }
-       M # Return matrix (modified in place)
+  # Prefer the canonical condition tags used in design_matrix(); fall back to
+  # Cartesian Kronecker-order level combinations if they can't be retrieved.
+  lvl_grid       <- do.call(expand.grid, lapply(evs_cat, levels))
+  expected_rows  <- nrow(lvl_grid)
+  cat_cond_names <- local({
+    tags <- try(conditions(x, drop.empty = FALSE, expand_basis = FALSE), silent = TRUE)
+    if (!inherits(tags, "try-error") && length(tags) == expected_rows) {
+      tags
+    } else {
+      apply(lvl_grid, 1, paste, collapse = ":")
+    }
   })
-  
-  names(final_contrasts_named) <- names(final_contrasts_list)
-  
-  final_contrasts_named
+
+  # Build a Kronecker-product matrix for a given subset `ix` of factors that
+  # should contribute a contrast (D[ix]); the others use C (the all-ones
+  # vector). Rownames are set inline so we don't need a second pass.
+  make_fcontrast <- function(ix) {
+    mat_list <- C
+    mat_list[ix] <- D[ix]
+    M <- Reduce(kronecker, mat_list)
+    if (is.matrix(M) && nrow(M) == expected_rows) {
+      dimnames(M)[[1]] <- cat_cond_names
+    }
+    M
+  }
+
+  main <- stats::setNames(lapply(seq_along(D), function(i) make_fcontrast(i)),
+                          names(evs_cat))
+
+  if (length(D) > 1L && length(D) <= max_inter) {
+    inter <- unlist(lapply(2:length(D), function(k) {
+      combn(length(D), k, simplify = FALSE, FUN = function(ix) {
+        M <- make_fcontrast(ix)
+        attr(M, "name") <- paste(names(evs_cat)[ix], collapse = ":")
+        M
+      })
+    }), recursive = FALSE)
+    names(inter) <- vapply(inter, attr, character(1), "name")
+    c(main, inter)
+  } else {
+    main
+  }
 }
 
 #' Retrieve contrast definitions for an event term

@@ -390,37 +390,21 @@ construct.baselinespec <- function(x, model_spec, ...) {
     return(baseline_term(x$name, mat, colind, rowind))
   }
   
-  # Standard block-wise construction
+  # Standard block-wise construction: assemble block-diagonal matrix.
   nc_per_block <- ncol(ret_list[[1]])
-  total_cols <- length(ret_list) * nc_per_block
-  mat <- matrix(0, sum(bl), total_cols)
-  
-  colind <- vector("list", length(ret_list))
-  rowind <- vector("list", length(ret_list))
-  all_cnames <- vector("character", total_cols)
-  
-  current_col <- 1
-  current_row <- 1
-  for (i in seq_along(ret_list)) {
-    rows_this_block <- bl[i]
-    cols_this_block <- nc_per_block
-    
-    row_indices <- current_row:(current_row + rows_this_block - 1)
-    col_indices <- current_col:(current_col + cols_this_block - 1)
-    
-    mat[row_indices, col_indices] <- ret_list[[i]]
-    colind[[i]] <- col_indices
-    rowind[[i]] <- row_indices
-    
-    # Generate column names for this block
-    cnames_block <- paste0("base_", x$basis, 1:cols_this_block, "_block_", i)
-    all_cnames[col_indices] <- cnames_block
-    
-    current_row <- current_row + rows_this_block
-    current_col <- current_col + cols_this_block
-  }
-  
-  colnames(mat) <- all_cnames
+  mat <- as.matrix(Matrix::bdiag(ret_list))
+  colnames(mat) <- unlist(purrr::imap(ret_list, function(block, i) {
+    paste0("base_", x$basis, seq_len(nc_per_block), "_block_", i)
+  }))
+
+  rows_per_block <- vapply(ret_list, nrow, integer(1))
+  row_ends <- cumsum(rows_per_block)
+  row_starts <- row_ends - rows_per_block + 1L
+  rowind <- Map(seq.int, row_starts, row_ends)
+  col_ends <- seq_len(length(ret_list)) * nc_per_block
+  col_starts <- col_ends - nc_per_block + 1L
+  colind <- Map(seq.int, col_starts, col_ends)
+
   baseline_term(x$name, mat, colind, rowind)
 }
 
