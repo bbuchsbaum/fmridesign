@@ -22,4 +22,3 @@ below to see their documentation.
 \describe{
   \item{fmrihrf}{\code{\link[fmrihrf]{as_hrf}}, \code{\link[fmrihrf]{blocklens}}, \code{\link[fmrihrf]{evaluate}}, \code{\link[fmrihrf]{gen_hrf}}, \code{\link[fmrihrf]{global_onsets}}, \code{\link[fmrihrf:HRF-class]{HRF}}, \code{\link[fmrihrf]{hrf_spmg1}}, \code{\link[fmrihrf]{regressor}}, \code{\link[fmrihrf]{samples}}, \code{\link[fmrihrf]{sampling_frame}}}
 }}
-
