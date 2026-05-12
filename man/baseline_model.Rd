@@ -9,7 +9,8 @@ baseline_model(
   degree = 1,
   sframe,
   intercept = c("runwise", "global", "none"),
-  nuisance_list = NULL
+  nuisance_list = NULL,
+  nuisance_check = c("warn", "error", "drop", "none")
 )
 }
 \arguments{
@@ -24,6 +25,11 @@ Ignored when \code{basis == "constant"} because the drift term already
 provides the constant baseline.}
 
 \item{nuisance_list}{Optional list of nuisance matrices or data frames (one per fMRI block).}
+
+\item{nuisance_check}{Character; how to handle nuisance diagnostics. \code{"warn"}
+warns on construction-time problems, \code{"error"} stops, \code{"drop"} removes
+non-finite, zero-variance, and rank-aliased columns with a warning, and
+\code{"none"} skips these checks.}
 }
 \value{
 An object of class "baseline_model".

@@ -14,7 +14,10 @@ test_that("can construct a baseline_model with 1 block and 5th order bspline bas
     poly(fmrihrf::samples(sframe), 3)
   )
   
-  bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe, nuisance_list=nlist)
+  expect_warning(
+    bmodel <- baseline_model(basis="bs", degree=5, sframe=sframe, nuisance_list=nlist),
+    "Rank with baseline terms"
+  )
   
   ## 5 + 1 for constant term
   expect_equal(ncol(design_matrix(bmodel)),9)
