@@ -26,6 +26,7 @@ formula using the `contrasts` argument in
 terms:
 
 ``` r
+
 # Create a simple two-condition experiment
 set.seed(123)
 sframe <- sampling_frame(blocklens = 200, TR = 2)
@@ -65,6 +66,7 @@ contrast_weights(emodel_with_contrast)
 Validate all attached contrasts for a model in one call:
 
 ``` r
+
 res <- validate_contrasts(emodel_with_contrast)
 # 'full_rank' is only meaningful for F-contrasts; drop it when all are t-contrasts
 if (!any(res$type == "F")) res$full_rank <- NULL
@@ -85,6 +87,7 @@ For designs with multiple levels, you can specify all pairwise
 comparisons:
 
 ``` r
+
 # Three-condition experiment
 set.seed(456)
 conditions_3 <- rep(c("easy", "medium", "hard"), each = 15)
@@ -119,6 +122,7 @@ with `degree = k` returns an F‑contrast matrix with k orthogonal columns
 rather than separate one‑by‑one contrasts.
 
 ``` r
+
 # Parametric design with 4 levels
 set.seed(789)
 intensity_levels <- rep(1:4, each = 12)
@@ -169,6 +173,7 @@ For factorial designs, specify contrasts for main effects and
 interactions:
 
 ``` r
+
 # 2x2 factorial design
 set.seed(234)
 n_trials <- 60
@@ -226,6 +231,7 @@ need to combine multiple columns (e.g., multi‑basis HRF, or a set of
 RT‑by‑condition regressors) into a single hypothesis.
 
 ``` r
+
 # Design with conditions and RT modulation
 set.seed(567)
 n_events <- 50
@@ -262,6 +268,7 @@ colnames(dm)[idx[["RT"]]]
 F-contrasts test multiple parameters simultaneously:
 
 ``` r
+
 # Four-condition design for omnibus test
 set.seed(890)
 conditions_4 <- rep(c("A", "B", "C", "D"), each = 12)
@@ -298,6 +305,7 @@ print(f_contrasts)
 ### Extracting and Manipulating Weights
 
 ``` r
+
 # Create a model
 simple_model <- event_model(
   onset ~ hrf(stim),
@@ -339,6 +347,7 @@ using
 [`validate_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/validate_contrasts.md):
 
 ``` r
+
 # Validate the custom contrast against the design implied by the model
 validate_contrasts(simple_model, weights = custom_contrast)
 #>       name type estimable sum_to_zero orthogonal_to_intercept full_rank
@@ -353,6 +362,7 @@ When working with multiple runs, contrasts can be specified to test
 within-run or across-run effects:
 
 ``` r
+
 # Two-run experiment with potential run differences
 set.seed(345)
 run1_onsets <- sort(runif(20, 0, 200))
@@ -391,6 +401,7 @@ orthogonal sets when possible.
 ### 2. Scaling and Normalization
 
 ``` r
+
 # Properly scaled contrasts sum to zero
 create_scaled_contrast <- function(n_positive, n_negative) {
   c(rep(1/n_positive, n_positive), rep(-1/n_negative, n_negative))
@@ -413,6 +424,7 @@ contrast specifications. For example, a sliding-window set that compares
 adjacent, disjoint windows across an ordered factor:
 
 ``` r
+
 # Five ordered levels
 lvl <- paste0("L", 1:5)
 
@@ -445,6 +457,7 @@ with regex to match design-matrix columns.
 ### 1. Rank-Deficient Contrasts
 
 ``` r
+
 # This will cause issues - contrast is not estimable
 bad_data <- data.frame(
   onset = c(10, 30),
@@ -468,6 +481,7 @@ tryCatch({
 ### 2. Multicollinearity in Contrasts
 
 ``` r
+
 # Check for multicollinearity in your design matrix
 cc <- check_collinearity(design_matrix(emodel_with_contrast), threshold = 0.9)
 if (!cc$ok) cc$pairs

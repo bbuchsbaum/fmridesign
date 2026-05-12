@@ -16,6 +16,7 @@ intended to be used with analysis packages like `fmrireg`.
 ## Installation
 
 ``` r
+
 # Install development version from GitHub
 # install.packages("devtools")
 devtools::install_github("bbuchsbaum/fmridesign")
@@ -34,6 +35,7 @@ devtools::install_github("bbuchsbaum/fmridesign")
 ## Basic Usage
 
 ``` r
+
 library(fmridesign)
 
 # Create event data
@@ -80,6 +82,7 @@ baseline_dm <- design_matrix(base_model)
 From R, you can also open installed vignettes:
 
 ``` r
+
 vignette("a_01_introduction", package = "fmridesign")
 vignette("a_03_baseline_model", package = "fmridesign")
 vignette("a_04_event_models", package = "fmridesign")

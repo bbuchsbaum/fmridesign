@@ -33,6 +33,7 @@ These basis functions are generated separately for each scanning run
 defined in the `sampling_frame`.
 
 ``` r
+
 # Define a sampling frame for two runs of 100 scans each, TR=2s
 TR <- 2
 sframe <- sampling_frame(blocklens = c(100, 100), TR = TR)
@@ -156,6 +157,7 @@ so you can often use shorter names like `"poly"`, `"bs"`, or
 `"nuisance"` if they uniquely identify a term.
 
 ``` r
+
 # Plot the polynomial regressors (term is named "drift")
 plot(bmodel_poly, term_name = "drift")
 ```
@@ -164,6 +166,7 @@ plot(bmodel_poly, term_name = "drift")
 time.](a_03_baseline_model_files/figure-html/plot_basis-1.png)
 
 ``` r
+
 
 # Plot the B-spline regressors
 plot(bmodel_bs, term_name = "drift")
@@ -174,6 +177,7 @@ time.](a_03_baseline_model_files/figure-html/plot_basis-2.png)
 
 ``` r
 
+
 # Plot the Natural spline regressors
 plot(bmodel_ns, term_name = "drift")
 ```
@@ -182,6 +186,7 @@ plot(bmodel_ns, term_name = "drift")
 time.](a_03_baseline_model_files/figure-html/plot_basis-3.png)
 
 ``` r
+
 
 # Plotting the Constant (Intercept) term is generally not informative
 print(bmodel_const) # Shows it has a 'constant' term
@@ -231,6 +236,7 @@ corresponds to a scanning run. Each element should be a `data.frame` or
 will be grouped under the term name `"nuisance"`.
 
 ``` r
+
 # Simulate nuisance regressors (e.g., 6 motion parameters)
 n_scans_run1 <- blocklens(sframe)[1]
 n_scans_run2 <- blocklens(sframe)[2]
@@ -286,6 +292,7 @@ You can include both a structured basis set (like polynomials) and
 custom nuisance regressors in the same baseline model.
 
 ``` r
+
 bmodel_combined <- baseline_model(basis = "poly", degree = 5, sframe = sframe, 
                                   nuisance_list = nuisance_regressors)
 print(bmodel_combined)
@@ -344,6 +351,7 @@ run.](a_03_baseline_model_files/figure-html/combined_baseline-1.png)
 
 ``` r
 
+
 # Plot the nuisance terms (using exact match "nuisance")
 plot(bmodel_combined, term_name = "nuisance") + 
   labs(title = "Nuisance Terms (from Combined Model)")
@@ -359,6 +367,7 @@ nuisance regressors, properly formatted per block) can be obtained using
 [`design_matrix()`](https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.md).
 
 ``` r
+
 dmat_baseline <- design_matrix(bmodel_combined)
 
 cat("Dimensions of baseline design matrix:", dim(dmat_baseline), "\n")

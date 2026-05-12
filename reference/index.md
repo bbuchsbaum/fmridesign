@@ -50,6 +50,12 @@
 - [`check_collinearity()`](https://bbuchsbaum.github.io/fmridesign/reference/check_collinearity.md)
   : Check design matrix for multicollinearity
 
+- [`check_nuisance()`](https://bbuchsbaum.github.io/fmridesign/reference/check_nuisance.md)
+  : Check nuisance regressors for rank and column problems
+
+- [`clean_nuisance()`](https://bbuchsbaum.github.io/fmridesign/reference/clean_nuisance.md)
+  : Clean nuisance regressors by dropping rank-useless columns
+
 - [`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md)
   : Column Contrast Specification
 
@@ -72,6 +78,14 @@
 
 - [`contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast.md)
   : Contrast Specification
+
+- [`contrast_from_mask()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_from_mask.md)
+  :
+
+  Package a base mask into a `contrast` object
+
+- [`contrast_mask()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_mask.md)
+  : Build a base contrast mask
 
 - [`contrast_set()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_set.md)
   : Create a Set of Contrasts
@@ -127,6 +141,9 @@
 - [`design_matrix()`](https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.md)
   : Extract or construct a design matrix
 
+- [`design_meta()`](https://bbuchsbaum.github.io/fmridesign/reference/design_meta.md)
+  : Accessor: column metadata for a design matrix
+
 - [`duration_hrf_gen()`](https://bbuchsbaum.github.io/fmridesign/reference/duration_hrf_gen.md)
   : Create duration-aware normalized HRF generator
 
@@ -169,6 +186,9 @@
 - [`get_all_external_hrf_functions()`](https://bbuchsbaum.github.io/fmridesign/reference/get_all_external_hrf_functions.md)
   : Get All External HRF Function Names
 
+- [`get_basis_entry()`](https://bbuchsbaum.github.io/fmridesign/reference/get_basis_entry.md)
+  : Look Up a Registered Basis Entry
+
 - [`get_external_hrfspec_functions()`](https://bbuchsbaum.github.io/fmridesign/reference/get_external_hrfspec_functions.md)
   : Get the HRF Function Name for External Specifications
 
@@ -202,6 +222,9 @@
 
 - [`list_external_hrfspecs()`](https://bbuchsbaum.github.io/fmridesign/reference/list_external_hrfspecs.md)
   : List All Registered External HRF Specifications
+
+- [`list_registered_bases()`](https://bbuchsbaum.github.io/fmridesign/reference/list_registered_bases.md)
+  : List Registered Parametric Basis Classes
 
 - [`longnames()`](https://bbuchsbaum.github.io/fmridesign/reference/longnames.md)
   : Extract longnames
@@ -262,6 +285,9 @@
 - [`print(`*`<sampling_frame>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.sampling_frame.md)
   [`plot(`*`<sampling_frame>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.sampling_frame.md)
   : Print and Plot for sampling_frame
+
+- [`register_basis()`](https://bbuchsbaum.github.io/fmridesign/reference/register_basis.md)
+  : Register a Parametric Basis Class
 
 - [`register_hrfspec_extension()`](https://bbuchsbaum.github.io/fmridesign/reference/register_hrfspec_extension.md)
   : Register an External HRF Specification Type

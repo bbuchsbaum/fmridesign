@@ -62,6 +62,7 @@ Consider a basic design with four stimulus types (*face*, *scene*,
 variable ISI (4-7s). The total scan duration is 70 TRs (TR=2s).
 
 ``` r
+
 TR <- 2
 cond <- c("face", "scene", "tool", "object")
 NSTIM <- length(cond) * 4
@@ -103,6 +104,7 @@ The `block = ~ run` argument links events to scanning runs (here, just
 one run).
 
 ``` r
+
 emodel_simple <- event_model(onset ~ hrf(stim), 
                              data = simple_design, 
                              block = ~ run, 
@@ -119,6 +121,7 @@ We can plot the generated regressors using
 `ggplot2`) or `plotly()` for an interactive version.
 
 ``` r
+
 # Static plot (ggplot2)
 plot(emodel_simple)
 ```
@@ -127,6 +130,7 @@ plot(emodel_simple)
 time.](a_04_event_models_files/figure-html/plot_simple_model-1.png)
 
 ``` r
+
 
 # Interactive plot via plotly (skipped in non-interactive builds)
 if (interactive()) {
@@ -142,6 +146,7 @@ level) convolved with the default HRF.
 Let’s extend the design to two runs.
 
 ``` r
+
 # Construct a design table with two runs
 design_list <- lapply(1:2, function(run_idx) {
   df <- data.frame(
@@ -172,6 +177,7 @@ correctly maps events to their respective runs based on the `run` column
 and the `sampling_frame`.
 
 ``` r
+
 emodel_multi_run <- event_model(onset ~ hrf(stim), 
                                 data = design_multi_run, 
                                 block = ~ run, 
@@ -191,6 +197,7 @@ Now consider a design crossing stimulus type (`stim`) with task
 instruction (`task`: attend vs. ignore).
 
 ``` r
+
 cond1 <- c("face", "scene", "tool", "object")
 cond2 <- c("attend", "ignore")
 comb <- expand.grid(stim = cond1, task = cond2)
@@ -228,6 +235,7 @@ for the interaction of `stim` and `task`. The term tag will default to
 `stim_task`.
 
 ``` r
+
 emodel_two_factor <- event_model(onset ~ hrf(stim, task), 
                                  data = design_two_factor, 
                                  block = ~ run, 
@@ -243,6 +251,7 @@ plot(emodel_two_factor)
 time.](a_04_event_models_files/figure-html/create_two_factor_model-1.png)
 
 ``` r
+
 if (interactive()) {
   plotly::ggplotly(plot(emodel_two_factor))
 }
@@ -257,6 +266,7 @@ the modulating variable within the
 call.
 
 ``` r
+
 # Use the simple single-run design and add a simulated RT column
 simple_design$RT <- rnorm(nrow(simple_design), mean = 700, sd = 100)
 
@@ -277,6 +287,7 @@ Here, `hrf(stim)` creates the main effect term (tag: `stim`), and
 `RT_centered`).
 
 ``` r
+
 emodel_pmod <- event_model(onset ~ hrf(stim) + hrf(RT_centered), 
                            data = simple_design, 
                            block = ~ run, 
@@ -292,6 +303,7 @@ plot(emodel_pmod, term_name = "RT_centered")
 time.](a_04_event_models_files/figure-html/create_pmod_model-1.png)
 
 ``` r
+
 if (interactive()) {
   plotly::ggplotly(plot(emodel_pmod, term_name = "RT_centered"))
 }
@@ -308,6 +320,7 @@ Here, `hrf(stim)` is one term (tag: `stim`). The interaction
 `hrf(stim, RT_centered)` is a second term (tag: `stim_RT_centered`).
 
 ``` r
+
 emodel_pmod_int <- event_model(onset ~ hrf(stim) + hrf(stim, RT_centered), 
                                data = simple_design, 
                                block = ~ run, 
@@ -323,6 +336,7 @@ plot(emodel_pmod_int, term_name = "stim_RT_centered")
 time.](a_04_event_models_files/figure-html/create_pmod_interaction-1.png)
 
 ``` r
+
 if (interactive()) {
   plotly::ggplotly(plot(emodel_pmod_int, term_name = "stim_RT_centered"))
 }
@@ -364,6 +378,7 @@ Here are the main ways to specify the `basis`:
 HRF types using the `list_available_hrfs()` function:
 
 ``` r
+
 # List basic information about available HRFs
 list_available_hrfs()
 #>        name      type nbasis_default is_alias
@@ -407,6 +422,7 @@ the HRF-related vignettes in the `fmrihrf` package.
 Here are a few examples within the `event_model` context:
 
 ``` r
+
 # Example 1: Using basis name string "gaussian"
 # Term tags: "stim", "RT_centered"
 emodel_diff_hrf <- event_model(onset ~ hrf(stim, basis="spmg1") + hrf(RT_centered, basis="gaussian"), 
@@ -421,6 +437,7 @@ plot(emodel_diff_hrf, term_name = "RT_centered") # Plot the Gaussian RT regresso
 spline/tent).](a_04_event_models_files/figure-html/specify_hrf-1.png)
 
 ``` r
+
 
 # Example 2: Using a pre-defined HRF object (SPMG3)
 # Term tag: "stim"
@@ -437,6 +454,7 @@ plot(emodel_spmg3, term_name = "stim") # Plotting shows the 3 basis functions fo
 spline/tent).](a_04_event_models_files/figure-html/specify_hrf-2.png)
 
 ``` r
+
 if (interactive()) {
   plotly::ggplotly(plot(emodel_spmg3)) # Better for exploring many conditions interactively
 }
@@ -456,6 +474,7 @@ plot(emodel_custom_hrf, term_name = "stim")
 spline/tent).](a_04_event_models_files/figure-html/specify_hrf-3.png)
 
 ``` r
+
 
 # Example 4: Using gen_hrf() to create a lagged Gaussian
 # Term tag: "stim"
@@ -480,6 +499,7 @@ per onset). The generator is called *after* any subsetting, so it only
 sees the events that will actually be modeled.
 
 ``` r
+
 # Generator function that assigns different HRFs based on condition
 cond_hrf_gen <- function(event_data) {
   lapply(seq_len(nrow(event_data)), function(i) {
@@ -514,6 +534,7 @@ like:
   with `hrf_fun = ~my_hrf_column`
 
 ``` r
+
 # Create a design with varying event durations
 boxcar_design <- data.frame(
   onset = c(0, 20, 45, 70),
@@ -541,6 +562,7 @@ F‑test across a window of bins (e.g., around the expected peak) or
 across all bins.
 
 ``` r
+
 # Toy design with a continuous RT modulator
 set.seed(42)
 n <- 60
@@ -608,6 +630,7 @@ in the formula. This creates a separate regressor for every single event
 specified by the `onset` variable.
 
 ``` r
+
 emodel_trialwise <- event_model(onset ~ trialwise(), 
                                 data = simple_design, 
                                 block = ~ run, 
@@ -626,6 +649,7 @@ mean
 column.](a_04_event_models_files/figure-html/create_trialwise-1.png)
 
 ``` r
+
 if (interactive()) {
   plotly::ggplotly(plot(emodel_trialwise, label_mode = "compact")) # Use plotly to explore interactively
 }
@@ -643,6 +667,7 @@ Normally, one would add `motion` regressors to the `baseline_model` but
 we use it as an illustrative example.
 
 ``` r
+
 
 # Create covariates aligned to the sampling frame
 n_scans <- sum(blocklens(sframe_single_run))
@@ -669,6 +694,7 @@ construction will error with a helpful message.
 Once an `event_model` is created, you can extract its components:
 
 ``` r
+
 # List the terms in the model (names are now term tags)
 terms_list <- terms(emodel_pmod_int)
 print(names(terms_list))
@@ -761,6 +787,7 @@ You can attach contrasts directly to
 terms. Here are two common patterns.
 
 ``` r
+
 # Pairwise contrast between two stimulus levels
 con_face_vs_scene <- pair_contrast(~ stim == "face", ~ stim == "scene", name = "face_vs_scene")
 
@@ -793,6 +820,7 @@ To build a full design matrix, bind the event regressors with the
 baseline regressors.
 
 ``` r
+
 # Baseline model for the same sampling frame
 bmodel <- baseline_model(basis = "poly", degree = 5, sframe = sframe_two_factor)
 

@@ -51,6 +51,7 @@ Here’s a minimal example demonstrating the complete workflow from
 experimental design to design matrix:
 
 ``` r
+
 # 1. Define the temporal structure (2 runs, 150 scans each, TR = 2s)
 TR <- 2
 sframe <- sampling_frame(blocklens = c(150, 150), TR = TR)
@@ -108,6 +109,7 @@ The `sampling_frame` object defines the temporal structure of your fMRI
 data:
 
 ``` r
+
 # Single run: 200 scans, TR = 2 seconds
 sframe_single <- sampling_frame(blocklens = 200, TR = 2)
 print(sframe_single)
@@ -132,6 +134,7 @@ print(sframe_multi)
 Events are typically specified with the formula interface:
 
 ``` r
+
 # Formula interface (recommended)
 emodel_formula <- event_model(
   onset ~ hrf(condition) + hrf(RT, basis = "gaussian"),
@@ -151,6 +154,7 @@ emodel_formula <- event_model(
 ### 1. Block Design
 
 ``` r
+
 # Block design with 20-second blocks
 block_onsets <- seq(0, 280, by = 40)
 block_conditions <- rep(c("task", "rest"), length.out = length(block_onsets))
@@ -177,6 +181,7 @@ time.](a_01_introduction_files/figure-html/block_design-1.png)
 ### 2. Rapid Event-Related Design
 
 ``` r
+
 # Rapid event-related with jittered ISI
 set.seed(456)
 n_events <- 60
@@ -209,6 +214,7 @@ cor(design_matrix(emodel_rapid))
 ### 3. Parametric Modulation
 
 ``` r
+
 # Event-related design with RT modulation
 set.seed(789)
 n_trials <- 30
@@ -241,6 +247,7 @@ The design matrices created by `fmridesign` can be used with various
 fMRI analysis approaches:
 
 ``` r
+
 # Example: Export for use with external software
 X <- cbind(design_matrix(emodel), design_matrix(bmodel))
 

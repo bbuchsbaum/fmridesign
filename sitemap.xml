@@ -9,6 +9,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/articles/index.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/authors.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/index.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/news/index.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/BSpline.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/Ident.html</loc></url>
@@ -25,6 +26,8 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/boxcar_hrf_gen.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/cells.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/check_collinearity.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/check_nuisance.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/clean_nuisance.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/column_groups_by_condition.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/columns.html</loc></url>
@@ -33,6 +36,8 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/conditions.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/construct.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/contrast.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/contrast_from_mask.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/contrast_mask.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/contrast_set.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/contrasts.event_model.html</loc></url>
@@ -51,6 +56,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_map.event_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_map.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_meta.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/dot-fmridesign_extensions.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/dot-trial_factor.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/duration_hrf_gen.html</loc></url>
@@ -68,6 +74,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/feature_suffix.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-reexports.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/get_all_external_hrf_functions.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/get_basis_entry.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/get_external_hrfspec_functions.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/get_external_hrfspec_info.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/hrf.html</loc></url>
@@ -79,6 +86,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/labels.event.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/levels.event.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/list_external_hrfspecs.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/list_registered_bases.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/longnames.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/nbasis.hrfspec.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/nuisance.html</loc></url>
@@ -95,6 +103,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/print.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/print.sampling_frame.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/reexports.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/register_basis.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/register_hrfspec_extension.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/regressors.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/requires_external_processing.html</loc></url>

@@ -15,6 +15,7 @@ for creating event models with flexible hemodynamic response functions
 ### Build and Check
 
 ``` r
+
 # Build the package
 devtools::build()
 
@@ -31,6 +32,7 @@ devtools::load_all()
 ### Testing
 
 ``` r
+
 # Run all tests
 devtools::test()
 
@@ -44,6 +46,7 @@ covr::package_coverage()
 ### Documentation
 
 ``` r
+
 # Generate documentation from roxygen2 comments
 devtools::document()
 
