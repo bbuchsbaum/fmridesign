@@ -572,7 +572,9 @@ parse_event_model <- function(formula_or_list, data, block, durations = 0) {
          stop(sprintf("Length of 'onset' column (%d) != nrow(data) (%d)",
                       length(onsets), nrow(data)), call.=FALSE)
     }
-    formula_env <- rlang::empty_env() 
+    # List-based specs don't have a model formula environment, but they still
+    # need base operators for legacy expression-only fields like `subset = cond == "A"`.
+    formula_env <- rlang::base_env()
     
   } else {
     stop("`formula_or_list` must be a formula or a list of hrfspec objects.", call.=FALSE)

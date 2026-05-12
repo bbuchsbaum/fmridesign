@@ -32,6 +32,30 @@ test_that("event_model attaches col_metadata aligned with design matrix", {
   expect_true(all(rt_rows$modulation_id == "rt"))
 })
 
+test_that("factor HRF metadata has one row per expanded column", {
+  des <- data.frame(
+    condition = factor(c("A", "B", "A", "B", "A", "B")),
+    onsets = c(1, 15, 30, 45, 60, 75),
+    run = c(1, 1, 1, 2, 2, 2)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+
+  emod <- event_model(
+    onsets ~ hrf(condition),
+    data = des,
+    block = ~run,
+    sampling_frame = sframe
+  )
+
+  dm <- design_matrix(emod)
+  meta <- design_meta(emod)
+
+  expect_equal(ncol(dm), 2)
+  expect_equal(nrow(meta), ncol(dm))
+  expect_equal(meta$col, seq_len(ncol(dm)))
+  expect_equal(meta$name, colnames(dm))
+})
+
 test_that("design_colmap reads from col_metadata when available", {
   des <- data.frame(
     onset = c(0, 10, 20, 30),
@@ -69,4 +93,24 @@ test_that("multi-basis HRF yields basis_ix and basis_total", {
   expect_true(all(!is.na(meta$basis_ix)))
   expect_true(all(meta$basis_total == 3L))
   expect_true(all(meta$basis_label %in% c("canonical", "derivative", "dispersion")))
+})
+
+test_that("multi-basis factor HRF metadata matches expanded columns", {
+  des <- data.frame(
+    onset = c(0, 10, 20, 30),
+    run   = 1,
+    cond  = factor(c("A", "B", "A", "B"))
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
+
+  emod <- event_model(onset ~ hrf(cond, basis = "spmg3"),
+                      data = des, block = ~run, sampling_frame = sframe)
+  dm <- design_matrix(emod)
+  meta <- design_meta(emod)
+
+  expect_equal(ncol(dm), 6)
+  expect_equal(nrow(meta), ncol(dm))
+  expect_equal(meta$col, seq_len(ncol(dm)))
+  expect_equal(meta$basis_ix, rep(1:3, times = 2))
+  expect_true(all(meta$basis_total == 3L))
 })

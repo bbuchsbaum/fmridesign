@@ -9,3 +9,11 @@
   nuisance problems warn, stop, are dropped with an audit warning, or are skipped.
 - Added `check_nuisance()` and `clean_nuisance()` helpers for inspecting and
   repairing block-wise nuisance regressors before model construction.
+
+## Bug fixes
+
+- Fixed list-based `event_model()` specifications so `hrf(..., subset = )`
+  expressions can use base operators and helper functions from the calling
+  environment, matching formula-interface subset behavior.
+- Fixed event-model column metadata construction for factor and multi-basis HRF
+  terms that expand to multiple design columns.

@@ -154,8 +154,9 @@
                                modulation_type = "amplitude",
                                modulation_id   = NA_character_,
                                is_block_diagonal = FALSE) {
+  n <- length(name)
   tibble::tibble(
-    col              = integer(0),  # filled by combiner
+    col              = seq_len(n),  # replaced with absolute positions by combiner
     name             = name,
     term_tag         = term_tag,
     term_index       = NA_integer_,

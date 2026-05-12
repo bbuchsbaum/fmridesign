@@ -138,6 +138,7 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
                 nbasis=1, contrasts=NULL, id=NULL, name=NULL, lag=0, summate=TRUE, normalize=FALSE) {
 
   vars <- rlang::enquos(...) # Capture variables/expressions as quosures
+  subset_quo <- if (missing(subset)) NULL else rlang::enquo(subset)
 
   # --- Handle special named arguments within ... ---
   var_names <- names(vars)
@@ -246,7 +247,7 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
     onsets = onsets,
     durations = durations,
     prefix = prefix,
-    subset = rlang::enexpr(subset), # Capture subset expr unevaluated
+    subset = subset_quo, # Capture subset with its calling environment
     precision = precision,
     contrasts = contrasts, ## Pass validated list of contrast specs
     summate = summate,
