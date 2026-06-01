@@ -3,7 +3,7 @@
 \docType{data}
 \name{.fmridesign_extensions}
 \alias{.fmridesign_extensions}
-\title{Extension Registry for External HRF Specifications}
+\title{Extension Registry for External HRF Specifications and Parametric Bases}
 \format{
 An object of class \code{environment} of length 0.
 }
@@ -15,7 +15,10 @@ An environment used internally as a registry.
 }
 \description{
 This file provides an extension mechanism for packages to register
-their own HRF specification types with fmridesign.
+their own HRF specification types and parametric basis classes with
+fmridesign. The registries are queried by the term-naming pipeline and
+the design-metadata layer so user-defined types integrate without
+requiring edits to package internals.
 }
 \details{
 Internal registry environment for external HRF specs

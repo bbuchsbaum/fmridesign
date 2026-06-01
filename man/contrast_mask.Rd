@@ -16,7 +16,7 @@ contrast_mask(x, term, ...)
 \value{
 A list with elements:
 \itemize{
-\item \code{weights}   : numeric matrix, \code{n_base_conditions x n_contrast_cols},
+\item \code{weights}   : numeric matrix, \verb{n_base_conditions x n_contrast_cols},
 row names = base condition names.
 \item \code{condnames} : character vector of base condition names.
 }

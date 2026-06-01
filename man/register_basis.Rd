@@ -30,7 +30,7 @@ Invisibly returns the registration entry.
 }
 \description{
 Register a basis class so that the term-naming pipeline produces a
-well-formed term tag (\code{<prefix>_<varname>}) and so that design-matrix
+well-formed term tag (\verb{<prefix>_<varname>}) and so that design-matrix
 metadata identifies columns built from this basis as \code{parametric}.
 Built-in bases (\code{Poly}, \code{BSpline}, \code{Scale}, \code{Standardized},
 \code{ScaleWithin}, \code{RobustScale}, \code{Ident}) are registered automatically.
