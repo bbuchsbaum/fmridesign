@@ -605,8 +605,100 @@ parse_event_model <- function(formula_or_list, data, block, durations = 0) {
     onsets      = onsets,
     durations   = durations_proc,
     blockids    = blockids, # Use canonicalized IDs
-    data        = data, 
+    data        = data,
     formula_env = formula_env,
     interface   = if (rlang::is_formula(formula_or_list)) "formula" else "list"
   )
-} 
+}
+
+#' Check that event onsets fall within the sampling frame
+#'
+#' Backstop bounds check run at `event_model()` construction. For each block it
+#' compares the (run-relative) onsets and event end-times against the run bound
+#' `blocklen * TR`. Onsets that are negative, at/after a run's end, or events
+#' that extend past a run's end are flagged. This catches gross onset/clock
+#' mistakes (e.g. onsets recorded on the wrong clock that spill past run ends),
+#' which otherwise silently produce (nearly) empty regressors.
+#'
+#' This is a backstop, not a guarantee: a *uniform* temporal shift that keeps
+#' every event inside the frame is a valid design and is undetectable here.
+#'
+#' @param onsets Numeric vector of run-relative event onsets (length n_events).
+#' @param durations Numeric vector (or scalar) of event durations.
+#' @param blockids Integer vector of canonicalized block ids (length n_events).
+#' @param sampling_frame A `sampling_frame` object.
+#' @param strict Logical; if `TRUE`, raise an error instead of a warning.
+#' @return Invisibly `NULL`, or (when problems are found) a list with the
+#'   offending row indices (`before`, `after`, `overrun`).
+#' @keywords internal
+#' @noRd
+check_onsets_in_frame <- function(onsets, durations, blockids, sampling_frame,
+                                  strict = FALSE) {
+  bl <- tryCatch(fmrihrf::blocklens(sampling_frame), error = function(e) NULL)
+  TR <- tryCatch(sampling_frame$TR, error = function(e) NULL)
+  if (is.null(bl) || length(bl) == 0L || is.null(TR) || !is.numeric(TR)) {
+    return(invisible(NULL))
+  }
+  n_blocks <- length(bl)
+  if (length(TR) == 1L) TR <- rep(TR, n_blocks)
+  if (length(TR) != n_blocks) return(invisible(NULL))
+  run_end <- bl * TR  # seconds; run b spans [0, run_end[b])
+
+  n <- length(onsets)
+  if (length(durations) == 1L) durations <- rep(durations, n)
+  if (length(durations) != n) durations <- rep_len(durations, n)
+
+  # Per-event run bound; canonical block id b maps to frame block b. Events
+  # whose block has no matching frame entry are skipped (cannot map reliably).
+  in_range <- !is.na(blockids) & blockids >= 1L & blockids <= n_blocks
+  bound <- rep(NA_real_, n)
+  bound[in_range] <- run_end[blockids[in_range]]
+
+  before  <- which(in_range & onsets < 0)
+  after   <- which(in_range & onsets >= bound)
+  overrun <- which(in_range & onsets >= 0 & onsets < bound &
+                     (onsets + durations) > bound)
+
+  if (length(before) == 0L && length(after) == 0L && length(overrun) == 0L) {
+    return(invisible(NULL))
+  }
+
+  msg_lines <- character(0)
+  oob <- sort(union(before, after))
+  if (length(oob)) {
+    for (b in sort(unique(blockids[oob]))) {
+      rows_b <- oob[blockids[oob] == b]
+      ex <- utils::head(rows_b, 3L)
+      msg_lines <- c(msg_lines, sprintf(
+        "  Block %d: %d onset(s) outside [0, %.1f) s (%d scans x TR %s); e.g. onset %s at row %s.",
+        b, length(rows_b), run_end[b], bl[b], format(TR[b]),
+        paste(format(round(onsets[ex], 1)), collapse = ", "),
+        paste(ex, collapse = ", ")))
+    }
+  }
+  if (length(overrun)) {
+    for (b in sort(unique(blockids[overrun]))) {
+      rows_b <- overrun[blockids[overrun] == b]
+      ex <- utils::head(rows_b, 3L)
+      msg_lines <- c(msg_lines, sprintf(
+        "  Block %d: %d event(s) extend past run end (onset + duration > %.1f s); e.g. row %s.",
+        b, length(rows_b), run_end[b], paste(ex, collapse = ", ")))
+    }
+  }
+
+  n_total <- length(union(oob, overrun))
+  header <- sprintf(
+    paste0("event_model(): %d event(s) fall outside the sampling frame. ",
+           "Events outside [0, blocklen x TR) contribute (nearly) empty ",
+           "regressors; check that onsets are on the scan clock."),
+    n_total)
+  tail_line <- if (strict) "" else "\n(set strict = TRUE to error instead of warn)"
+  full <- paste0(header, "\n", paste(msg_lines, collapse = "\n"), tail_line)
+
+  if (strict) {
+    stop(full, call. = FALSE)
+  } else {
+    warning(full, call. = FALSE)
+  }
+  invisible(list(before = before, after = after, overrun = overrun))
+}

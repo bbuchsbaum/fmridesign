@@ -22,6 +22,12 @@ NULL
 #' @param sampling_frame An object of class `sampling_frame` defining the scan timing (TR, block lengths).
 #' @param durations Numeric vector or scalar specifying event durations (seconds). Default is 0.
 #' @param drop_empty Logical indicating whether to drop empty events during term construction. Default is TRUE.
+#' @param strict Logical controlling the onset bounds check. When `FALSE`
+#'   (default) event onsets that fall outside the sampling frame (negative, at or
+#'   after a run's end, or events extending past a run's end) trigger a
+#'   `warning()`. When `TRUE` the same conditions raise an error. This is a
+#'   backstop for gross onset/clock mistakes; a uniform in-bounds shift cannot be
+#'   detected here.
 #' @param precision Numeric precision for HRF sampling/convolution. Default is 0.3.
 #' @param parallel Logical compatibility shim reserved for future use. The
 #'   current implementation always evaluates terms sequentially; when set to
@@ -76,13 +82,17 @@ NULL
 #'
 #' @export
 #' @include event_model_helpers.R
-event_model <- function(formula_or_list, data, block, sampling_frame, 
-                        durations = 0, drop_empty = TRUE, precision = 0.3, 
-                        parallel = FALSE, progress = FALSE, ...) {
-  
+event_model <- function(formula_or_list, data, block, sampling_frame,
+                        durations = 0, drop_empty = TRUE, precision = 0.3,
+                        parallel = FALSE, progress = FALSE, strict = FALSE, ...) {
+
   # Stage 1: Parse inputs
   parsed <- parse_event_model(formula_or_list, data, block, durations)
-  
+
+  # Backstop: warn (or error, if strict) when onsets fall outside the frame.
+  check_onsets_in_frame(parsed$onsets, parsed$durations, parsed$blockids,
+                        sampling_frame, strict = strict)
+
   # Stage 2: Realise event terms
   terms <- realise_event_terms(parsed, sampling_frame, drop_empty, progress)
   

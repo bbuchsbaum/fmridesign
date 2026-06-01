@@ -243,7 +243,15 @@ correlation_map.event_model <- function(x, rotate_x_text = TRUE, ...) {
 #' # Plot specific term only
 #' plot(emod, term_name = "cond")
 #'
-#' @importFrom ggplot2 ggplot aes geom_line facet_wrap labs theme_minimal as_labeller scale_color_discrete
+#' @param block_x Time axis to use for multi-run designs. `"global"` (default)
+#'   uses concatenated time so each block occupies a distinct x-range;
+#'   `"run"` uses run-relative time that restarts each block. In either case
+#'   line segments are grouped by block so a regressor is never connected across
+#'   a run boundary (this is what prevents the spurious high-frequency
+#'   oscillations that appear when all blocks share one block-relative axis).
+#' @param facet_by_block Logical; if `TRUE`, draw one panel per block. Defaults
+#'   to `FALSE`. Useful for multi-run designs where overlaid runs are cluttered.
+#' @importFrom ggplot2 ggplot aes geom_line facet_wrap facet_grid labs theme_minimal as_labeller scale_color_discrete
 #' @importFrom tidyr pivot_longer
 #' @method plot event_model
 #' @export
@@ -254,42 +262,57 @@ plot.event_model <- function(x,
                              max_labels = 30,
                              abbrev_min = 10,
                              strip_text_size = 8,
+                             block_x = c("global", "run"),
+                             facet_by_block = FALSE,
                              ...) {
+  block_x <- match.arg(block_x)
   # Get the design matrix
   DM <- design_matrix(x)
-  
-  # Create time variable based on sampling frame
+
+  # Per-timepoint block ids and time axis from the sampling frame.
   if (!is.null(x$sampling_frame)) {
-    # Use run-relative time (restarts each block) for clearer per-block plots
-    time_var <- fmrihrf::samples(x$sampling_frame, global = FALSE)
+    blockid_vec <- fmrihrf::blockids(x$sampling_frame)
+    # global = concatenated time (distinct x-range per block);
+    # run-relative time restarts each block.
+    time_var <- fmrihrf::samples(x$sampling_frame, global = (block_x == "global"))
   } else {
+    blockid_vec <- rep(1L, nrow(DM))
     time_var <- seq_len(nrow(DM))
   }
-  
+  # Guard against any length mismatch between the frame and the design matrix.
+  if (length(blockid_vec) != nrow(DM)) blockid_vec <- rep(1L, nrow(DM))
+  if (length(time_var) != nrow(DM)) time_var <- seq_len(nrow(DM))
+  n_blocks <- length(unique(blockid_vec))
+
   # Select columns to plot
   if (!is.null(term_name)) {
     # Find columns matching the term name
     # Pattern matches: term_name followed by underscore, dot, bracket, or end of string
-    term_cols <- grep(paste0("^", term_name, "[_\\.\\[]|^", term_name, "$"), 
+    term_cols <- grep(paste0("^", term_name, "[_\\.\\[]|^", term_name, "$"),
                       colnames(DM), value = TRUE)
     if (length(term_cols) == 0) {
       stop("No columns found matching term name: ", term_name)
     }
     DM <- DM[, term_cols, drop = FALSE]
   }
-  
+
   # Convert to long format
   df_long <- as.data.frame(DM)
   df_long$Time <- time_var
+  df_long$.block <- factor(blockid_vec, levels = unique(blockid_vec))
   df_long <- tidyr::pivot_longer(
     df_long,
-    cols = -Time,
+    cols = -c(Time, .block),
     names_to = "Regressor",
     values_to = "Response"
   )
-  # Ensure proper ordering and grouping for line drawing
-  df_long <- df_long[order(df_long$Regressor, df_long$Time), ]
-  
+  # Group each line by Regressor *within* a block so the polyline never doubles
+  # back between runs (the root cause of the spurious oscillation in #6).
+  df_long$.group <- interaction(df_long$Regressor, df_long$.block,
+                                drop = TRUE, lex.order = TRUE)
+  # Ensure proper ordering for line drawing
+  df_long <- df_long[order(df_long$Regressor, df_long$.block, df_long$Time), ]
+
   # Label handling
   label_mode <- match.arg(label_mode)
   regs <- unique(df_long$Regressor)
@@ -306,15 +329,31 @@ plot.event_model <- function(x,
     label_map[] <- abbr
   }
   
-  # Create the plot
-  plt <- ggplot(df_long, aes(x = Time, y = Response, color = Regressor, group = Regressor)) +
+  # Only facet by block when it actually disambiguates (more than one block).
+  facet_by_block <- isTRUE(facet_by_block) && n_blocks > 1L
+  x_lab <- if (block_x == "run") "Time (seconds, run-relative)" else "Time (seconds)"
+
+  # Create the plot. Lines are grouped by Regressor-within-block via `.group`.
+  plt <- ggplot(df_long, aes(x = Time, y = Response, color = Regressor, group = .group)) +
     geom_line(linewidth = 0.8, na.rm = TRUE) +
     theme_minimal(base_size = 14) +
-    labs(x = "Time (seconds)", y = "Predicted Response")
-  
-  if (use_facets) {
+    labs(x = x_lab, y = "Predicted Response")
+
+  suppress_labels <- label_mode == "none" ||
+    (label_mode == "auto" && n_regressors > max_labels)
+
+  if (use_facets && facet_by_block) {
+    # Grid: regressors x blocks.
+    labeller <- if (suppress_labels) "label_value" else ggplot2::as_labeller(label_map)
+    plt <- plt +
+      ggplot2::facet_grid(Regressor ~ .block, scales = "free_y",
+                          labeller = ggplot2::labeller(Regressor = labeller)) +
+      ggplot2::theme(legend.position = "none",
+                     strip.text = if (suppress_labels) ggplot2::element_blank()
+                                  else ggplot2::element_text(size = strip_text_size))
+  } else if (use_facets) {
     # Facet by regressor; control labels via labeller and theme
-    if (label_mode == "none" || (label_mode == "auto" && n_regressors > max_labels)) {
+    if (suppress_labels) {
       plt <- plt +
         ggplot2::facet_wrap(~ Regressor, scales = "free_y") +
         ggplot2::theme(legend.position = "none", strip.text = ggplot2::element_blank())
@@ -323,15 +362,24 @@ plot.event_model <- function(x,
         ggplot2::facet_wrap(~ Regressor, scales = "free_y", labeller = ggplot2::as_labeller(label_map)) +
         ggplot2::theme(legend.position = "none", strip.text = ggplot2::element_text(size = strip_text_size))
     }
+  } else if (facet_by_block) {
+    # One panel per block (each block keeps its own x-range).
+    plt <- plt + ggplot2::facet_wrap(~ .block, scales = "free_x",
+                                     labeller = ggplot2::labeller(.block = function(b) paste0("block ", b)))
+    if (suppress_labels) {
+      plt <- plt + ggplot2::theme(legend.position = "none")
+    } else {
+      plt <- plt + ggplot2::scale_color_discrete(labels = function(x) unname(ifelse(x %in% names(label_map), label_map[x], x)))
+    }
   } else {
     # Not faceting; show legend unless suppressed
-    if (label_mode == "none" || (label_mode == "auto" && n_regressors > max_labels)) {
+    if (suppress_labels) {
       plt <- plt + ggplot2::theme(legend.position = "none")
     } else {
       # Apply compacted labels to legend if requested
       plt <- plt + ggplot2::scale_color_discrete(labels = function(x) unname(ifelse(x %in% names(label_map), label_map[x], x)))
     }
   }
-  
+
   plt
 }

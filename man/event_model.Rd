@@ -14,6 +14,7 @@ event_model(
   precision = 0.3,
   parallel = FALSE,
   progress = FALSE,
+  strict = FALSE,
   ...
 )
 
@@ -27,6 +28,7 @@ event_model(
   precision = 0.3,
   parallel = FALSE,
   progress = FALSE,
+  strict = FALSE,
   ...
 )
 }
@@ -53,6 +55,13 @@ current implementation always evaluates terms sequentially; when set to
 \code{FALSE}.}
 
 \item{progress}{Logical indicating whether to show a progress bar during term realisation. Default is FALSE.}
+
+\item{strict}{Logical controlling the onset bounds check. When \code{FALSE}
+(default) event onsets that fall outside the sampling frame (negative, at or
+after a run's end, or events extending past a run's end) trigger a
+\code{warning()}. When \code{TRUE} the same conditions raise an error. This is a
+backstop for gross onset/clock mistakes; a uniform in-bounds shift cannot be
+detected here.}
 
 \item{...}{Additional arguments (currently unused).}
 }

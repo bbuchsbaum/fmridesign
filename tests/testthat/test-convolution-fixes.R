@@ -238,13 +238,17 @@ test_that("events outside sampling window are handled correctly", {
   
   # Create a short sampling frame (10 TRs * 2s = 20s)
   sframe <- sampling_frame(10, TR = 2.0)
-  
-  # No warning expected - out-of-window events are handled gracefully
-  emodel <- event_model(Onset ~ hrf(Cond), 
-                        block = ~ Run, 
-                        sampling_frame = sframe, 
-                        data = test_events)
-  
+
+  # The out-of-window event (onset 25 s, window [0, 20) s) is flagged by the
+  # construction-time bounds check (issue #5) but still handled gracefully.
+  expect_warning(
+    emodel <- event_model(Onset ~ hrf(Cond),
+                          block = ~ Run,
+                          sampling_frame = sframe,
+                          data = test_events),
+    "outside the sampling frame"
+  )
+
   dmat <- design_matrix(emodel)
   col_sums <- apply(dmat, 2, sum)
   

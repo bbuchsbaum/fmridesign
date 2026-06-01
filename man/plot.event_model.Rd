@@ -12,6 +12,8 @@
   max_labels = 30,
   abbrev_min = 10,
   strip_text_size = 8,
+  block_x = c("global", "run"),
+  facet_by_block = FALSE,
   ...
 )
 }
@@ -33,6 +35,16 @@ exceeds this value, labels are suppressed. Default 30.}
 \item{abbrev_min}{Integer. Minimum length used by \code{\link[base:abbreviate]{base::abbreviate()}} when compacting labels. Default 10.}
 
 \item{strip_text_size}{Numeric. Strip label text size when faceting with labels. Default 8.}
+
+\item{block_x}{Time axis to use for multi-run designs. \code{"global"} (default)
+uses concatenated time so each block occupies a distinct x-range;
+\code{"run"} uses run-relative time that restarts each block. In either case
+line segments are grouped by block so a regressor is never connected across
+a run boundary (this is what prevents the spurious high-frequency
+oscillations that appear when all blocks share one block-relative axis).}
+
+\item{facet_by_block}{Logical; if \code{TRUE}, draw one panel per block. Defaults
+to \code{FALSE}. Useful for multi-run designs where overlaid runs are cluttered.}
 
 \item{...}{Additional arguments (currently unused).}
 }
