@@ -251,7 +251,11 @@ correlation_map.event_model <- function(x, rotate_x_text = TRUE, ...) {
 #'   oscillations that appear when all blocks share one block-relative axis).
 #' @param facet_by_block Logical; if `TRUE`, draw one panel per block. Defaults
 #'   to `FALSE`. Useful for multi-run designs where overlaid runs are cluttered.
-#' @importFrom ggplot2 ggplot aes geom_line facet_wrap facet_grid labs theme_minimal as_labeller scale_color_discrete
+#' @param show_block_bounds Logical; if `TRUE` (default), draw dashed vertical
+#'   rules at each run's start/end (`blocklen * TR`). These make late starts and
+#'   overruns obvious and complement the `event_model()` onset bounds check.
+#'   Drawn only when a `sampling_frame` is available.
+#' @importFrom ggplot2 ggplot aes geom_line geom_vline facet_wrap facet_grid labs theme_minimal as_labeller scale_color_discrete
 #' @importFrom tidyr pivot_longer
 #' @method plot event_model
 #' @export
@@ -264,6 +268,7 @@ plot.event_model <- function(x,
                              strip_text_size = 8,
                              block_x = c("global", "run"),
                              facet_by_block = FALSE,
+                             show_block_bounds = TRUE,
                              ...) {
   block_x <- match.arg(block_x)
   # Get the design matrix
@@ -333,8 +338,46 @@ plot.event_model <- function(x,
   facet_by_block <- isTRUE(facet_by_block) && n_blocks > 1L
   x_lab <- if (block_x == "run") "Time (seconds, run-relative)" else "Time (seconds)"
 
+  # Run start/end boundaries (at blocklen * TR), in the chosen time units.
+  bound_df <- NULL
+  if (isTRUE(show_block_bounds) && !is.null(x$sampling_frame)) {
+    bl <- tryCatch(fmrihrf::blocklens(x$sampling_frame), error = function(e) NULL)
+    TR <- tryCatch(x$sampling_frame$TR, error = function(e) NULL)
+    if (!is.null(bl) && length(bl) > 0L && is.numeric(TR)) {
+      if (length(TR) == 1L) TR <- rep(TR, length(bl))
+      if (length(TR) == length(bl)) {
+        run_len <- bl * TR
+        if (block_x == "global") {
+          ends   <- cumsum(run_len)
+          starts <- c(0, utils::head(ends, -1L))
+        } else {
+          ends   <- run_len
+          starts <- rep(0, length(bl))
+        }
+        if (facet_by_block) {
+          # One set of rules per panel (keyed by .block) so each run is bracketed.
+          bound_df <- data.frame(
+            .block = factor(rep(seq_along(bl), times = 2L),
+                            levels = levels(df_long$.block)),
+            xintercept = c(starts, ends)
+          )
+        } else {
+          # Single shared axis: de-duplicated boundary positions.
+          bound_df <- data.frame(xintercept = sort(unique(c(starts, ends))))
+        }
+      }
+    }
+  }
+
   # Create the plot. Lines are grouped by Regressor-within-block via `.group`.
-  plt <- ggplot(df_long, aes(x = Time, y = Response, color = Regressor, group = .group)) +
+  plt <- ggplot(df_long, aes(x = Time, y = Response, color = Regressor, group = .group))
+  if (!is.null(bound_df)) {
+    # Drawn first so the dashed rules sit underneath the regressor lines.
+    plt <- plt + ggplot2::geom_vline(
+      data = bound_df, ggplot2::aes(xintercept = xintercept),
+      inherit.aes = FALSE, linetype = "dashed", colour = "grey60", linewidth = 0.35)
+  }
+  plt <- plt +
     geom_line(linewidth = 0.8, na.rm = TRUE) +
     theme_minimal(base_size = 14) +
     labs(x = x_lab, y = "Predicted Response")

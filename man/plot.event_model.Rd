@@ -14,6 +14,7 @@
   strip_text_size = 8,
   block_x = c("global", "run"),
   facet_by_block = FALSE,
+  show_block_bounds = TRUE,
   ...
 )
 }
@@ -45,6 +46,11 @@ oscillations that appear when all blocks share one block-relative axis).}
 
 \item{facet_by_block}{Logical; if \code{TRUE}, draw one panel per block. Defaults
 to \code{FALSE}. Useful for multi-run designs where overlaid runs are cluttered.}
+
+\item{show_block_bounds}{Logical; if \code{TRUE} (default), draw dashed vertical
+rules at each run's start/end (\code{blocklen * TR}). These make late starts and
+overruns obvious and complement the \code{event_model()} onset bounds check.
+Drawn only when a \code{sampling_frame} is available.}
 
 \item{...}{Additional arguments (currently unused).}
 }

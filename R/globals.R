@@ -6,5 +6,5 @@ utils::globalVariables(c(
   "Var1", "Var2", "Correlation",
   "Time", "Response", "ContrastName", "Weight",
   ".time", ".block", ".group", "condition", "value",
-  "run", "start", "end"
+  "run", "start", "end", "xintercept"
 ))

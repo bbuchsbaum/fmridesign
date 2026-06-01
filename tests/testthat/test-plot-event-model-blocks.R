@@ -75,3 +75,46 @@ test_that("single-block models still plot with one block group", {
   expect_equal(length(unique(d$.block)), 1L)
   expect_s3_class(plot(em), "ggplot")
 })
+
+# --- per-run boundary rules (#5 companion) ---
+
+plot_geoms <- function(p) vapply(p$layers, function(l) class(l$geom)[1], character(1))
+vline_positions <- function(p) {
+  i <- which(plot_geoms(p) == "GeomVline")
+  if (length(i) == 0) return(numeric(0))
+  sort(unique(p$layers[[i[1]]]$data$xintercept))
+}
+
+test_that("run boundary rules are drawn by default and can be disabled", {
+  emod <- make_pm_model()
+  expect_true("GeomVline" %in% plot_geoms(plot(emod)))
+  expect_false("GeomVline" %in% plot_geoms(plot(emod, show_block_bounds = FALSE)))
+})
+
+test_that("global boundaries sit at cumulative run ends", {
+  emod <- make_pm_model()  # blocklens c(140,140), TR 1.77 -> run_len 247.8
+  expect_equal(vline_positions(plot(emod)), c(0, 247.8, 495.6), tolerance = 1e-6)
+})
+
+test_that("run-relative boundaries sit at each run length", {
+  emod <- make_pm_model()
+  expect_equal(vline_positions(plot(emod, block_x = "run")), c(0, 247.8), tolerance = 1e-6)
+})
+
+test_that("boundaries honour per-block TR", {
+  ev <- data.frame(onset = c(5, 5), run = c(1, 2), cond = factor("a"))
+  sf <- fmrihrf::sampling_frame(blocklens = c(100, 100), TR = c(2, 1.77))
+  em <- event_model(onset ~ hrf(cond), data = ev, block = ~run, sampling_frame = sf, durations = 0)
+  # global: 100*2 = 200, then +100*1.77 = 377
+  expect_equal(vline_positions(plot(em)), c(0, 200, 377), tolerance = 1e-6)
+})
+
+test_that("faceted boundary data is keyed by block for per-panel rules", {
+  emod <- make_pm_model()
+  p <- plot(emod, facet_by_block = TRUE)
+  i <- which(plot_geoms(p) == "GeomVline")
+  expect_length(i, 1L)
+  bd <- p$layers[[i[1]]]$data
+  expect_true(".block" %in% colnames(bd))
+  expect_equal(nrow(bd), 4L)  # start + end for each of 2 blocks
+})
