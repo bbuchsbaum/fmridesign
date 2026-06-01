@@ -15,6 +15,9 @@ plot(
   max_labels = 30,
   abbrev_min = 10,
   strip_text_size = 8,
+  block_x = c("global", "run"),
+  facet_by_block = FALSE,
+  show_block_bounds = TRUE,
   ...
 )
 ```
@@ -56,6 +59,29 @@ plot(
 - strip_text_size:
 
   Numeric. Strip label text size when faceting with labels. Default 8.
+
+- block_x:
+
+  Time axis to use for multi-run designs. `"global"` (default) uses
+  concatenated time so each block occupies a distinct x-range; `"run"`
+  uses run-relative time that restarts each block. In either case line
+  segments are grouped by block so a regressor is never connected across
+  a run boundary (this is what prevents the spurious high-frequency
+  oscillations that appear when all blocks share one block-relative
+  axis).
+
+- facet_by_block:
+
+  Logical; if `TRUE`, draw one panel per block. Defaults to `FALSE`.
+  Useful for multi-run designs where overlaid runs are cluttered.
+
+- show_block_bounds:
+
+  Logical; if `TRUE` (default), draw dashed vertical rules at each run's
+  start/end (`blocklen * TR`). These make late starts and overruns
+  obvious and complement the
+  [`event_model()`](https://bbuchsbaum.github.io/fmridesign/reference/event_model.md)
+  onset bounds check. Drawn only when a `sampling_frame` is available.
 
 - ...:
 

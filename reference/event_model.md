@@ -22,6 +22,7 @@ event_model(
   precision = 0.3,
   parallel = FALSE,
   progress = FALSE,
+  strict = FALSE,
   ...
 )
 
@@ -35,6 +36,7 @@ event_model(
   precision = 0.3,
   parallel = FALSE,
   progress = FALSE,
+  strict = FALSE,
   ...
 )
 ```
@@ -86,6 +88,16 @@ event_model(
 
   Logical indicating whether to show a progress bar during term
   realisation. Default is FALSE.
+
+- strict:
+
+  Logical controlling the onset bounds check. When `FALSE` (default)
+  event onsets that fall outside the sampling frame (negative, at or
+  after a run's end, or events extending past a run's end) trigger a
+  [`warning()`](https://rdrr.io/r/base/warning.html). When `TRUE` the
+  same conditions raise an error. This is a backstop for gross
+  onset/clock mistakes; a uniform in-bounds shift cannot be detected
+  here.
 
 - ...:
 
