@@ -19,7 +19,10 @@
 \item{x}{A baseline_model object.}
 
 \item{term_name}{Optional term name (a character string) specifying which term to plot.
-If omitted, the first non-constant term is plotted.}
+If omitted, the first non-constant term is plotted. Valid names are those
+returned by \code{names(terms(x))}; in particular pass \code{"nuisance"} to
+plot nuisance regressors supplied via \code{nuisance_list}, which are never
+shown by the default (first-term) selection.}
 
 \item{title}{Optional title for the plot. If not provided, a default title is generated.}
 
@@ -45,6 +48,13 @@ for each block and supports customization of titles, axis labels, line size, and
 sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
 bmod <- baseline_model(sframe = sframe)
 if (requireNamespace("ggplot2", quietly = TRUE)) plot(bmod)
+
+# Nuisance regressors are stored as the "nuisance" term; plot with term_name
+nuis <- list(matrix(rnorm(10), nrow = 5, ncol = 2))
+bmod2 <- baseline_model(basis = "poly", degree = 2, sframe = sframe,
+                        nuisance_list = nuis, nuisance_check = "none")
+if (requireNamespace("ggplot2", quietly = TRUE))
+  plot(bmod2, term_name = "nuisance")
 
 }
 \keyword{internal}

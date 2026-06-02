@@ -1054,7 +1054,10 @@ print.baseline_model <- function(x, ...) {
 #'
 #' @param x A baseline_model object.
 #' @param term_name Optional term name (a character string) specifying which term to plot.
-#'   If omitted, the first non-constant term is plotted.
+#'   If omitted, the first non-constant term is plotted. Valid names are those
+#'   returned by \code{names(terms(x))}; in particular pass \code{"nuisance"} to
+#'   plot nuisance regressors supplied via \code{nuisance_list}, which are never
+#'   shown by the default (first-term) selection.
 #' @param title Optional title for the plot. If not provided, a default title is generated.
 #' @param xlab Label for the x-axis (default: "Time").
 #' @param ylab Label for the y-axis (default: "Design Matrix Value").
@@ -1066,6 +1069,13 @@ print.baseline_model <- function(x, ...) {
 #' sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
 #' bmod <- baseline_model(sframe = sframe)
 #' if (requireNamespace("ggplot2", quietly = TRUE)) plot(bmod)
+#'
+#' # Nuisance regressors are stored as the "nuisance" term; plot with term_name
+#' nuis <- list(matrix(rnorm(10), nrow = 5, ncol = 2))
+#' bmod2 <- baseline_model(basis = "poly", degree = 2, sframe = sframe,
+#'                         nuisance_list = nuis, nuisance_check = "none")
+#' if (requireNamespace("ggplot2", quietly = TRUE))
+#'   plot(bmod2, term_name = "nuisance")
 #'
 #' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap labs theme_minimal scale_color_brewer
 #' @importFrom tidyr pivot_longer
@@ -1154,9 +1164,22 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   # Get the data for the selected term and ensure stable ordering
   dfx <- dflist[[plot_term]]
   dfx <- dfx[order(dfx$.block, dfx$condition, dfx$.time), ]
+
+  # Hide regressors that are structurally absent from a block. Block-diagonal
+  # terms (nuisance regressors, run-wise drift/intercept bases) carry all-zero
+  # columns for every block but their own; without this each facet would draw
+  # flat zero lines for the other blocks' columns.
+  zero_tol <- sqrt(.Machine$double.eps)
+  grp <- interaction(dfx$.block, dfx$condition, drop = TRUE)
+  grp_has_signal <- stats::ave(abs(dfx$value), grp,
+                               FUN = function(v) any(v > zero_tol, na.rm = TRUE)) > 0
+  if (any(grp_has_signal)) {
+    dfx <- dfx[grp_has_signal, , drop = FALSE]
+  }
+
   # Coerce types explicitly to avoid downstream surprises
   dfx$.block    <- factor(dfx$.block)
-  dfx$condition <- as.factor(dfx$condition)
+  dfx$condition <- droplevels(as.factor(dfx$condition))
   dfx$value     <- as.numeric(dfx$value)
   dfx$.time     <- as.numeric(dfx$.time)
   n_cond <- length(levels(dfx$condition))
@@ -1170,7 +1193,7 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   # Create the ggplot (handle single vs multi condition for robust legends/scales).
   if (n_cond <= 1) {
     p <- ggplot2::ggplot(dfx, ggplot2::aes(x = .time, y = value, group = 1)) +
-      ggplot2::geom_line(size = line_size, na.rm = TRUE, colour = "#2c7fb8", ...) +
+      ggplot2::geom_line(linewidth = line_size, na.rm = TRUE, colour = "#2c7fb8", ...) +
       ggplot2::facet_wrap(ggplot2::vars(.block), ncol = 1, scales = "free_x") +
       ggplot2::labs(title = if (!is.null(title)) title else paste("Baseline Model:", plot_term),
                     x = xlab, y = ylab) +
@@ -1180,7 +1203,7 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
                      axis.title = ggplot2::element_text(face = "bold"))
   } else {
     p <- ggplot2::ggplot(dfx, ggplot2::aes(x = .time, y = value, colour = condition, group = condition)) +
-      ggplot2::geom_line(size = line_size, na.rm = TRUE, ...) +
+      ggplot2::geom_line(linewidth = line_size, na.rm = TRUE, ...) +
       ggplot2::facet_wrap(ggplot2::vars(.block), ncol = 1, scales = "free_x") +
       ggplot2::labs(title = if (!is.null(title)) title else paste("Baseline Model:", plot_term),
                     x = xlab, y = ylab, colour = "Condition") +
@@ -1309,7 +1332,7 @@ design_map.baseline_model <- function(x,
                  xend = ncols + 0.5,
                  y    = rb + 0.5,
                  yend = rb + 0.5,
-                 color = "white", size = 1)
+                 color = "white", linewidth = 1)
     }
   }
   
