@@ -70,7 +70,7 @@ A ggplot2 plot object.
 sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
 bmod <- baseline_model(sframe = sframe)
 if (requireNamespace("ggplot2", quietly = TRUE)) plot(bmod)
-#> No term_name specified, plotting the first available non-constant term: drift
+#> No term_name specified and all baseline terms are constant; plotting: drift
 
 
 # Nuisance regressors are stored as the "nuisance" term; plot with term_name
