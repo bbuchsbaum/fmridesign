@@ -70,6 +70,33 @@
   mats
 }
 
+# Repair NA values in (already-normalized) nuisance matrices per `na_action`.
+# fMRIPrep-style confounds (framewise_displacement, dvars, *_derivative1) carry
+# a leading NA per run; this decides how those are handled before the rank /
+# collinearity diagnostics. Only pure NA is repaired -- NaN and Inf are left in
+# place so genuinely corrupt columns are still flagged non-finite and dropped.
+.repair_nuisance_na <- function(mats, na_action = c("drop", "zero", "median")) {
+  na_action <- match.arg(na_action)
+  if (na_action == "drop") return(mats)
+
+  lapply(mats, function(mat) {
+    for (j in seq_len(ncol(mat))) {
+      col <- mat[, j]
+      na_idx <- is.na(col) & !is.nan(col)
+      if (!any(na_idx)) next
+      if (na_action == "zero") {
+        col[na_idx] <- 0
+      } else {
+        finite <- col[is.finite(col)]
+        if (length(finite) == 0L) next  # all-NA: leave for the non-finite drop
+        col[na_idx] <- stats::median(finite)
+      }
+      mat[, j] <- col
+    }
+    mat
+  })
+}
+
 .qr_rank <- function(x, tol = .nuisance_default_tol()) {
   if (ncol(x) == 0) return(0L)
   qr(x, tol = tol)$rank
@@ -177,8 +204,10 @@
                                      sframe,
                                      baseline_terms = list(),
                                      tol = .nuisance_default_tol(),
-                                     duplicate_threshold = 1 - .nuisance_default_tol()) {
+                                     duplicate_threshold = 1 - .nuisance_default_tol(),
+                                     na_action = "drop") {
   mats <- .as_nuisance_matrices(nuisance_list, sframe)
+  mats <- .repair_nuisance_na(mats, na_action)
   rows_by_block <- .block_rows(sframe)
   by_block <- vector("list", length(mats))
   problems <- list()
@@ -359,6 +388,13 @@
 #' @param tol Numeric tolerance passed to QR rank checks.
 #' @param duplicate_threshold Absolute correlation threshold used to flag
 #'   duplicate or near-duplicate columns.
+#' @param na_action Character; how to handle `NA` values in `nuisance_list`
+#'   columns before the diagnostics run. `"drop"` (default) leaves `NA`s in
+#'   place so any column containing one is treated as non-finite. `"zero"`
+#'   replaces `NA` with `0` (matching the fMRIPrep leading-row convention) and
+#'   `"median"` replaces `NA` with the column median; both repair an isolated
+#'   leading `NA` (e.g. in DVARS or framewise displacement) so the regressor is
+#'   retained. `NaN` and `Inf` are never repaired and remain non-finite.
 #'
 #' @return A `nuisance_check` object with `ok`, `problems`, `by_block`, and
 #'   normalized `nuisance_list` elements.
@@ -369,16 +405,19 @@ check_nuisance <- function(nuisance_list,
                            degree = 1,
                            intercept = c("runwise", "global", "none"),
                            tol = sqrt(.Machine$double.eps),
-                           duplicate_threshold = 1 - sqrt(.Machine$double.eps)) {
+                           duplicate_threshold = 1 - sqrt(.Machine$double.eps),
+                           na_action = c("drop", "zero", "median")) {
   basis <- match.arg(basis)
   intercept <- match.arg(intercept)
+  na_action <- match.arg(na_action)
   if (basis %in% c("bs", "ns")) {
     assert_that(degree > 2, msg = "'bs' and 'ns' bases must have degree >= 3")
   }
   baseline_terms <- .baseline_terms_for_nuisance_check(basis, degree, sframe, intercept)
   .check_nuisance_internal(nuisance_list, sframe, baseline_terms,
                            tol = tol,
-                           duplicate_threshold = duplicate_threshold)
+                           duplicate_threshold = duplicate_threshold,
+                           na_action = na_action)
 }
 
 #' Clean nuisance regressors by dropping rank-useless columns
@@ -399,13 +438,16 @@ clean_nuisance <- function(nuisance_list,
                            degree = 1,
                            intercept = c("runwise", "global", "none"),
                            tol = sqrt(.Machine$double.eps),
-                           duplicate_threshold = 1 - sqrt(.Machine$double.eps)) {
+                           duplicate_threshold = 1 - sqrt(.Machine$double.eps),
+                           na_action = c("drop", "zero", "median")) {
+  na_action <- match.arg(na_action)
   report <- check_nuisance(nuisance_list, sframe,
                            basis = basis,
                            degree = degree,
                            intercept = intercept,
                            tol = tol,
-                           duplicate_threshold = duplicate_threshold)
+                           duplicate_threshold = duplicate_threshold,
+                           na_action = na_action)
   ret <- list(
     nuisance_list = .drop_nuisance_columns(report),
     report = report
@@ -519,6 +561,16 @@ make_nuisance_term <- function(nuisance_list,
 #'   warns on construction-time problems, `"error"` stops, `"drop"` removes
 #'   non-finite, zero-variance, and rank-aliased columns with a warning, and
 #'   `"none"` skips these checks.
+#' @param na_action Character; how to handle `NA` values in `nuisance_list`
+#'   columns before the diagnostics run. `"drop"` (default) leaves `NA`s in
+#'   place so any column containing one is treated as non-finite and removed by
+#'   `nuisance_check`. `"zero"` replaces `NA` with `0` (matching the fMRIPrep
+#'   leading-row convention) and `"median"` replaces `NA` with the column
+#'   median; both repair an isolated leading `NA` (e.g. in DVARS or framewise
+#'   displacement) so the regressor is retained. `NaN` and `Inf` are never
+#'   repaired and remain subject to the non-finite drop. Repair is applied even
+#'   when `nuisance_check = "none"`, preventing `NA`s from leaking into the
+#'   design matrix.
 #'
 #' @return An object of class "baseline_model".
 #'
@@ -530,23 +582,33 @@ make_nuisance_term <- function(nuisance_list,
 #' stopifnot(ncol(design_matrix(bmod)) == 8)
 #' @export
 #' @importFrom purrr compact
-baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1, sframe, 
+baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1, sframe,
                            intercept = c("runwise", "global", "none"), nuisance_list = NULL,
-                           nuisance_check = c("warn", "error", "drop", "none")) {
-  
+                           nuisance_check = c("warn", "error", "drop", "none"),
+                           na_action = c("drop", "zero", "median")) {
+
   basis <- match.arg(basis)
   intercept <- match.arg(intercept)
   nuisance_check <- match.arg(nuisance_check)
-  
+  na_action <- match.arg(na_action)
+
   if (basis %in% c("bs", "ns")) {
     assert_that(degree > 2, msg ="'bs' and 'ns' bases must have degree >= 3")
   }
-  
+
   # Construct the drift term specification
   drift_spec <- baseline(degree = degree, basis = basis, intercept = intercept)
   drift_term <- construct(drift_spec, sframe)
   block_term <- if (intercept != "none" && basis != "constant") {
     construct_block_term("constant", sframe, intercept)
+  }
+
+  # Normalize and repair NA values once, up front, so both the diagnostics and
+  # make_nuisance_term() see the repaired matrices. Applying this even when
+  # nuisance_check = "none" keeps NA values out of the design matrix.
+  if (!is.null(nuisance_list)) {
+    nuisance_list <- .as_nuisance_matrices(nuisance_list, sframe)
+    nuisance_list <- .repair_nuisance_na(nuisance_list, na_action)
   }
 
   nuisance_report <- NULL

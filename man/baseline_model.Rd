@@ -10,7 +10,8 @@ baseline_model(
   sframe,
   intercept = c("runwise", "global", "none"),
   nuisance_list = NULL,
-  nuisance_check = c("warn", "error", "drop", "none")
+  nuisance_check = c("warn", "error", "drop", "none"),
+  na_action = c("drop", "zero", "median")
 )
 }
 \arguments{
@@ -30,6 +31,17 @@ provides the constant baseline.}
 warns on construction-time problems, \code{"error"} stops, \code{"drop"} removes
 non-finite, zero-variance, and rank-aliased columns with a warning, and
 \code{"none"} skips these checks.}
+
+\item{na_action}{Character; how to handle \code{NA} values in \code{nuisance_list}
+columns before the diagnostics run. \code{"drop"} (default) leaves \code{NA}s in
+place so any column containing one is treated as non-finite and removed by
+\code{nuisance_check}. \code{"zero"} replaces \code{NA} with \code{0} (matching the fMRIPrep
+leading-row convention) and \code{"median"} replaces \code{NA} with the column
+median; both repair an isolated leading \code{NA} (e.g. in DVARS or framewise
+displacement) so the regressor is retained. \code{NaN} and \code{Inf} are never
+repaired and remain subject to the non-finite drop. Repair is applied even
+when \code{nuisance_check = "none"}, preventing \code{NA}s from leaking into the
+design matrix.}
 }
 \value{
 An object of class "baseline_model".
