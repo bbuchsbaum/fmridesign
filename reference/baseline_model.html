@@ -58,7 +58,8 @@ This model may include a drift term, a block intercept term, and nuisance regres
 <span>  <span class="va">sframe</span>,</span>
 <span>  intercept <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"runwise"</span>, <span class="st">"global"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
 <span>  nuisance_list <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  nuisance_check <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"warn"</span>, <span class="st">"error"</span>, <span class="st">"drop"</span>, <span class="st">"none"</span><span class="op">)</span></span>
+<span>  nuisance_check <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"warn"</span>, <span class="st">"error"</span>, <span class="st">"drop"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
+<span>  na_action <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"drop"</span>, <span class="st">"zero"</span>, <span class="st">"median"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -93,6 +94,19 @@ provides the constant baseline.</p></dd>
 warns on construction-time problems, <code>"error"</code> stops, <code>"drop"</code> removes
 non-finite, zero-variance, and rank-aliased columns with a warning, and
 <code>"none"</code> skips these checks.</p></dd>
+
+
+<dt id="arg-na-action">na_action<a class="anchor" aria-label="anchor" href="#arg-na-action"></a></dt>
+<dd><p>Character; how to handle <code>NA</code> values in <code>nuisance_list</code>
+columns before the diagnostics run. <code>"drop"</code> (default) leaves <code>NA</code>s in
+place so any column containing one is treated as non-finite and removed by
+<code>nuisance_check</code>. <code>"zero"</code> replaces <code>NA</code> with <code>0</code> (matching the fMRIPrep
+leading-row convention) and <code>"median"</code> replaces <code>NA</code> with the column
+median; both repair an isolated leading <code>NA</code> (e.g. in DVARS or framewise
+displacement) so the regressor is retained. <code>NaN</code> and <code>Inf</code> are never
+repaired and remain subject to the non-finite drop. Repair is applied even
+when <code>nuisance_check = "none"</code>, preventing <code>NA</code>s from leaking into the
+design matrix.</p></dd>
 
 </dl></div>
     <div class="section level2">

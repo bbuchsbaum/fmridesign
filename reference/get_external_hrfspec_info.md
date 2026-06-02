@@ -44,6 +44,6 @@ get_external_hrfspec_info("demo_hrfspec")
 #> [1] "demo_hrf"
 #> 
 #> $registered_at
-#> [1] "2026-06-02 18:03:06 UTC"
+#> [1] "2026-06-02 18:42:04 UTC"
 #> 
 ```
