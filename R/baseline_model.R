@@ -1046,6 +1046,28 @@ print.baseline_model <- function(x, ...) {
   cat("================================================\n")
 }
 
+# Identify intercept-like (constant) baseline terms by inspecting their design
+# matrix rather than their names. A term is "constant" for plotting purposes if
+# no column varies within any block, which covers the constant drift basis and
+# block-wise intercepts (flat within each run). Such terms have no time course
+# worth plotting and are skipped when choosing a default term.
+.baseline_term_is_constant <- function(dm, blockids = NULL,
+                                       tol = sqrt(.Machine$double.eps)) {
+  dm <- as.matrix(dm)
+  if (ncol(dm) == 0L) return(TRUE)
+  if (is.null(blockids) || length(blockids) != nrow(dm)) {
+    blockids <- rep(1L, nrow(dm))
+  }
+  for (j in seq_len(ncol(dm))) {
+    within_block_spread <- tapply(dm[, j], blockids, function(v) {
+      v <- v[is.finite(v)]
+      if (length(v) == 0L) 0 else diff(range(v))
+    })
+    if (any(within_block_spread > tol, na.rm = TRUE)) return(FALSE)
+  }
+  TRUE
+}
+
 #' Plot a Baseline Model
 #'
 #' Creates a detailed ggplot2 visualization of the baseline model design matrix.
@@ -1091,24 +1113,6 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   }
   term_names <- names(all_terms)
   
-  # Remove constant terms from plotting (e.g., block intercept)
-  # Need a reliable way to identify constant terms - check varname? Or add a flag?
-  # Let's assume terms named "constant" or similar are constant for now.
-  # A more robust approach might be needed.
-  const_idx <- grep("^constant", term_names, ignore.case = TRUE)
-  if (length(const_idx) > 0) {
-    plotting_terms <- all_terms[-const_idx]
-    plotting_term_names <- term_names[-const_idx]
-  } else {
-    plotting_terms <- all_terms
-    plotting_term_names <- term_names
-  }
-  
-  # Check if any non-constant terms remain.
-  if (length(plotting_terms) == 0) {
-    stop("No non-constant baseline terms available for plotting.")
-  }
-  
   # Derive time and block IDs from the sampling frame without mutating it
   # Use run-relative sample times so each facet starts at 0 per block
   time_vec    <- tryCatch(fmrihrf::samples(x$sampling_frame, global = FALSE), silent = TRUE)
@@ -1117,9 +1121,26 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
       is.null(time_vec) || is.null(blockids_vec)) {
     stop("Could not derive sample times or block IDs from the sampling_frame.", call. = FALSE)
   }
-  
-  # For each term to plot, convert its design matrix into a long-format tibble.
-  dflist <- lapply(plotting_terms, function(term) {
+
+  # Identify constant (intercept-like) terms by inspecting their design matrices
+  # rather than their list names: the constant drift basis and block-wise
+  # intercepts are flat within every run and carry no time course worth plotting.
+  # They are skipped when picking a default term, but can still be requested
+  # explicitly via `term_name`.
+  is_constant <- vapply(all_terms, function(term)
+    .baseline_term_is_constant(design_matrix(term), blockids_vec), logical(1))
+  if (all(is_constant)) {
+    # Pure intercept/constant model: nothing varies, but still produce a (flat)
+    # plot rather than erroring so the simplest models remain plottable.
+    plotting_term_names <- term_names
+  } else {
+    plotting_term_names <- term_names[!is_constant]
+  }
+
+  # Convert each term's design matrix into a long-format tibble. Build every term
+  # (not just the plottable ones) so an explicitly requested constant term can
+  # still be plotted.
+  dflist <- lapply(all_terms, function(term) {
     dm <- design_matrix(term) # Get matrix for this specific term
     dm_tib <- suppressMessages(tibble::as_tibble(dm, .name_repair = "check_unique"))
     # Add block and time info - ensure dimensions match!
@@ -1131,32 +1152,35 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
     tidyr::pivot_longer(dm_tib, cols = -c(.time, .block),
                         names_to = "condition", values_to = "value")
   })
-  names(dflist) <- plotting_term_names
-  
-  # Select the term to plot, allowing for partial matching against plottable terms.
+  names(dflist) <- term_names
+
+  # Select the term to plot. With no term_name, default to the first non-constant
+  # term; an explicit term_name may match any term (constant or not), exactly or
+  # by partial match.
   if (is.null(term_name)) {
-    plot_term_idx <- 1
-    plot_term <- plotting_term_names[plot_term_idx]
-    message(paste("No term_name specified, plotting the first available non-constant term:", plot_term))
+    plot_term <- plotting_term_names[1]
+    if (all(is_constant)) {
+      message("No term_name specified and all baseline terms are constant; plotting: ", plot_term)
+    } else {
+      message("No term_name specified, plotting the first non-constant term: ", plot_term)
+    }
   } else {
-    exact_match <- which(plotting_term_names == term_name)
+    exact_match <- which(term_names == term_name)
     if (length(exact_match) == 1) {
-      plot_term_idx <- exact_match
-      plot_term <- plotting_term_names[plot_term_idx]
+      plot_term <- term_names[exact_match]
     } else {
       # Try partial matching if no exact match
-      partial_matches <- grep(term_name, plotting_term_names, ignore.case = TRUE)
+      partial_matches <- grep(term_name, term_names, ignore.case = TRUE)
       if (length(partial_matches) == 1) {
-        plot_term_idx <- partial_matches
-        plot_term <- plotting_term_names[plot_term_idx]
-        message(paste("Found unique partial match for '", term_name, "': using term '", plot_term, "'", sep=""))
+        plot_term <- term_names[partial_matches]
+        message("Found unique partial match for '", term_name, "': using term '", plot_term, "'")
       } else if (length(partial_matches) == 0) {
-        stop("Specified term_name '", term_name, "' not found among plottable terms. Available: ", 
-             paste(plotting_term_names, collapse=", "))
+        stop("Specified term_name '", term_name, "' not found. Available terms: ",
+             paste(term_names, collapse = ", "))
       } else {
         # Multiple partial matches
-        stop("Specified term_name '", term_name, "' matches multiple terms: ", 
-             paste(plotting_term_names[partial_matches], collapse=", "), ". Please be more specific.")
+        stop("Specified term_name '", term_name, "' matches multiple terms: ",
+             paste(term_names[partial_matches], collapse = ", "), ". Please be more specific.")
       }
     }
   }
