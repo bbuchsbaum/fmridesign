@@ -78,7 +78,10 @@ for each block and supports customization of titles, axis labels, line size, and
 
 <dt id="arg-term-name">term_name<a class="anchor" aria-label="anchor" href="#arg-term-name"></a></dt>
 <dd><p>Optional term name (a character string) specifying which term to plot.
-If omitted, the first non-constant term is plotted.</p></dd>
+If omitted, the first non-constant term is plotted. Valid names are those
+returned by <code>names(terms(x))</code>; in particular pass <code>"nuisance"</code> to
+plot nuisance regressors supplied via <code>nuisance_list</code>, which are never
+shown by the default (first-term) selection.</p></dd>
 
 
 <dt id="arg-title">title<a class="anchor" aria-label="anchor" href="#arg-title"></a></dt>
@@ -116,11 +119,15 @@ If omitted, the first non-constant term is plotted.</p></dd>
 <span class="r-in"><span><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu"><a href="baseline_model.html">baseline_model</a></span><span class="op">(</span>sframe <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"ggplot2"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmod</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> No term_name specified, plotting the first available non-constant term: drift</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Please use `linewidth` instead.</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> The deprecated feature was likely used in the <span style="color: #0000BB;">fmridesign</span> package.</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span>   Please report the issue at <span style="color: #0000BB; font-style: italic;">&lt;https://github.com/bbuchsbaum/fmridesign/issues&gt;</span>.</span>
 <span class="r-plt img"><img src="plot.baseline_model-1.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Nuisance regressors are stored as the "nuisance" term; plot with term_name</span></span></span>
+<span class="r-in"><span><span class="va">nuis</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">10</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">5</span>, ncol <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">bmod2</span> <span class="op">&lt;-</span> <span class="fu"><a href="baseline_model.html">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"poly"</span>, degree <span class="op">=</span> <span class="fl">2</span>, sframe <span class="op">=</span> <span class="va">sframe</span>,</span></span>
+<span class="r-in"><span>                        nuisance_list <span class="op">=</span> <span class="va">nuis</span>, nuisance_check <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"ggplot2"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">bmod2</span>, term_name <span class="op">=</span> <span class="st">"nuisance"</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="plot.baseline_model-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

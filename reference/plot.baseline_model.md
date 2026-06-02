@@ -30,7 +30,10 @@ plot(
 - term_name:
 
   Optional term name (a character string) specifying which term to plot.
-  If omitted, the first non-constant term is plotted.
+  If omitted, the first non-constant term is plotted. Valid names are
+  those returned by `names(terms(x))`; in particular pass `"nuisance"`
+  to plot nuisance regressors supplied via `nuisance_list`, which are
+  never shown by the default (first-term) selection.
 
 - title:
 
@@ -68,9 +71,13 @@ sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
 bmod <- baseline_model(sframe = sframe)
 if (requireNamespace("ggplot2", quietly = TRUE)) plot(bmod)
 #> No term_name specified, plotting the first available non-constant term: drift
-#> Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
-#> ℹ Please use `linewidth` instead.
-#> ℹ The deprecated feature was likely used in the fmridesign package.
-#>   Please report the issue at <https://github.com/bbuchsbaum/fmridesign/issues>.
+
+
+# Nuisance regressors are stored as the "nuisance" term; plot with term_name
+nuis <- list(matrix(rnorm(10), nrow = 5, ncol = 2))
+bmod2 <- baseline_model(basis = "poly", degree = 2, sframe = sframe,
+                        nuisance_list = nuis, nuisance_check = "none")
+if (requireNamespace("ggplot2", quietly = TRUE))
+  plot(bmod2, term_name = "nuisance")
 
 ```
