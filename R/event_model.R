@@ -351,7 +351,7 @@ contrasts.event_model <- function(x, ...) {
 #'                     data = des, block = ~run, sampling_frame = sframe)
 #' contrast_weights(emod)
 contrast_weights.event_model <- function(x, ...) {
-  tnames <- term_names(x)
+  tnames <- names(terms(x))
   tind <- attr(x$design_matrix, "col_indices") 
   ncond <- ncol(x$design_matrix)
   if (is.null(tind)) {
@@ -475,7 +475,7 @@ contrast_weights.event_model <- function(x, ...) {
 #' Row names of the contrast matrices can specify which levels of the term are
 #' tested.  Any matching is done against the design matrix column names.
 Fcontrasts.event_model <- function(x, ...) {
-  tnames <- term_names(x)
+  tnames <- names(terms(x))
   tind <- attr(x$design_matrix, "col_indices") 
   ncond <- ncol(x$design_matrix)
   if (is.null(tind)) {

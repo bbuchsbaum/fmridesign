@@ -310,6 +310,36 @@ test_that("contrast_weights.interaction_contrast_spec with 2x2 design", {
   expect_equal(ncol(cw$weights), 1)
 })
 
+test_that("event_model contrast keys use col_indices term tags for interactions", {
+  des <- data.frame(
+    onset = rep(seq(6, 110, length.out = 12), 2),
+    Cond  = factor(rep(c("a", "b", "c"), 8)),
+    Lev   = factor(rep(c("lo", "hi"), each = 12)),
+    run   = rep(1:2, each = 12)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(70, 70), TR = 2)
+  con <- contrast_set(
+    pair_contrast(~ Cond == "a", ~ Cond == "b", name = "a_min_b")
+  )
+
+  emod <- event_model(
+    onset ~ hrf(Cond, Lev, contrasts = con),
+    data = des,
+    block = ~run,
+    sampling_frame = sframe
+  )
+
+  cw <- contrast_weights(emod)
+  cw_terms <- sub("#.*$", "", names(cw))
+  col_index_terms <- names(attr(emod$design_matrix, "col_indices"))
+
+  expect_named(cw, "Cond_Lev#a_min_b")
+  expect_true(all(cw_terms %in% col_index_terms))
+
+  f_terms <- sub("#.*$", "", names(Fcontrasts(emod)))
+  expect_true(all(f_terms %in% col_index_terms))
+})
+
 test_that("contrast_weights.column_contrast_spec matches A pattern", {
   emod <- make_simple_emod()
   term1 <- terms(emod)[[1]]

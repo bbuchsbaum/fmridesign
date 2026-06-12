@@ -1402,11 +1402,51 @@ contrasts.event_term <- function(x, ...) {
 ## Section 12: Design Matrix Construction
 ## ============================================================================
 
+.warn_degenerate_continuous_events <- function(x, tol = 1e-8) {
+  term_name <- x$varname %||% "unnamed"
+
+  for (ev in x$events) {
+    if (!is_continuous(ev)) next
+
+    vals <- ev$value
+    if (!is.matrix(vals) || ncol(vals) == 0L) next
+
+    ev_name <- ev$varname %||% "unnamed"
+    col_ids <- colnames(vals)
+    if (is.null(col_ids)) {
+      col_ids <- paste0(ev_name, "_", seq_len(ncol(vals)))
+    }
+
+    for (j in seq_len(ncol(vals))) {
+      col <- vals[, j]
+      finite <- is.finite(col)
+      if (!any(finite)) next
+
+      finite_col <- col[finite]
+      mod_id <- if (ncol(vals) == 1L) ev_name else col_ids[j]
+
+      if (all(abs(finite_col) <= tol)) {
+        warning(sprintf(
+          "Parametric modulator '%s' in term '%s' is all zero; the resulting design column is degenerate.",
+          mod_id, term_name
+        ), call. = FALSE)
+      } else if ((max(finite_col) - min(finite_col)) <= tol) {
+        warning(sprintf(
+          "Parametric modulator '%s' in term '%s' has zero variance; the resulting design column may be rank deficient or collinear with its parent event regressor.",
+          mod_id, term_name
+        ), call. = FALSE)
+      }
+    }
+  }
+}
+
 #' @method design_matrix event_term
 #' @rdname design_matrix
 #' @export
 #' @importFrom tibble as_tibble
 design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
+
+  .warn_degenerate_continuous_events(x)
 
   # --- Special case: term contains only one continuous event --- 
   # This includes single numeric variables and multi-column basis functions.

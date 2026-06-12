@@ -12,6 +12,13 @@
 
 ## Bug fixes
 
+- `contrast_weights()` and `Fcontrasts()` for `event_model` objects now name
+  interaction-term contrasts with the same term tags used by design-matrix
+  `col_indices`, preventing downstream consumers from dropping crossed-term
+  contrasts because of `:`/`_` key mismatches (#9).
+- `event_model()` now warns when continuous parametric modulators are all-zero
+  or have zero variance, catching degenerate design columns before model fitting
+  while preserving the existing design-matrix shape (#8).
 - Fixed list-based `event_model()` specifications so `hrf(..., subset = )`
   expressions can use base operators and helper functions from the calling
   environment, matching formula-interface subset behavior.
