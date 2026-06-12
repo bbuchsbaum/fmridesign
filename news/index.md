@@ -21,6 +21,19 @@
 
 ### Bug fixes
 
+- [`contrast_weights()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.md)
+  and
+  [`Fcontrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.md)
+  for `event_model` objects now name interaction-term contrasts with the
+  same term tags used by design-matrix `col_indices`, preventing
+  downstream consumers from dropping crossed-term contrasts because of
+  `:`/`_` key mismatches
+  ([\#9](https://github.com/bbuchsbaum/fmridesign/issues/9)).
+- [`event_model()`](https://bbuchsbaum.github.io/fmridesign/reference/event_model.md)
+  now warns when continuous parametric modulators are all-zero or have
+  zero variance, catching degenerate design columns before model fitting
+  while preserving the existing design-matrix shape
+  ([\#8](https://github.com/bbuchsbaum/fmridesign/issues/8)).
 - Fixed list-based
   [`event_model()`](https://bbuchsbaum.github.io/fmridesign/reference/event_model.md)
   specifications so `hrf(..., subset = )` expressions can use base

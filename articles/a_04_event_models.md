@@ -744,7 +744,7 @@ Fcontrasts(emodel_pmod_int)
 #> attr(,"term_indices")
 #> [1] 1 2 3 4
 #> 
-#> $`stim:RT_centered#stim`
+#> $`stim_RT_centered#stim`
 #>                                          c1 c2 c3
 #> stim_stim.face                            0  0  0
 #> stim_stim.object                          0  0  0

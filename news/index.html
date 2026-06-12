@@ -53,7 +53,11 @@
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-0-6-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-6-0"></a></h3>
-<ul><li>Fixed list-based <code><a href="../reference/event_model.html">event_model()</a></code> specifications so <code>hrf(..., subset = )</code> expressions can use base operators and helper functions from the calling environment, matching formula-interface subset behavior.</li>
+<ul><li>
+<code><a href="../reference/contrast_weights.html">contrast_weights()</a></code> and <code><a href="../reference/Fcontrasts.html">Fcontrasts()</a></code> for <code>event_model</code> objects now name interaction-term contrasts with the same term tags used by design-matrix <code>col_indices</code>, preventing downstream consumers from dropping crossed-term contrasts because of <code>:</code>/<code>_</code> key mismatches (<a href="https://github.com/bbuchsbaum/fmridesign/issues/9" class="external-link">#9</a>).</li>
+<li>
+<code><a href="../reference/event_model.html">event_model()</a></code> now warns when continuous parametric modulators are all-zero or have zero variance, catching degenerate design columns before model fitting while preserving the existing design-matrix shape (<a href="https://github.com/bbuchsbaum/fmridesign/issues/8" class="external-link">#8</a>).</li>
+<li>Fixed list-based <code><a href="../reference/event_model.html">event_model()</a></code> specifications so <code>hrf(..., subset = )</code> expressions can use base operators and helper functions from the calling environment, matching formula-interface subset behavior.</li>
 <li>Fixed event-model column metadata construction for factor and multi-basis HRF terms that expand to multiple design columns.</li>
 </ul></div>
 </div>

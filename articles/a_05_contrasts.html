@@ -265,21 +265,21 @@ interactions:</p>
 <span></span>
 <span><span class="va">interaction_contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">emodel_factorial</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">interaction_contrasts</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">x</span><span class="op">$</span><span class="va">weights</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; $`A:B#main_A`</span></span>
+<span><span class="co">#&gt; $`A_B#main_A`</span></span>
 <span><span class="co">#&gt;           main_A_1</span></span>
 <span><span class="co">#&gt; A.A1_B.B1       -1</span></span>
 <span><span class="co">#&gt; A.A2_B.B1        1</span></span>
 <span><span class="co">#&gt; A.A1_B.B2       -1</span></span>
 <span><span class="co">#&gt; A.A2_B.B2        1</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $`A:B#main_B`</span></span>
+<span><span class="co">#&gt; $`A_B#main_B`</span></span>
 <span><span class="co">#&gt;           main_B_1</span></span>
 <span><span class="co">#&gt; A.A1_B.B1       -1</span></span>
 <span><span class="co">#&gt; A.A2_B.B1       -1</span></span>
 <span><span class="co">#&gt; A.A1_B.B2        1</span></span>
 <span><span class="co">#&gt; A.A2_B.B2        1</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; $`A:B#A_by_B`</span></span>
+<span><span class="co">#&gt; $`A_B#A_by_B`</span></span>
 <span><span class="co">#&gt;       A_by_B_1</span></span>
 <span><span class="co">#&gt; A1_B1        1</span></span>
 <span><span class="co">#&gt; A2_B1       -1</span></span>
@@ -448,8 +448,8 @@ within-run or across-run effects:</p>
 <span></span>
 <span><span class="va">multirun_contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">emodel_multirun</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">multirun_contrasts</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "condition:block#overall" "condition:block#run1"   </span></span>
-<span><span class="co">#&gt; [3] "condition:block#run2"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "condition_block#overall" "condition_block#run1"   </span></span>
+<span><span class="co">#&gt; [3] "condition_block#run2"</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="contrast-specification-best-practices">Contrast Specification Best Practices<a class="anchor" aria-label="anchor" href="#contrast-specification-best-practices"></a>

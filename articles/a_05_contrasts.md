@@ -199,21 +199,21 @@ emodel_factorial <- event_model(
 
 interaction_contrasts <- contrast_weights(emodel_factorial)
 lapply(interaction_contrasts, function(x) round(x$weights, 3))
-#> $`A:B#main_A`
+#> $`A_B#main_A`
 #>           main_A_1
 #> A.A1_B.B1       -1
 #> A.A2_B.B1        1
 #> A.A1_B.B2       -1
 #> A.A2_B.B2        1
 #> 
-#> $`A:B#main_B`
+#> $`A_B#main_B`
 #>           main_B_1
 #> A.A1_B.B1       -1
 #> A.A2_B.B1       -1
 #> A.A1_B.B2        1
 #> A.A2_B.B2        1
 #> 
-#> $`A:B#A_by_B`
+#> $`A_B#A_by_B`
 #>       A_by_B_1
 #> A1_B1        1
 #> A2_B1       -1
@@ -389,8 +389,8 @@ emodel_multirun <- event_model(
 
 multirun_contrasts <- contrast_weights(emodel_multirun)
 names(multirun_contrasts)
-#> [1] "condition:block#overall" "condition:block#run1"   
-#> [3] "condition:block#run2"
+#> [1] "condition_block#overall" "condition_block#run1"   
+#> [3] "condition_block#run2"
 ```
 
 ## Contrast Specification Best Practices
