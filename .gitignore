@@ -4,3 +4,8 @@
 .omc/
 Rplots.pdf
 fmridesign_*.tar.gz
+
+# Local benchmark outputs (checked-in summaries live under bench/)
+bench/results/*.csv
+bench/results/*.json
+!bench/results/.gitkeep

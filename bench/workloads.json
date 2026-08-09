@@ -1,0 +1,112 @@
+{
+  "description": "Shared synthetic workloads for fmridesign vs nilearn/fitlins-equivalent design-matrix benchmarks.",
+  "notes": [
+    "FitLins builds first-level design matrices via nilearn.glm.first_level.make_first_level_design_matrix (or FirstLevelModel); nilearn timings therefore represent the FitLins design-matrix hot path.",
+    "Drift/baseline is disabled for event-only comparisons so we isolate HRF convolution + design assembly.",
+    "Multi-run workloads use global onsets on a concatenated time axis for both libraries."
+  ],
+  "defaults": {
+    "TR": 2.0,
+    "n_reps": 7,
+    "warmup": 2,
+    "seed": 42
+  },
+  "workloads": [
+    {
+      "id": "categorical_spm_dense",
+      "label": "Categorical SPM (dense, 4 conditions)",
+      "n_runs": 4,
+      "run_len": 200,
+      "n_events_per_run": 40,
+      "n_conditions": 4,
+      "duration": 0.0,
+      "hrf": "spm",
+      "style": "categorical",
+      "include_modulator": false
+    },
+    {
+      "id": "categorical_spmg3",
+      "label": "Categorical SPM + deriv + dispersion",
+      "n_runs": 4,
+      "run_len": 200,
+      "n_events_per_run": 40,
+      "n_conditions": 4,
+      "duration": 0.0,
+      "hrf": "spm_deriv_dispersion",
+      "style": "categorical",
+      "include_modulator": false
+    },
+    {
+      "id": "fir_12",
+      "label": "FIR (12 bins)",
+      "n_runs": 4,
+      "run_len": 200,
+      "n_events_per_run": 40,
+      "n_conditions": 4,
+      "duration": 0.0,
+      "hrf": "fir12",
+      "style": "categorical",
+      "include_modulator": false
+    },
+    {
+      "id": "modulated_spm",
+      "label": "Parametric modulator (SPM)",
+      "n_runs": 4,
+      "run_len": 200,
+      "n_events_per_run": 40,
+      "n_conditions": 2,
+      "duration": 0.0,
+      "hrf": "spm",
+      "style": "modulated",
+      "include_modulator": true
+    },
+    {
+      "id": "block_design_spm",
+      "label": "Block design (duration=8s, SPM)",
+      "n_runs": 4,
+      "run_len": 200,
+      "n_events_per_run": 16,
+      "n_conditions": 2,
+      "duration": 8.0,
+      "hrf": "spm",
+      "style": "categorical",
+      "include_modulator": false
+    },
+    {
+      "id": "trialwise_lss_medium",
+      "label": "Trialwise / LSS (240 trials)",
+      "n_runs": 6,
+      "run_len": 200,
+      "n_events_per_run": 40,
+      "n_conditions": 1,
+      "duration": 0.0,
+      "hrf": "spm",
+      "style": "trialwise",
+      "include_modulator": false
+    },
+    {
+      "id": "trialwise_lss_large",
+      "label": "Trialwise / LSS (480 trials)",
+      "n_runs": 8,
+      "run_len": 250,
+      "n_events_per_run": 60,
+      "n_conditions": 1,
+      "duration": 0.0,
+      "hrf": "spm",
+      "style": "trialwise",
+      "include_modulator": false
+    },
+    {
+      "id": "multi_term_realistic",
+      "label": "Multi-term realistic (cat + interaction + modulator)",
+      "n_runs": 8,
+      "run_len": 250,
+      "n_events_per_run": 50,
+      "n_conditions": 4,
+      "duration": 0.0,
+      "hrf": "spm",
+      "style": "multi_term",
+      "include_modulator": true
+    }
+  ]
+}

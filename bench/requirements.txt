@@ -1,0 +1,7 @@
+nilearn>=0.10
+numpy
+pandas
+scipy
+# Optional: pybids is what FitLins uses for BIDS model graphs; design-matrix
+# evaluation still routes through nilearn for first-level convolution.
+pybids>=0.16

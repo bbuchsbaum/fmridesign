@@ -31,3 +31,4 @@
 ^\.ecosystem\.yml$
 ^tools$
 ^manual_cards\.jsonl$
+bench
