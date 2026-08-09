@@ -1024,7 +1024,10 @@ convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE, hrf_l
   }
 
   reglist <- purrr::map(1:ncol(dmat), function(i) {
-    amp <- dmat[, i][[1]]
+    # Extract column i as a plain vector. `dmat[[i]]` is correct for both tibbles
+    # (identical to the previous `dmat[, i][[1]]`) and base data frames, where the
+    # old `dmat[, i][[1]]` dropped to a vector and then took only its first element.
+    amp <- dmat[[i]]
     nonzero <- which(amp != 0)
     if (length(nonzero) == 0) {
       # Empty regressor - use first HRF from list or single HRF for span info
