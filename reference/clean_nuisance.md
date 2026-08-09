@@ -59,3 +59,17 @@ clean_nuisance(
 A list with `nuisance_list` and `report` elements. Pass
 `result$nuisance_list` to
 [`baseline_model()`](https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.md).
+
+## Examples
+
+``` r
+sframe <- fmrihrf::sampling_frame(blocklens = 20, TR = 1)
+motion <- cbind(
+  linear = seq_len(20),
+  duplicate = seq_len(20),
+  constant = 1
+)
+cleaned <- clean_nuisance(list(motion), sframe, basis = "constant")
+colnames(cleaned$nuisance_list[[1]])
+#> [1] "linear"
+```

@@ -51,9 +51,6 @@ emod <- event_model(
   data = trial_data, block = ~run, sampling_frame = sf,
   durations = trial_data$duration
 )
-#> Warning: Parameters P1, P2, A1 are not arguments to function SPMG1_block(w=2) and will be ignored
-#> Warning: Parameters P1, P2, A1 are not arguments to function SPMG1_block(w=5) and will be ignored
-#> Warning: Parameters P1, P2, A1 are not arguments to function SPMG1_block(w=3) and will be ignored
 print(emod)
 #> 
 #> ── fMRI Event Model ────────────────────────────────────────────────────────────

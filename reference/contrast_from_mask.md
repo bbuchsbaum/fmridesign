@@ -42,3 +42,31 @@ A `contrast` object.
 Custom contrast types implement
 [`contrast_mask()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_mask.md)
 and call this driver.
+
+## Examples
+
+``` r
+term <- event_term(
+  list(condition = factor(c("A", "B"))),
+  onsets = c(0, 2),
+  blockids = c(1, 1)
+)
+condition_names <- conditions(term, drop.empty = FALSE)
+weights <- matrix(
+  c(1, -1), ncol = 1,
+  dimnames = list(condition_names, "A-B")
+)
+spec <- structure(
+  list(name = "A-B", basis = NULL, basis_weights = NULL),
+  class = c("example_contrast_spec", "contrast_spec", "list")
+)
+result <- contrast_from_mask(
+  list(weights = weights, condnames = condition_names),
+  spec,
+  term
+)
+result$weights
+#>             A-B
+#> condition.A   1
+#> condition.B  -1
+```

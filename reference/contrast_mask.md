@@ -56,3 +56,34 @@ The built-in spec classes (`pair_contrast_spec`, `oneway_contrast_spec`,
 `poly_contrast_spec`, ...) implement
 [`contrast_weights()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.md)
 directly, so they do not require `contrast_mask()` methods.
+
+## Examples
+
+``` r
+term <- event_term(
+  list(condition = factor(c("A", "B"))),
+  onsets = c(0, 2),
+  blockids = c(1, 1)
+)
+spec <- structure(
+  list(name = "A-B"),
+  class = c("example_contrast_spec", "contrast_spec", "list")
+)
+contrast_mask.example_contrast_spec <- function(x, term, ...) {
+  condition_names <- conditions(term, drop.empty = FALSE)
+  weights <- matrix(
+    c(1, -1), ncol = 1,
+    dimnames = list(condition_names, x$name)
+  )
+  list(weights = weights, condnames = condition_names)
+}
+contrast_mask(spec, term)
+#> $weights
+#>             A-B
+#> condition.A   1
+#> condition.B  -1
+#> 
+#> $condnames
+#> [1] "condition.A" "condition.B"
+#> 
+```

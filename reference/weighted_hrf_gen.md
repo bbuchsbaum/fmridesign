@@ -69,8 +69,6 @@ emod <- event_model(
   onset ~ hrf(onset, hrf_fun = weighted_hrf_gen("sub_times", "sub_weights", relative = TRUE)),
   data = trial_data, block = ~run, sampling_frame = sf
 )
-#> Warning: Parameters times, weights, width, method, normalize are not arguments to function weighted[3 pts, constant] and will be ignored
-#> Warning: Parameters times, weights, width, method, normalize are not arguments to function weighted[3 pts, constant] and will be ignored
 print(emod)
 #> 
 #> ── fMRI Event Model ────────────────────────────────────────────────────────────

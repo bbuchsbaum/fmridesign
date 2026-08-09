@@ -65,6 +65,8 @@
 <code><a href="../reference/event_model.html">event_model()</a></code> now warns when continuous parametric modulators are all-zero or have zero variance, catching degenerate design columns before model fitting while preserving the existing design-matrix shape (<a href="https://github.com/bbuchsbaum/fmridesign/issues/8" class="external-link">#8</a>).</li>
 <li>Fixed list-based <code><a href="../reference/event_model.html">event_model()</a></code> specifications so <code>hrf(..., subset = )</code> expressions can use base operators and helper functions from the calling environment, matching formula-interface subset behavior.</li>
 <li>Fixed event-model column metadata construction for factor and multi-basis HRF terms that expand to multiple design columns.</li>
+<li>Event terms whose subsets select zero events now retain their canonical condition-column names and metadata on the resulting all-zero design matrix, rather than falling back to generic <code>col_1</code>, <code>col_2</code>, … names.</li>
+<li>Suppressed exact, known false-positive metadata warnings produced when decorated HRFs are reconstructed by <code>fmrihrf</code> 0.3.0, while continuing to surface unrelated warnings.</li>
 </ul></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

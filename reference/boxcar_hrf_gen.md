@@ -48,9 +48,6 @@ emod <- event_model(
   onset ~ hrf(condition, hrf_fun = boxcar_hrf_gen()),
   data = trial_data, block = ~run, sampling_frame = sf, durations = trial_data$duration
 )
-#> Warning: Parameters width, amplitude, normalize are not arguments to function boxcar[2] and will be ignored
-#> Warning: Parameters width, amplitude, normalize are not arguments to function boxcar[5] and will be ignored
-#> Warning: Parameters width, amplitude, normalize are not arguments to function boxcar[3] and will be ignored
 print(emod)
 #> 
 #> ── fMRI Event Model ────────────────────────────────────────────────────────────

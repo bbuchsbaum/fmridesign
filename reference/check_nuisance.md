@@ -58,3 +58,20 @@ check_nuisance(
 
 A `nuisance_check` object with `ok`, `problems`, `by_block`, and
 normalized `nuisance_list` elements.
+
+## Examples
+
+``` r
+sframe <- fmrihrf::sampling_frame(blocklens = 20, TR = 1)
+motion <- cbind(
+  linear = seq_len(20),
+  duplicate = seq_len(20),
+  constant = 1
+)
+report <- check_nuisance(list(motion), sframe, basis = "constant")
+report$ok
+#> [1] FALSE
+report$by_block[[1]]$keep
+#>    linear duplicate  constant 
+#>      TRUE     FALSE     FALSE 
+```
