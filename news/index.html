@@ -52,8 +52,14 @@
 <li>Added <code><a href="../reference/check_nuisance.html">check_nuisance()</a></code> and <code><a href="../reference/clean_nuisance.html">clean_nuisance()</a></code> helpers for inspecting and repairing block-wise nuisance regressors before model construction.</li>
 </ul></div>
 <div class="section level3">
+<h3 id="performance-0-6-0">Performance<a class="anchor" aria-label="anchor" href="#performance-0-6-0"></a></h3>
+<ul><li>Sped up <code><a href="../reference/event_model.html">event_model()</a></code> design-matrix construction by replacing the per-term <code><a href="https://tibble.tidyverse.org/reference/tibble.html" class="external-link">tibble::tibble()</a></code> / <code><a href="https://dplyr.tidyverse.org/reference/bind_rows.html" class="external-link">dplyr::bind_rows()</a></code> calls used to assemble column metadata with a lightweight, validated <code>tibble</code> constructor. This removes the metadata-building hotspot (~15% faster end-to-end on a representative multi-term, multi-run model) with byte-identical design matrices, column names, <code>col_indices</code>/<code>term_spans</code>, and metadata values.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="bug-fixes-0-6-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-6-0"></a></h3>
 <ul><li>
+<code><a href="../reference/convolve_design.html">convolve_design()</a></code> now extracts each condition column with <code>dmat[[i]]</code>, so it produces correct regressors for base <code>data.frame</code> inputs (its documented example). The previous <code>dmat[, i][[1]]</code> collapsed a data frame column to its first element; the tibble-based internal call path was unaffected.</li>
+<li>
 <code><a href="../reference/contrast_weights.html">contrast_weights()</a></code> and <code><a href="../reference/Fcontrasts.html">Fcontrasts()</a></code> for <code>event_model</code> objects now name interaction-term contrasts with the same term tags used by design-matrix <code>col_indices</code>, preventing downstream consumers from dropping crossed-term contrasts because of <code>:</code>/<code>_</code> key mismatches (<a href="https://github.com/bbuchsbaum/fmridesign/issues/9" class="external-link">#9</a>).</li>
 <li>
 <code><a href="../reference/event_model.html">event_model()</a></code> now warns when continuous parametric modulators are all-zero or have zero variance, catching degenerate design columns before model fitting while preserving the existing design-matrix shape (<a href="https://github.com/bbuchsbaum/fmridesign/issues/8" class="external-link">#8</a>).</li>
@@ -70,7 +76,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

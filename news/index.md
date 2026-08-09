@@ -19,8 +19,28 @@
   helpers for inspecting and repairing block-wise nuisance regressors
   before model construction.
 
+### Performance
+
+- Sped up
+  [`event_model()`](https://bbuchsbaum.github.io/fmridesign/reference/event_model.md)
+  design-matrix construction by replacing the per-term
+  [`tibble::tibble()`](https://tibble.tidyverse.org/reference/tibble.html)
+  /
+  [`dplyr::bind_rows()`](https://dplyr.tidyverse.org/reference/bind_rows.html)
+  calls used to assemble column metadata with a lightweight, validated
+  `tibble` constructor. This removes the metadata-building hotspot (~15%
+  faster end-to-end on a representative multi-term, multi-run model)
+  with byte-identical design matrices, column names,
+  `col_indices`/`term_spans`, and metadata values.
+
 ### Bug fixes
 
+- [`convolve_design()`](https://bbuchsbaum.github.io/fmridesign/reference/convolve_design.md)
+  now extracts each condition column with `dmat[[i]]`, so it produces
+  correct regressors for base `data.frame` inputs (its documented
+  example). The previous `dmat[, i][[1]]` collapsed a data frame column
+  to its first element; the tibble-based internal call path was
+  unaffected.
 - [`contrast_weights()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.md)
   and
   [`Fcontrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.md)
