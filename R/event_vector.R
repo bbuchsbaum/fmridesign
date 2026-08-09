@@ -1200,6 +1200,39 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
     # Subset hrf_list for this block if applicable
     hrf_list_block <- if (!is.null(hrf_list)) hrf_list[idx] else NULL
 
+    # --- Fast path: skip all-zero columns within this block ---------------
+    # A column with no nonzero amplitude in this block convolves to an exact
+    # zero regressor (verified for all bases), so we can fill it with zeros
+    # directly instead of constructing and evaluating an empty regressor. This
+    # is a large win for block-diagonal-ish designs (e.g. trialwise/LSS, or a
+    # factor level present only in some runs), where most per-block columns are
+    # empty. It is only taken when the block has no NA/NaN to filter, so that
+    # convolve_design()'s NA row-removal semantics remain exactly as before;
+    # otherwise we fall through to the original full-column path unchanged.
+    if (!anyNA(dblock) && !anyNA(globons_block)) {
+      # `any(a != 0)` per column is equivalent to `colSums(abs(col)) > 0` for the
+      # NA-free block guaranteed here, and matches convolve_design()'s own
+      # `which(amp != 0)` emptiness test, while short-circuiting and avoiding a
+      # full matrix copy (so dense designs pay almost nothing).
+      col_has <- vapply(dblock, function(a) any(a != 0), logical(1))
+      if (!all(col_has)) {
+        out <- matrix(0, nrow = length(block_samples), ncol = ncol(dblock) * nb)
+        keep <- which(col_has)
+        if (length(keep) > 0L) {
+          reg <- convolve_design(hrf, dblock[, keep, drop = FALSE],
+                                 globons_block, durations_block,
+                                 summate = summate, hrf_list = hrf_list_block)
+          for (k in seq_along(keep)) {
+            c_orig <- keep[k]
+            target_cols <- ((c_orig - 1L) * nb + 1L):(c_orig * nb)
+            out[, target_cols] <- eval_reg(reg[[k]], block_samples, precision)
+          }
+        }
+        return(out)
+      }
+    }
+
+    # Dense (or NA-fallback) path: original behavior, unchanged.
     reg <- convolve_design(hrf, dblock, globons_block, durations_block, summate = summate, hrf_list = hrf_list_block)
     do.call(cbind, lapply(reg, function(r) eval_reg(r, block_samples, precision)))
   })

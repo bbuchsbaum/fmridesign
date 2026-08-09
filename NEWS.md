@@ -18,6 +18,14 @@
   metadata-building hotspot (~15% faster end-to-end on a representative
   multi-term, multi-run model) with byte-identical design matrices, column
   names, `col_indices`/`term_spans`, and metadata values.
+- `convolve.event_term()` now skips columns that are all-zero within a block
+  instead of building and evaluating an empty `fmrihrf` regressor for each. For
+  block-diagonal-ish designs (trialwise/LSS single-trial models, or factor
+  levels present only in some runs) this is a large speedup (~2.2x faster on a
+  representative 360-column trialwise model) while producing bit-identical
+  output. Designs where every column is populated in every block are unaffected
+  (a fast-exit keeps the original path), and blocks containing `NA`/`NaN` fall
+  back to the previous full-column path so filtering semantics are unchanged.
 
 ## Bug fixes
 
