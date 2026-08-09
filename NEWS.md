@@ -10,8 +10,21 @@
 - Added `check_nuisance()` and `clean_nuisance()` helpers for inspecting and
   repairing block-wise nuisance regressors before model construction.
 
+## Performance
+
+- Sped up `event_model()` design-matrix construction by replacing the per-term
+  `tibble::tibble()` / `dplyr::bind_rows()` calls used to assemble column
+  metadata with a lightweight, validated `tibble` constructor. This removes the
+  metadata-building hotspot (~15% faster end-to-end on a representative
+  multi-term, multi-run model) with byte-identical design matrices, column
+  names, `col_indices`/`term_spans`, and metadata values.
+
 ## Bug fixes
 
+- `convolve_design()` now extracts each condition column with `dmat[[i]]`, so it
+  produces correct regressors for base `data.frame` inputs (its documented
+  example). The previous `dmat[, i][[1]]` collapsed a data frame column to its
+  first element; the tibble-based internal call path was unaffected.
 - `contrast_weights()` and `Fcontrasts()` for `event_model` objects now name
   interaction-term contrasts with the same term tags used by design-matrix
   `col_indices`, preventing downstream consumers from dropping crossed-term

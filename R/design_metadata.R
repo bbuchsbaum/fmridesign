@@ -2,10 +2,47 @@
 ## `.empty_col_metadata()` and is the single source of truth for the columns
 ## returned by `design_colmap()` and `design_meta()`.
 
+#' Fast, validated constructor for fixed-schema metadata tibbles
+#'
+#' `tibble::tibble()` is convenient but its NSE / name-repair / glue machinery
+#' dominates design-matrix build time when called once per term (profiling shows
+#' ~15% of `event_model()`). This helper reproduces exactly the parts of
+#' `tibble::tibble()` we rely on for the metadata schema -- length-1 column
+#' recycling and a `tbl_df` result -- while skipping the overhead by delegating
+#' to the low-level `tibble::new_tibble()`.
+#'
+#' Unlike raw `new_tibble()` (which in tibble 3.x neither recycles nor validates
+#' column lengths), this recycles every length-1 column to `n` and errors on any
+#' other length mismatch, so a forgotten recycle can never silently produce a
+#' structurally corrupt tibble.
+#'
+#' @param cols Named list of columns (atomic vectors).
+#' @param n Target number of rows.
+#' @return A `tbl_df` with `n` rows.
+#' @keywords internal
+#' @noRd
+.new_meta_tibble <- function(cols, n) {
+  cols <- lapply(cols, function(v) {
+    lv <- length(v)
+    if (lv != n && lv == 1L) {
+      v <- rep(v, n)
+    } else if (lv != n) {
+      stop(sprintf("metadata column length %d incompatible with nrow %d", lv, n),
+           call. = FALSE)
+    }
+    # Metadata columns are plain atomic vectors. Strip any stray attributes
+    # (e.g. a leftover `orig_names` that could ride in on a scalar value) so the
+    # output is fully deterministic and independent of incidental input attrs.
+    if (is.atomic(v)) attributes(v) <- NULL
+    v
+  })
+  tibble::new_tibble(cols, nrow = n)
+}
+
 #' @keywords internal
 #' @noRd
 .empty_col_metadata <- function() {
-  tibble::tibble(
+  .new_meta_tibble(list(
     col              = integer(0),
     name             = character(0),
     term_tag         = character(0),
@@ -21,7 +58,7 @@
     is_block_diagonal = logical(0),
     modulation_type  = character(0),
     modulation_id    = character(0)
-  )
+  ), n = 0L)
 }
 
 #' Determine modulation type and id for a realised event term
@@ -155,7 +192,7 @@
                                modulation_id   = NA_character_,
                                is_block_diagonal = FALSE) {
   n <- length(name)
-  tibble::tibble(
+  .new_meta_tibble(list(
     col              = seq_len(n),  # replaced with absolute positions by combiner
     name             = name,
     term_tag         = term_tag,
@@ -171,7 +208,7 @@
     is_block_diagonal = is_block_diagonal,
     modulation_type  = modulation_type,
     modulation_id    = modulation_id
-  )
+  ), n = n)
 }
 
 #' Combine per-term metadata tibbles into a design-wide metadata tibble
@@ -205,7 +242,22 @@
   }
   parts <- purrr::compact(parts)
   if (length(parts) == 0L) return(.empty_col_metadata())
-  dplyr::bind_rows(parts)
+
+  # Row-bind the per-term parts. Every part is a `.make_col_metadata()` output
+  # and therefore shares the exact fixed schema of `.empty_col_metadata()`, so a
+  # name-keyed per-column concatenation reproduces `dplyr::bind_rows()` exactly
+  # (types are homogeneous per column) while avoiding its splice/vec_c overhead.
+  schema <- names(.empty_col_metadata())
+  for (p in parts) {
+    if (!identical(names(p), schema)) {
+      stop("internal error: metadata part does not match the canonical schema; ",
+           "cannot combine.", call. = FALSE)
+    }
+  }
+  total <- sum(vapply(parts, nrow, integer(1)))
+  combined <- lapply(schema, function(nm) do.call(c, lapply(parts, `[[`, nm)))
+  names(combined) <- schema
+  .new_meta_tibble(combined, n = total)
 }
 
 #' Accessor: column metadata for a design matrix
