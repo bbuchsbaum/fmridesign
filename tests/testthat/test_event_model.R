@@ -510,8 +510,30 @@ test_that("Golden heading test: diverse terms produce expected colnames", {
   
   dm_golden <- design_matrix(model_golden)
   
-  # Snapshot the column names
-  expect_snapshot(colnames(dm_golden))
+  # Assert the complete heading contract directly. A snapshot cannot be used
+  # here because test_event_model.R and test-event_model.R share testthat's
+  # normalized snapshot context name (`event_model`).
+  expect_identical(
+    colnames(dm_golden),
+    c(
+      "Cond_condition.a",
+      "Cond_condition.b",
+      "CondXMod_condition.a_modulator",
+      "CondXMod_condition.b_modulator",
+      "StimRT_spmg3_stim_type.Face_rt_b01",
+      "StimRT_spmg3_stim_type.Scene_rt_b01",
+      "StimRT_spmg3_stim_type.Face_rt_b02",
+      "StimRT_spmg3_stim_type.Scene_rt_b02",
+      "StimRT_spmg3_stim_type.Face_rt_b03",
+      "StimRT_spmg3_stim_type.Scene_rt_b03",
+      "PolyX_01",
+      "PolyX_02",
+      "PolyX_03",
+      "ScaleYbyG_y",
+      "Mod_CondA_modulator",
+      "Mod_CondB_modulator"
+    )
+  )
 })
 
 # --- Clash Test ---
@@ -675,7 +697,7 @@ test_that("formula and list interfaces produce identical design matrices for 3x3
   events <- data.frame(
     A = factor(rep(letters[1:3], each = 3)),
     B = factor(rep(letters[24:26], times = 3)),
-    onset = seq_len(n_events),
+    onset = seq_len(n_events) - 1,
     block = rep(1, n_events)
   )
   # Single block sampling frame

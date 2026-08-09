@@ -1,6 +1,8 @@
 /doc/
 /docs/
 /Meta/
+.DS_Store
+*.Rcheck/
 .omc/
 Rplots.pdf
 fmridesign_*.tar.gz

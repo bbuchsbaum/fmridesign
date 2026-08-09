@@ -111,6 +111,25 @@
 #'   * `weights`   : numeric matrix, `n_base_conditions x n_contrast_cols`,
 #'                   row names = base condition names.
 #'   * `condnames` : character vector of base condition names.
+#' @examples
+#' term <- event_term(
+#'   list(condition = factor(c("A", "B"))),
+#'   onsets = c(0, 2),
+#'   blockids = c(1, 1)
+#' )
+#' spec <- structure(
+#'   list(name = "A-B"),
+#'   class = c("example_contrast_spec", "contrast_spec", "list")
+#' )
+#' contrast_mask.example_contrast_spec <- function(x, term, ...) {
+#'   condition_names <- conditions(term, drop.empty = FALSE)
+#'   weights <- matrix(
+#'     c(1, -1), ncol = 1,
+#'     dimnames = list(condition_names, x$name)
+#'   )
+#'   list(weights = weights, condnames = condition_names)
+#' }
+#' contrast_mask(spec, term)
 #' @export
 contrast_mask <- function(x, term, ...) UseMethod("contrast_mask")
 
@@ -129,6 +148,27 @@ contrast_mask <- function(x, term, ...) UseMethod("contrast_mask")
 #' @param classes Character vector of extra S3 classes prepended to the
 #'   default `c("cell_contrast", "contrast", "list")`.
 #' @return A `contrast` object.
+#' @examples
+#' term <- event_term(
+#'   list(condition = factor(c("A", "B"))),
+#'   onsets = c(0, 2),
+#'   blockids = c(1, 1)
+#' )
+#' condition_names <- conditions(term, drop.empty = FALSE)
+#' weights <- matrix(
+#'   c(1, -1), ncol = 1,
+#'   dimnames = list(condition_names, "A-B")
+#' )
+#' spec <- structure(
+#'   list(name = "A-B", basis = NULL, basis_weights = NULL),
+#'   class = c("example_contrast_spec", "contrast_spec", "list")
+#' )
+#' result <- contrast_from_mask(
+#'   list(weights = weights, condnames = condition_names),
+#'   spec,
+#'   term
+#' )
+#' result$weights
 #' @export
 contrast_from_mask <- function(mask, spec, term, classes = character()) {
   stopifnot(is.list(mask), !is.null(mask$weights))

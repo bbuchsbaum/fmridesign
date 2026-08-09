@@ -128,7 +128,7 @@ design_map.event_model <- function(x,
                  xend = num_cols + 0.5,
                  y = rb + 0.5,
                  yend = rb + 0.5,
-                 color = "white", size = 1)
+                 color = "white", linewidth = 1)
     }
   }
   

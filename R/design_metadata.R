@@ -213,8 +213,8 @@
 
 #' Combine per-term metadata tibbles into a design-wide metadata tibble
 #'
-#' Stamps `term_index` and the absolute `col` index. Intended for use in
-#' [build_event_model_design_matrix()].
+#' Stamps `term_index` and the absolute `col` index. Intended for use by the
+#' internal event-model design-matrix builder.
 #'
 #' @param meta_list   Named list of per-term metadata tibbles (or NULL entries).
 #' @param term_names  Character vector of term tags aligned with `meta_list`.

@@ -28,3 +28,25 @@ downstream \code{contrast_weights.event_model()}.
 \details{
 Custom contrast types implement \code{\link[=contrast_mask]{contrast_mask()}} and call this driver.
 }
+\examples{
+term <- event_term(
+  list(condition = factor(c("A", "B"))),
+  onsets = c(0, 2),
+  blockids = c(1, 1)
+)
+condition_names <- conditions(term, drop.empty = FALSE)
+weights <- matrix(
+  c(1, -1), ncol = 1,
+  dimnames = list(condition_names, "A-B")
+)
+spec <- structure(
+  list(name = "A-B", basis = NULL, basis_weights = NULL),
+  class = c("example_contrast_spec", "contrast_spec", "list")
+)
+result <- contrast_from_mask(
+  list(weights = weights, condnames = condition_names),
+  spec,
+  term
+)
+result$weights
+}

@@ -6,7 +6,7 @@ test_that("covariate data length must match sampling frame", {
 
   expect_error(
     event_model(onset ~ covariate(x, y, data = bad_dat),
-                data = data.frame(onset = seq_len(100), run = rep(1:2, each = 50)),
+                data = data.frame(onset = rep(0:49, 2), run = rep(1:2, each = 50)),
                 block = ~ run, sampling_frame = sframe),
     "sampling_frame expects"
   )

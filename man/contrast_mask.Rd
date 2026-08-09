@@ -47,3 +47,23 @@ The built-in spec classes (\code{pair_contrast_spec}, \code{oneway_contrast_spec
 \code{poly_contrast_spec}, ...) implement \code{contrast_weights()} directly, so
 they do not require \code{contrast_mask()} methods.
 }
+\examples{
+term <- event_term(
+  list(condition = factor(c("A", "B"))),
+  onsets = c(0, 2),
+  blockids = c(1, 1)
+)
+spec <- structure(
+  list(name = "A-B"),
+  class = c("example_contrast_spec", "contrast_spec", "list")
+)
+contrast_mask.example_contrast_spec <- function(x, term, ...) {
+  condition_names <- conditions(term, drop.empty = FALSE)
+  weights <- matrix(
+    c(1, -1), ncol = 1,
+    dimnames = list(condition_names, x$name)
+  )
+  list(weights = weights, condnames = condition_names)
+}
+contrast_mask(spec, term)
+}

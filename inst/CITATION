@@ -3,7 +3,7 @@ bibentry(
   title    = "fmridesign: Design Matrix Construction for fMRI Analysis",
   author   = person("Bradley", "Buchsbaum", email = "brad.buchsbaum@gmail.com", role = c("aut", "cre")),
   year     = "2026",
-  note     = "R package version 0.5.0",
+  note     = sprintf("R package version %s", meta$Version),
   url      = "https://bbuchsbaum.github.io/fmridesign/",
   header   = "To cite fmridesign in publications use:"
 )

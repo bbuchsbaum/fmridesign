@@ -398,6 +398,16 @@
 #'
 #' @return A `nuisance_check` object with `ok`, `problems`, `by_block`, and
 #'   normalized `nuisance_list` elements.
+#' @examples
+#' sframe <- fmrihrf::sampling_frame(blocklens = 20, TR = 1)
+#' motion <- cbind(
+#'   linear = seq_len(20),
+#'   duplicate = seq_len(20),
+#'   constant = 1
+#' )
+#' report <- check_nuisance(list(motion), sframe, basis = "constant")
+#' report$ok
+#' report$by_block[[1]]$keep
 #' @export
 check_nuisance <- function(nuisance_list,
                            sframe,
@@ -431,6 +441,15 @@ check_nuisance <- function(nuisance_list,
 #'
 #' @return A list with `nuisance_list` and `report` elements. Pass
 #'   `result$nuisance_list` to `baseline_model()`.
+#' @examples
+#' sframe <- fmrihrf::sampling_frame(blocklens = 20, TR = 1)
+#' motion <- cbind(
+#'   linear = seq_len(20),
+#'   duplicate = seq_len(20),
+#'   constant = 1
+#' )
+#' cleaned <- clean_nuisance(list(motion), sframe, basis = "constant")
+#' colnames(cleaned$nuisance_list[[1]])
 #' @export
 clean_nuisance <- function(nuisance_list,
                            sframe,

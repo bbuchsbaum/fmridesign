@@ -37,3 +37,9 @@
   environment, matching formula-interface subset behavior.
 - Fixed event-model column metadata construction for factor and multi-basis HRF
   terms that expand to multiple design columns.
+- Event terms whose subsets select zero events now retain their canonical
+  condition-column names and metadata on the resulting all-zero design matrix,
+  rather than falling back to generic `col_1`, `col_2`, ... names.
+- Suppressed exact, known false-positive metadata warnings produced when
+  decorated HRFs are reconstructed by `fmrihrf` 0.3.0, while continuing to
+  surface unrelated warnings.

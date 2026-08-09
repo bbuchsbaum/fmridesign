@@ -1,4 +1,4 @@
-options(mc.cores=2)
+withr::local_options(list(mc.cores = 2))
 
 library(testthat)
 library(assertthat)
@@ -457,7 +457,7 @@ test_that("poly_contrast respects where clause", {
 
 test_that("pair_contrast with basis filtering - single basis", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B", "C"), 10),
     run = rep(1:2, each = 15)
   )
@@ -484,7 +484,7 @@ test_that("pair_contrast with basis filtering - single basis", {
 
 test_that("pair_contrast with basis filtering - multiple basis", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("Face", "Scene"), 15),
     run = rep(1:2, each = 15)
   )
@@ -510,7 +510,7 @@ test_that("pair_contrast with basis filtering - multiple basis", {
 
 test_that("oneway_contrast with basis filtering", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B", "C"), 10),
     run = rep(1:2, each = 15)
   )
@@ -539,7 +539,7 @@ test_that("oneway_contrast with basis filtering", {
 
 test_that("oneway_contrast with basis filtering - multiple basis", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B", "C"), 10),
     run = rep(1:2, each = 15)
   )
@@ -559,7 +559,7 @@ test_that("oneway_contrast with basis filtering - multiple basis", {
 
 test_that("poly_contrast with basis filtering", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     intensity = rep(c("low", "medium", "high"), 10),
     run = rep(1:2, each = 15)
   )
@@ -586,7 +586,7 @@ test_that("poly_contrast with basis filtering", {
 
 test_that("basis filtering with FIR HRF", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B"), 15),
     run = rep(1:2, each = 15)
   )
@@ -607,7 +607,7 @@ test_that("basis filtering with FIR HRF", {
 
 test_that("basis filtering handles edge cases", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B"), 15),
     run = rep(1:2, each = 15)
   )
@@ -648,7 +648,7 @@ test_that("basis filtering validates input", {
 
   # Test that basis indices beyond nbasis are caught at weight computation time
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B"), 15),
     run = rep(1:2, each = 15)
   )
@@ -670,7 +670,7 @@ test_that("basis filtering validates input", {
 
 test_that("basis filtering preserves sum-to-zero property", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B"), 15),
     run = rep(1:2, each = 15)
   )
@@ -698,7 +698,7 @@ test_that("basis filtering preserves sum-to-zero property", {
 
 test_that("pair_contrast with basis_weights - basic functionality", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B", "C"), 10),
     run = rep(1:2, each = 15)
   )
@@ -740,7 +740,7 @@ test_that("pair_contrast with basis_weights - basic functionality", {
 
 test_that("basis_weights auto-normalization with warning", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B"), 15),
     run = rep(1:2, each = 15)
   )
@@ -766,7 +766,7 @@ test_that("basis_weights auto-normalization with warning", {
 
 test_that("basis_weights validation - length mismatch", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B"), 15),
     run = rep(1:2, each = 15)
   )
@@ -822,7 +822,7 @@ test_that("basis_weights validation - non-numeric", {
 
 test_that("oneway_contrast with basis_weights", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B", "C"), 10),
     run = rep(1:2, each = 15)
   )
@@ -848,7 +848,7 @@ test_that("oneway_contrast with basis_weights", {
 
 test_that("poly_contrast with basis_weights", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     intensity = rep(c("low", "med", "high"), 10),
     run = rep(1:2, each = 15)
   )
@@ -876,7 +876,7 @@ test_that("poly_contrast with basis_weights", {
 
 test_that("basis_weights with basis = NULL (all bases)", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B"), 15),
     run = rep(1:2, each = 15)
   )
@@ -899,7 +899,7 @@ test_that("basis_weights with basis = NULL (all bases)", {
 
 test_that("basis_weights preserves sum-to-zero property", {
   des <- data.frame(
-    onset = seq(2, 120, by = 4),
+    onset = rep(seq(2, 58, by = 4), 2),
     condition = rep(c("A", "B", "C", "D"), length.out = 30),
     run = rep(1:2, each = 15)
   )

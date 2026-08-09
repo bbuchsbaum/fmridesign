@@ -1154,8 +1154,10 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   # This ensures names match the columns being convolved
   base_cnames <- colnames(dmat)
   
-  # Check if dmat became empty after dropping
-  if (ncol(dmat) == 0 || nrow(dmat) == 0) {
+  # A zero-row matrix can still carry the complete condition-column contract
+  # after an event subset removes every observation. Preserve those names so
+  # the resulting all-zero convolved matrix remains structurally meaningful.
+  if (ncol(dmat) == 0) {
       warning(sprintf("Design matrix for term '%s' became empty after dropping. Convolution will result in an empty matrix.", term_tag), call.=FALSE)
       # Proceed to generate names for an empty matrix
       base_cnames <- character(0) # Use empty names

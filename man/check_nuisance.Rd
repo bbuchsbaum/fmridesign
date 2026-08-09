@@ -46,3 +46,14 @@ baseline model. The check is run per block and compares nuisance columns
 against the baseline terms that would be constructed from \code{basis}, \code{degree},
 and \code{intercept}.
 }
+\examples{
+sframe <- fmrihrf::sampling_frame(blocklens = 20, TR = 1)
+motion <- cbind(
+  linear = seq_len(20),
+  duplicate = seq_len(20),
+  constant = 1
+)
+report <- check_nuisance(list(motion), sframe, basis = "constant")
+report$ok
+report$by_block[[1]]$keep
+}

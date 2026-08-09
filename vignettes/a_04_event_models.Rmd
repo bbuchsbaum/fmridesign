@@ -28,7 +28,7 @@ includes:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE, comment = "#>", fig.align = "center", fig.retina = 2,
+  collapse = TRUE, comment = "#>", fig.align = "center", fig.retina = 1,
   out.width = "100%", fig.width = 7, fig.asp = 0.618, message = FALSE, warning = FALSE
 )
 set.seed(123)

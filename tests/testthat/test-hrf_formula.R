@@ -391,6 +391,37 @@ test_that("make_hrf() applies lag", {
   expect_true(inherits(hrf_lagged, "HRF"))
 })
 
+test_that("fmrihrf metadata warning compatibility handler is narrowly scoped", {
+  expect_no_warning(
+    fmridesign:::.without_fmrihrf_metadata_warning(
+      warning(
+        "Parameters width, normalize are not arguments to function decorated and will be ignored",
+        call. = FALSE
+      ),
+      c("width", "normalize")
+    )
+  )
+
+  expect_warning(
+    fmridesign:::.without_fmrihrf_metadata_warning(
+      warning("an unrelated warning", call. = FALSE),
+      c("width", "normalize")
+    ),
+    "an unrelated warning"
+  )
+
+  expect_warning(
+    fmridesign:::.without_fmrihrf_metadata_warning(
+      warning(
+        "Parameters width are not arguments to function decorated and will be ignored",
+        call. = FALSE
+      ),
+      c("width", "normalize")
+    ),
+    "Parameters width"
+  )
+})
+
 test_that("make_hrf() from HRF object", {
   hrf_obj <- fmridesign:::make_hrf(fmrihrf::HRF_SPMG1, lag = 0)
   expect_true(inherits(hrf_obj, "HRF"))

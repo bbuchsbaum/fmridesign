@@ -3,6 +3,35 @@
 #' @importFrom stats setNames
 
 
+# fmrihrf <= 0.4.0 re-validates inherited HRF metadata against the decorated
+# closure's formal arguments. The decorated closure already captures those
+# parameters, so the resulting warning is a false positive. Muffle only the
+# exact warning for the metadata names supplied by the caller; all other
+# warnings continue to propagate.
+.without_fmrihrf_metadata_warning <- function(expr, metadata_names) {
+  metadata_names <- metadata_names[nzchar(metadata_names)]
+  if (length(metadata_names) == 0L) {
+    return(expr)
+  }
+
+  prefix <- paste0(
+    "Parameters ", paste(metadata_names, collapse = ", "),
+    " are not arguments to function "
+  )
+  suffix <- " and will be ignored"
+
+  withCallingHandlers(
+    expr,
+    warning = function(cnd) {
+      msg <- conditionMessage(cnd)
+      if (startsWith(msg, prefix) && endsWith(msg, suffix)) {
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
+}
+
+
 #' @keywords internal
 #' @noRd
 make_hrf <- function(basis, lag, nbasis=1) {
@@ -56,11 +85,17 @@ make_hrf <- function(basis, lag, nbasis=1) {
       stop("Unknown HRF basis name: ", basis, ". Available options: ", paste(c(names(hrf_map), "fourier"), collapse = ", "))
     }
     # Apply lag using gen_hrf
-    final_hrf <- fmrihrf::gen_hrf(base_hrf_obj, lag = lag)
+    final_hrf <- .without_fmrihrf_metadata_warning(
+      fmrihrf::gen_hrf(base_hrf_obj, lag = lag),
+      names(attr(base_hrf_obj, "params"))
+    )
 
   } else if (inherits(basis, "HRF")) {
     # If it's already an HRF object, apply lag using gen_hrf
-    final_hrf <- fmrihrf::gen_hrf(basis, lag = lag)
+    final_hrf <- .without_fmrihrf_metadata_warning(
+      fmrihrf::gen_hrf(basis, lag = lag),
+      names(attr(basis, "params"))
+    )
     
   } else if (is.function(basis)) {
     # If it's a raw function, gen_hrf will handle conversion via as_hrf and apply lag
@@ -529,7 +564,10 @@ boxcar_hrf_gen <- function(normalize = TRUE, min_duration = 0.1) {
   hrf_boxcar_fn <- get("hrf_boxcar", envir = asNamespace("fmrihrf"))
   function(d) {
     lapply(d$duration, function(dur) {
-      hrf_boxcar_fn(width = max(dur, min_duration), normalize = normalize)
+      .without_fmrihrf_metadata_warning(
+        hrf_boxcar_fn(width = max(dur, min_duration), normalize = normalize),
+        c("width", "amplitude", "normalize")
+      )
     })
   }
 }
@@ -570,7 +608,10 @@ duration_hrf_gen <- function(base = fmrihrf::HRF_SPMG1, min_duration = 0) {
     lapply(d$duration, function(dur) {
       dur <- max(dur, min_duration)
       if (dur == 0) return(base)
-      fmrihrf::block_hrf(base, width = dur, normalize = TRUE)
+      .without_fmrihrf_metadata_warning(
+        fmrihrf::block_hrf(base, width = dur, normalize = TRUE),
+        names(attr(base, "params"))
+      )
     })
   }
 }
@@ -627,8 +668,11 @@ weighted_hrf_gen <- function(times_col = "sub_times", weights_col = "sub_weights
     Map(function(times, weights, onset) {
       # Convert absolute times to relative if needed
       rel_times <- if (relative) times else times - onset
-      hrf_weighted_fn(times = rel_times, weights = weights,
-                      method = method, normalize = normalize)
+      .without_fmrihrf_metadata_warning(
+        hrf_weighted_fn(times = rel_times, weights = weights,
+                        method = method, normalize = normalize),
+        c("times", "weights", "width", "method", "normalize")
+      )
     }, d[[times_col]], d[[weights_col]], d$onset)
   }
 }

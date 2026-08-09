@@ -46,3 +46,13 @@ increase QR rank after the block's baseline terms and earlier nuisance
 columns. Column order is respected, so when two columns are aliased the
 earlier column is kept.
 }
+\examples{
+sframe <- fmrihrf::sampling_frame(blocklens = 20, TR = 1)
+motion <- cbind(
+  linear = seq_len(20),
+  duplicate = seq_len(20),
+  constant = 1
+)
+cleaned <- clean_nuisance(list(motion), sframe, basis = "constant")
+colnames(cleaned$nuisance_list[[1]])
+}

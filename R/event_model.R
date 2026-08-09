@@ -1,5 +1,4 @@
 #' @importFrom utils head
-#' @importFrom plotly plot_ly layout animation_opts
 #' @importFrom tidyr complete pivot_longer
 #' @importFrom dplyr mutate
 #' @importFrom rlang .data

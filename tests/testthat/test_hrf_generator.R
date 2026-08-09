@@ -349,11 +349,20 @@ test_that("hrf_fun with empty events (after subset) handles gracefully", {
   }
 
   # Subset that results in no events
-  emod <- event_model(
-    onset ~ hrf(condition, hrf_fun = check_gen, subset = condition == "C"),
-    data = des, block = ~run, sampling_frame = sf
+  expect_warning(
+    emod <- event_model(
+      onset ~ hrf(condition, hrf_fun = check_gen, subset = condition == "C"),
+      data = des, block = ~run, sampling_frame = sf
+    ),
+    class = "fmridesign_zero_events"
   )
 
   # Generator should not be called for empty events
   expect_false(gen_called)
+  expected_names <- c("condition_condition.A", "condition_condition.B")
+  expect_identical(colnames(design_matrix(emod)), expected_names)
+  expect_identical(as.matrix(design_matrix(emod)),
+                   matrix(0, nrow = 30, ncol = 2,
+                          dimnames = list(NULL, expected_names)))
+  expect_identical(design_colmap(emod)$name, expected_names)
 })

@@ -1,26 +1,18 @@
 ## Resubmission
 
-This is a resubmission addressing reviewer feedback from 2026-02-11.
+This is a resubmission of fmridesign, previously submitted as version 0.5.0.
+Version 0.6.0 retains the changes requested during the previous review and adds
+construction-time validation for nuisance regressors, consistent interaction
+contrast keys, warnings for degenerate parametric modulators, and compatibility
+handling for spurious HRF-metadata warnings from `fmrihrf` 0.3.0.
 
-Changes made:
+The previous reviewer-requested changes remain in place:
 
-* Added method references (Friston et al. 1995, Lindquist 2008) with
-  `<doi:...>` links to the DESCRIPTION Description field.
-
-* Exported functions that had examples but were not exported
-  (`sanitize`, `basis_suffix`, `feature_suffix`, `split_by_block`).
-  Removed examples from internal-only functions
-  (`column_groups_by_condition`, `translate_legacy_pattern`).
-
-* Removed all `\dontrun{}`. Three longer-running examples use
-  `\donttest{}` instead (`register_hrfspec_extension`,
-  `boxcar_hrf_gen`, `weighted_hrf_gen`).
-
-* Replaced commented-out code in examples with runnable code
-  (`event_model`, `hrf`, `split_by_block`).
-
-* Vignettes now save and restore `options()` via
-  `old_opts <- options(...)` / `options(old_opts)`.
+* Method references are included in the DESCRIPTION with DOI links.
+* Exported functions have runnable examples; internal-only functions do not
+  expose examples as user-facing API.
+* There are no `\dontrun{}` examples. Longer examples use `\donttest{}`.
+* Vignettes restore any session options they change.
 
 ## R CMD check results
 
@@ -28,11 +20,17 @@ Changes made:
 
 * This is a new submission.
 
-* NOTE: Possibly misspelled words: HRF, hemodynamic, trialwise
-  - These are standard terms in the functional MRI analysis domain.
+The same source tarball produced this result under both R 4.6.1 and R-devel.
 
 ## Test environments
 
-* local macOS (aarch64-apple-darwin20), R 4.5.1
-* win-builder R-release (4.5.2)
-* win-builder R-devel (2026-02-08 r89382)
+* Ubuntu 24.04.4 LTS (aarch64-unknown-linux-gnu), R 4.6.1
+* Ubuntu 24.04.4 LTS (aarch64-unknown-linux-gnu), R-devel
+  (2026-06-21 r90185)
+* local macOS Sonoma 14.3 (aarch64-apple-darwin20), R 4.5.1
+
+All checks used the CRAN release of `fmrihrf` (0.3.0). The macOS check produced
+one additional local-tooling note because its installed HTML Tidy is too old
+for HTML-manual validation; that validation passed on both Ubuntu checks.
+
+The source tarball is 1.9 MB and its installed `doc` directory is 2.5 MB.
