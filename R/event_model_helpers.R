@@ -296,11 +296,13 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
                        attr(term, "term_tag") %||% term$varname %||% "Unnamed"), call. = FALSE)
       }
 
-      # Regular convolution for event_term objects
-      convolve.event_term(term, hrf = hrfspec$hrf, sampling_frame = sampling_frame,
-                          precision = precision, drop.empty = TRUE,
-                          summate = hrfspec$summate %||% TRUE,
-                          normalize = hrfspec$normalize %||% FALSE)
+      # Regular convolution for event_term objects. Use the matrix-returning
+      # internal so we defer the single tibble materialization until after
+      # all terms are cbind'd (avoids per-term matrixToDataFrame cost).
+      .convolve_event_term_matrix(term, hrf = hrfspec$hrf, sampling_frame = sampling_frame,
+                                  precision = precision, drop.empty = TRUE,
+                                  summate = hrfspec$summate %||% TRUE,
+                                  normalize = hrfspec$normalize %||% FALSE)
   }
 
   term_matrices <- lapply(terms, convolve_one_term)

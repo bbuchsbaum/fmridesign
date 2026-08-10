@@ -26,6 +26,14 @@
   output. Designs where every column is populated in every block are unaffected
   (a fast-exit keeps the original path), and blocks containing `NA`/`NaN` fall
   back to the previous full-column path so filtering semantics are unchanged.
+- Convolution hot path now shares one fine-grid HRF matrix across all columns
+  and blocks and calls `fmrihrf`'s C++ evaluator directly, skipping per-column
+  `Reg` construction / `prep_reg_inputs` overhead. Combined with a single
+  global output matrix (no per-block zero-alloc + `rbind`) and deferred tibble
+  materialization in `build_event_model_design_matrix()`, this is ~2–3.5×
+  faster end-to-end on trialwise/LSS and multi-term workloads while remaining
+  bit-identical to `fmrihrf::evaluate(regressor(...))`. Per-onset `hrf_fun`
+  lists and NA-misaligned designs keep the previous path.
 - Added `bench/` cross-library design-matrix benchmarks against nilearn (the
   FitLins first-level design-matrix hot path). Run with `bash bench/run_compare.sh`;
   see `bench/RESULTS.md` and `bench/OPTIMIZATION_NOTES.md`.
