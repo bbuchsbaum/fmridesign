@@ -1,6 +1,6 @@
 # Design-matrix benchmark: fmridesign vs nilearn (FitLins hot path)
 
-Generated: 2026-08-10 13:46:34 UTC
+Generated: 2026-08-10 13:46:54 UTC
 
 ## Scope
 
@@ -32,13 +32,13 @@ Ratio column: `nilearn_time / fmridesign_time`. Values **> 1** mean fmridesign i
 - Column counts are not always identical across libraries (naming, constant/intercept columns,
   interaction encoding, SPMG3 vs nilearn's three SPM bases). Compare timings within each workload,
   not across mismatched column counts.
-- Dense categorical / FIR / modulated designs: fmridesign is typically competitive or ahead
-  after the metadata + sparse-block opts (see table; FIR/SPMG3 show the largest dense wins).
-- Trialwise/LSS: fmridesign's largest advantage. The per-block zero-column skip avoids building
-  empty regressors for trials absent from a run; nilearn evaluates every trial column over the
-  full concatenated series.
-- Remaining fmridesign time is still dominated by `fmrihrf::evaluate` / `prep_reg_inputs`
-  (see `OPTIMIZATION_NOTES.md` for next cross-repo targets).
+- Dense categorical / FIR / modulated designs: fmridesign is ahead after the shared-HRF C++
+  eval + metadata opts (see table; FIR/SPMG3/multi-term show the largest dense wins).
+- Trialwise/LSS: fmridesign's largest advantage. Per-block zero-column skip + shared-HRF
+  evaluation avoid empty regressors and per-column `Reg`/`prep_reg_inputs` overhead; nilearn
+  evaluates every trial column over the full concatenated series.
+- Remaining fmridesign time is dominated by `fmrihrf`'s C++ evaluate kernel
+  (see `OPTIMIZATION_NOTES.md` for next cross-repo batch-evaluate targets).
 - Numeric equivalence is intentionally out of scope for this harness (different HRF discretizations
   / oversampling). This suite is for **hot-path wall-clock** comparison of equivalent operations.
 
