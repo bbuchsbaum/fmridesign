@@ -1,6 +1,6 @@
 # Design-matrix benchmark: fmridesign vs nilearn (FitLins hot path)
 
-Generated: 2026-08-09 18:53:20 UTC
+Generated: 2026-08-10 13:46:34 UTC
 
 ## Scope
 
@@ -16,14 +16,14 @@ Generated: 2026-08-09 18:53:20 UTC
 
 | Workload | Events | fmridesign cols | nilearn cols | fmridesign (s) | nilearn (s) | fmridesign / nilearn |
 |---|---:|---:|---:|---:|---:|---:|
-| Block design (duration=8s, SPM) | 64 | 2 | 3 | 0.0070 | 0.0083 | **1.18x** |
-| Categorical SPM (dense, 4 conditions) | 160 | 4 | 5 | 0.0080 | 0.0147 | **1.84x** |
-| Categorical SPM + deriv + dispersion | 160 | 12 | 13 | 0.0090 | 0.0391 | **4.34x** |
-| FIR (12 bins) | 160 | 48 | 49 | 0.0120 | 0.0707 | **5.89x** |
-| Parametric modulator (SPM) | 160 | 3 | 4 | 0.0100 | 0.0122 | **1.22x** |
-| Multi-term realistic (cat + interaction + modulator) | 400 | 35 | 30 | 0.0310 | 0.1936 | **6.24x** |
-| Trialwise / LSS (480 trials) | 480 | 480 | 481 | 0.1070 | 3.6545 | **34.15x** |
-| Trialwise / LSS (240 trials) | 240 | 240 | 241 | 0.0500 | 1.1208 | **22.42x** |
+| Block design (duration=8s, SPM) | 64 | 2 | 3 | 0.0060 | 0.0083 | **1.38x** |
+| Categorical SPM (dense, 4 conditions) | 160 | 4 | 5 | 0.0060 | 0.0140 | **2.34x** |
+| Categorical SPM + deriv + dispersion | 160 | 12 | 13 | 0.0070 | 0.0393 | **5.62x** |
+| FIR (12 bins) | 160 | 48 | 49 | 0.0100 | 0.0763 | **7.63x** |
+| Parametric modulator (SPM) | 160 | 3 | 4 | 0.0080 | 0.0122 | **1.53x** |
+| Multi-term realistic (cat + interaction + modulator) | 400 | 35 | 30 | 0.0190 | 0.1934 | **10.18x** |
+| Trialwise / LSS (480 trials) | 480 | 480 | 481 | 0.0610 | 3.6924 | **60.53x** |
+| Trialwise / LSS (240 trials) | 240 | 240 | 241 | 0.0240 | 1.1301 | **47.09x** |
 
 Ratio column: `nilearn_time / fmridesign_time`. Values **> 1** mean fmridesign is faster.
 
