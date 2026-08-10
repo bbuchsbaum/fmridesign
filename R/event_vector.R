@@ -1023,7 +1023,9 @@ convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE, hrf_l
     }
   }
 
-  reglist <- purrr::map(1:ncol(dmat), function(i) {
+  # Plain lapply (not purrr::map): this sits on the legacy / NA-fallback
+  # convolution path and should stay allocation-light.
+  reglist <- lapply(seq_len(ncol(dmat)), function(i) {
     # Extract column i as a plain vector. `dmat[[i]]` is correct for both tibbles
     # (identical to the previous `dmat[, i][[1]]`) and base data frames, where the
     # old `dmat[, i][[1]]` dropped to a vector and then took only its first element.
@@ -1103,28 +1105,52 @@ regressors.event_term <- function(x, hrf, sampling_frame, summate = FALSE, drop.
 convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
                                 summate = TRUE, precision = 0.3,
                                 normalize = FALSE, ...) {
-  # Check for term_tag attribute (should have been added in realise_event_terms)
+  cmat <- .convolve_event_term_matrix(
+    x, hrf = hrf, sampling_frame = sampling_frame,
+    drop.empty = drop.empty, summate = summate,
+    precision = precision, normalize = normalize, ...
+  )
+  out <- suppressMessages(tibble::as_tibble(cmat, .name_repair = "minimal"))
+  attr(out, "col_metadata") <- attr(cmat, "col_metadata")
+  out
+}
+
+#' Matrix-returning implementation of `convolve.event_term`.
+#'
+#' Keeps an internal dense matrix through block assembly so callers that
+#' immediately `cbind` terms (the event-model builder) can defer the single
+#' tibble materialization. Public `convolve.event_term()` wraps this and
+#' converts once for API compatibility.
+#'
+#' Hot-path notes:
+#' - Shared-HRF C++ evaluation skips per-column `Reg` construction /
+#'   `prep_reg_inputs` when a single HRF is used (the common case). Output is
+#'   bit-identical to `fmrihrf::evaluate(regressor(...))`.
+#' - One global output matrix replaces per-block zero-alloc + `rbind`.
+#' - Per-block all-zero columns are still skipped (trialwise / LSS).
+#' - Per-onset `hrf_list` and NA-bearing blocks fall back to the previous
+#'   `convolve_design()` + `evaluate()` path so filtering semantics are
+#'   unchanged.
+#'
+#' @keywords internal
+#' @noRd
+.convolve_event_term_matrix <- function(x, hrf, sampling_frame, drop.empty = TRUE,
+                                        summate = TRUE, precision = 0.3,
+                                        normalize = FALSE, ...) {
   term_tag <- attr(x, "term_tag")
-  # --- REMOVED FALLBACK LOGIC FOR term_tag ---
-  # If term_tag is NULL (e.g., for Ident()-only terms), make_column_names will handle it
-  # by not prepending a term_tag, resulting in direct variable names.
 
   # --- Check for hrf_fun (per-onset HRF generator) ---
   hrfspec <- attr(x, "hrfspec")
   hrf_fun <- attr(x, "hrf_fun") %||% (if (!is.null(hrfspec)) hrfspec$hrf_fun else NULL)
 
-  # --- Generate per-onset HRF list if hrf_fun specified ---
   hrf_list <- NULL
   if (!is.null(hrf_fun) && length(x$onsets) > 0) {
-    # Build event data frame for generator
     event_data <- build_event_data_for_generator(x)
 
     if (rlang::is_formula(hrf_fun)) {
-      # Formula syntax: extract column from event_data or original_data
       original_data <- attr(x, "original_data")
       hrf_list <- evaluate_hrf_formula(hrf_fun, event_data, original_data)
     } else if (is.function(hrf_fun)) {
-      # Function syntax: call with event_data
       hrf_list <- tryCatch(
         hrf_fun(event_data),
         error = function(e) {
@@ -1134,44 +1160,49 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
       )
     }
 
-    # Validate the result
     hrf_list <- validate_hrf_list(hrf_list, nrow(event_data), term_tag)
-
-    # Update hrf for nbasis calculation (use first HRF from list)
     hrf <- hrf_list[[1]]
   }
 
-  # --- Basic Setup ---
   globons <- fmrihrf::global_onsets(sampling_frame, x$onsets, x$blockids)
   durations <- x$durations
   blockids <- x$blockids
-  
-  # --- Get Unconvolved Design Matrix (dmat) --- 
-  # design_matrix handles dropping empty/rank-deficient columns based on drop.empty
+
   dmat <- design_matrix(x, drop.empty = drop.empty)
-  
-  # --- Get Base Condition Names from the *actual* matrix columns --- 
-  # This ensures names match the columns being convolved
   base_cnames <- colnames(dmat)
-  
-  # A zero-row matrix can still carry the complete condition-column contract
-  # after an event subset removes every observation. Preserve those names so
-  # the resulting all-zero convolved matrix remains structurally meaningful.
-  if (ncol(dmat) == 0) {
-      warning(sprintf("Design matrix for term '%s' became empty after dropping. Convolution will result in an empty matrix.", term_tag), call.=FALSE)
-      # Proceed to generate names for an empty matrix
-      base_cnames <- character(0) # Use empty names
+  if (ncol(dmat) == 0L) {
+    warning(sprintf(
+      "Design matrix for term '%s' became empty after dropping. Convolution will result in an empty matrix.",
+      term_tag
+    ), call. = FALSE)
+    base_cnames <- character(0)
   }
+
   nb <- fmrihrf::nbasis(hrf)
-  
-  # --- Convolution per Block --- 
   sample_times <- fmrihrf::samples(sampling_frame, global = TRUE)
   sample_blockids <- fmrihrf::blockids(sampling_frame)
   block_ids <- unique(sample_blockids)
   sample_times_by_block <- split(sample_times, sample_blockids)
+  row_idx_by_block <- split(seq_along(sample_blockids), sample_blockids)
   event_rows_by_block <- split(seq_along(blockids), blockids)
 
-  # Helper to handle per-onset regressor sets (sum individual evaluations)
+  n_time <- length(sample_times)
+  n_cond <- ncol(dmat)
+  cmat <- matrix(0, nrow = n_time, ncol = n_cond * nb)
+
+  # Shared-HRF path: one fine-grid HRF matrix for all columns/blocks.
+  # Per-onset HRF lists cannot share a single kernel, so they use the legacy path.
+  # Also require design rows to align with event onsets; model.matrix may drop
+  # incomplete cases (NA modulators), in which case we keep tibble subsetting
+  # semantics and the convolve_design() NA-filter fallback.
+  use_shared_hrf <- is.null(hrf_list) && (nrow(dmat) == length(blockids))
+  hrf_span <- NULL
+  hrf_matrix <- NULL
+  if (use_shared_hrf && n_cond > 0L) {
+    hrf_span <- attr(hrf, "span") %||% 40
+    hrf_matrix <- .hrf_fine_matrix(hrf, hrf_span, precision)
+  }
+
   eval_reg <- function(r, times, prec) {
     if (inherits(r, "per_onset_regressor_set")) {
       results <- lapply(r, function(sub_r) fmrihrf::evaluate(sub_r, times, precision = prec))
@@ -1181,79 +1212,80 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
     }
   }
 
-  cmat_list <- lapply(block_ids, function(bid) {
+  for (bid in block_ids) {
     bid_chr <- as.character(bid)
+    rows <- row_idx_by_block[[bid_chr]]
     block_samples <- sample_times_by_block[[bid_chr]]
     idx <- event_rows_by_block[[bid_chr]] %||% integer(0)
 
-    if (length(idx) == 0) {
-      return(matrix(0, nrow = length(block_samples), ncol = ncol(dmat) * nb))
+    if (length(idx) == 0L || n_cond == 0L) {
+      next
     }
 
-    # Ensure we subset the correct dmat based on drop.empty consistency
-    dblock <- dmat[idx, , drop = FALSE] 
+    # Keep data.frame/tibble subsetting: out-of-range idx (after model.matrix
+    # drops incomplete cases) yields NA rows rather than an hard error, which
+    # then triggers the convolve_design() NA-filter path below.
+    dblock <- dmat[idx, , drop = FALSE]
     globons_block <- globons[idx]
     durations_block <- durations[idx]
-    
-    if (ncol(dblock) == 0) {
-      return(matrix(0, nrow = length(block_samples), ncol = 0))
-    }
-
-    # Subset hrf_list for this block if applicable
     hrf_list_block <- if (!is.null(hrf_list)) hrf_list[idx] else NULL
 
-    # --- Fast path: skip all-zero columns within this block ---------------
-    # A column with no nonzero amplitude in this block convolves to an exact
-    # zero regressor (verified for all bases), so we can fill it with zeros
-    # directly instead of constructing and evaluating an empty regressor. This
-    # is a large win for block-diagonal-ish designs (e.g. trialwise/LSS, or a
-    # factor level present only in some runs), where most per-block columns are
-    # empty. It is only taken when the block has no NA/NaN to filter, so that
-    # convolve_design()'s NA row-removal semantics remain exactly as before;
-    # otherwise we fall through to the original full-column path unchanged.
-    if (!anyNA(dblock) && !anyNA(globons_block)) {
-      # `any(a != 0)` per column is equivalent to `colSums(abs(col)) > 0` for the
-      # NA-free block guaranteed here, and matches convolve_design()'s own
-      # `which(amp != 0)` emptiness test, while short-circuiting and avoiding a
-      # full matrix copy (so dense designs pay almost nothing).
-      col_has <- vapply(dblock, function(a) any(a != 0), logical(1))
-      if (!all(col_has)) {
-        out <- matrix(0, nrow = length(block_samples), ncol = ncol(dblock) * nb)
-        keep <- which(col_has)
-        if (length(keep) > 0L) {
-          reg <- convolve_design(hrf, dblock[, keep, drop = FALSE],
-                                 globons_block, durations_block,
-                                 summate = summate, hrf_list = hrf_list_block)
-          for (k in seq_along(keep)) {
-            c_orig <- keep[k]
-            target_cols <- ((c_orig - 1L) * nb + 1L):(c_orig * nb)
-            out[, target_cols] <- eval_reg(reg[[k]], block_samples, precision)
-          }
+    # Shared-HRF + sparse-column skip (aligned, NA-free blocks only).
+    # Evaluate only live columns into a compact block matrix, then scatter
+    # once into the global output (one `[<-` per block, not per column).
+    if (use_shared_hrf && !anyNA(dblock) && !anyNA(globons_block)) {
+      dblock_mat <- as.matrix(dblock)
+      col_has <- colSums(dblock_mat != 0) > 0
+      keep <- which(col_has)
+      if (length(keep) > 0L) {
+        live <- .eval_design_cols_shared_hrf(
+          dmat = dblock_mat, globons = globons_block, durations = durations_block,
+          grid = block_samples, hrf_matrix = hrf_matrix,
+          hrf_span = hrf_span, precision = precision, nb = nb,
+          col_idx = keep
+        )
+        if (nb == 1L) {
+          cmat[rows, keep] <- live
+        } else {
+          target <- as.vector(vapply(
+            keep,
+            function(j) ((j - 1L) * nb + 1L):((j - 1L) * nb + nb),
+            integer(nb)
+          ))
+          cmat[rows, target] <- live
         }
-        return(out)
       }
+      next
     }
 
-    # Dense (or NA-fallback) path: original behavior, unchanged.
-    reg <- convolve_design(hrf, dblock, globons_block, durations_block, summate = summate, hrf_list = hrf_list_block)
-    do.call(cbind, lapply(reg, function(r) eval_reg(r, block_samples, precision)))
-  })
-  
-  # --- Generate Final Column Names --- 
-  # Use the base_cnames derived directly from the dmat that was convolved
-  cn <- make_column_names(term_tag, base_cnames, nb)
-  
-  # Handle case where convolution results in an empty matrix
-  if (length(cmat_list) == 0) {
-      warning(sprintf("Convolution resulted in an empty matrix for term '%s\'.\n  Returning tibble with correct names but 0 rows.", term_tag), call.=FALSE)
-      # Return empty tibble with correct names and 0 rows
-      return(tibble::as_tibble(matrix(numeric(0), nrow=0, ncol=length(cn)), 
-                               .name_repair="minimal", .names_minimal = cn))
+    # Legacy path: per-onset HRFs and/or NA filtering via convolve_design().
+    reg <- convolve_design(
+      hrf, dblock, globons_block, durations_block,
+      summate = summate, hrf_list = hrf_list_block
+    )
+    block_mat <- do.call(cbind, lapply(reg, function(r) eval_reg(r, block_samples, precision)))
+    if (!is.null(block_mat) && length(block_mat)) {
+      cmat[rows, ] <- block_mat
+    }
   }
-  cmat <- do.call(rbind, cmat_list)
 
-  # Peak-normalize each regressor column so max(abs(col)) == 1
-  if (isTRUE(normalize)) {
+  cn <- make_column_names(term_tag, base_cnames, nb)
+
+  if (n_time == 0L) {
+    warning(sprintf(
+      "Convolution resulted in an empty matrix for term '%s'.\n  Returning tibble with correct names but 0 rows.",
+      term_tag
+    ), call. = FALSE)
+    empty <- matrix(numeric(0), nrow = 0, ncol = length(cn))
+    colnames(empty) <- cn
+    attr(empty, "col_metadata") <- .term_col_metadata(
+      term = x, hrf = hrf, base_cnames = base_cnames, nb = nb,
+      term_tag = term_tag, colnames_final = cn
+    )
+    return(empty)
+  }
+
+  if (isTRUE(normalize) && ncol(cmat) > 0L) {
     for (j in seq_len(ncol(cmat))) {
       peak <- max(abs(cmat[, j]))
       if (peak > 0) {
@@ -1262,62 +1294,54 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
     }
   }
 
-  # Handle add_sum flag if present (set by trialwise)
   if (isTRUE(attr(x, "add_sum"))) {
-    if (ncol(cmat) > 0) { # Ensure there are columns to average
+    if (ncol(cmat) > 0L) {
       mean_col <- matrix(rowMeans(cmat, na.rm = TRUE), ncol = 1)
       mean_col_name <- make.names(paste0(attr(x, "add_sum_label") %||% term_tag, "_mean"))
       colnames(mean_col) <- mean_col_name
       cmat <- cbind(cmat, mean_col)
-      # Update column names to include the new mean column
       cn <- c(cn, mean_col_name)
     } else {
       warning(sprintf("Cannot add sum column for term '%s': no base columns generated.", term_tag))
     }
   }
-  
-  # Assign names, checking for length consistency
+
   if (length(cn) == ncol(cmat)) {
     colnames(cmat) <- cn
   } else {
-      warning(sprintf("Final column name count (%d) mismatch with convolved matrix columns (%d) for term '%s'. Using generic names.",
-                      length(cn), ncol(cmat), term_tag), call. = FALSE)
-      colnames(cmat) <- make.names(paste0("col_", seq_len(ncol(cmat))), unique=TRUE)
+    warning(sprintf(
+      "Final column name count (%d) mismatch with convolved matrix columns (%d) for term '%s'. Using generic names.",
+      length(cn), ncol(cmat), term_tag
+    ), call. = FALSE)
+    colnames(cmat) <- make.names(paste0("col_", seq_len(ncol(cmat))), unique = TRUE)
   }
 
-  # --- Optional Debug Validation ---
   if (getOption("fmrireg.debug", FALSE)) {
-     fn <- get0("is_valid_heading", mode = "function")
-     if (!is.null(fn)){
-        stopifnot(all(fn(colnames(cmat))))
-     } else {
-        warning("fmrireg.debug=TRUE: is_valid_heading helper not found for validation.")
-     }
+    fn <- get0("is_valid_heading", mode = "function")
+    if (!is.null(fn)) {
+      stopifnot(all(fn(colnames(cmat))))
+    } else {
+      warning("fmrireg.debug=TRUE: is_valid_heading helper not found for validation.")
+    }
   }
 
   base_meta <- .term_col_metadata(
-    term            = x,
-    hrf             = hrf,
-    base_cnames     = base_cnames,
-    nb              = nb,
-    term_tag        = term_tag,
-    colnames_final  = cn[seq_len(min(length(cn), length(base_cnames) * nb))]
+    term = x, hrf = hrf, base_cnames = base_cnames, nb = nb,
+    term_tag = term_tag,
+    colnames_final = cn[seq_len(min(length(cn), length(base_cnames) * nb))]
   )
   if (isTRUE(attr(x, "add_sum")) && ncol(cmat) > nrow(base_meta)) {
     extra_names <- setdiff(colnames(cmat), base_meta$name)
     extra <- .term_col_metadata(
-      term           = x, hrf = hrf,
-      base_cnames    = "mean", nb = 1L,
-      term_tag       = term_tag,
-      colnames_final = extra_names
+      term = x, hrf = hrf, base_cnames = "mean", nb = 1L,
+      term_tag = term_tag, colnames_final = extra_names
     )
     extra$basis_label <- "mean"
     base_meta <- dplyr::bind_rows(base_meta, extra)
   }
 
-  out <- suppressMessages(tibble::as_tibble(cmat, .name_repair = "minimal"))
-  attr(out, "col_metadata") <- base_meta
-  out
+  attr(cmat, "col_metadata") <- base_meta
+  cmat
 }
 
 ## ============================================================================
