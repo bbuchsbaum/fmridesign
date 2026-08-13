@@ -11,3 +11,4 @@ fmridesign_*.tar.gz
 bench/results/*.csv
 bench/results/*.json
 !bench/results/.gitkeep
+bench/__pycache__/

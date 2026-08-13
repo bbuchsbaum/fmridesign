@@ -44,11 +44,20 @@ Outputs:
 - `bench/results/comparison.csv` — median comparison + speedup
 - `bench/RESULTS.md` — human-readable summary
 
+Focused harness validation:
+
+```bash
+python3 bench/test_bench_nilearn.py
+```
+
 ## Fairness notes
 
 - Same TR, run lengths, event counts, and (seeded) onset generators.
 - Nilearn `drift_model=None` so event/HRF work is isolated; fmridesign baseline
   is only included in the multi-term workload.
+- The multi-term workload gives both libraries two polynomial drift terms per
+  run plus an equivalent runwise-intercept span. Its categorical/interaction
+  terms use SPM and its separate modulator uses SPMG3 in both libraries.
 - Multi-run designs use **global onsets** on a concatenated time axis in both libs.
 - Column counts can differ (intercept columns, interaction encoding, basis naming);
   compare wall-clock within a workload, not absolute column counts.

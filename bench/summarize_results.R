@@ -80,6 +80,8 @@ lines <- c(
   "  FitLins uses this (or `FirstLevelModel`) for first-level design construction, so these",
   "  numbers represent the FitLins design-matrix hot path for equivalent event/FIR/modulated/trialwise models.",
   "- Drift/baseline disabled on the nilearn side for event-only isolation (`drift_model=None`).",
+  "- The multi-term workload uses two polynomial drift terms per run plus an equivalent runwise-intercept span in both libraries.",
+  "  Its categorical/interaction terms use SPM and its separate modulator uses SPMG3 on both sides.",
   "- Multi-run designs use a concatenated global onset axis in both libraries.",
   "- Times are median wall-clock seconds over non-warmup reps (see `bench/workloads.json`).",
   "",

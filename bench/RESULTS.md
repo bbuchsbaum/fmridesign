@@ -1,6 +1,6 @@
 # Design-matrix benchmark: fmridesign vs nilearn (FitLins hot path)
 
-Generated: 2026-08-10 13:46:54 UTC
+Generated: 2026-08-13 10:09:32 UTC
 
 ## Scope
 
@@ -9,6 +9,8 @@ Generated: 2026-08-10 13:46:54 UTC
   FitLins uses this (or `FirstLevelModel`) for first-level design construction, so these
   numbers represent the FitLins design-matrix hot path for equivalent event/FIR/modulated/trialwise models.
 - Drift/baseline disabled on the nilearn side for event-only isolation (`drift_model=None`).
+- The multi-term workload uses two polynomial drift terms per run plus an equivalent runwise-intercept span in both libraries.
+  Its categorical/interaction terms use SPM and its separate modulator uses SPMG3 on both sides.
 - Multi-run designs use a concatenated global onset axis in both libraries.
 - Times are median wall-clock seconds over non-warmup reps (see `bench/workloads.json`).
 
@@ -16,14 +18,14 @@ Generated: 2026-08-10 13:46:54 UTC
 
 | Workload | Events | fmridesign cols | nilearn cols | fmridesign (s) | nilearn (s) | fmridesign / nilearn |
 |---|---:|---:|---:|---:|---:|---:|
-| Block design (duration=8s, SPM) | 64 | 2 | 3 | 0.0060 | 0.0083 | **1.38x** |
-| Categorical SPM (dense, 4 conditions) | 160 | 4 | 5 | 0.0060 | 0.0140 | **2.34x** |
-| Categorical SPM + deriv + dispersion | 160 | 12 | 13 | 0.0070 | 0.0393 | **5.62x** |
-| FIR (12 bins) | 160 | 48 | 49 | 0.0100 | 0.0763 | **7.63x** |
-| Parametric modulator (SPM) | 160 | 3 | 4 | 0.0080 | 0.0122 | **1.53x** |
-| Multi-term realistic (cat + interaction + modulator) | 400 | 35 | 30 | 0.0190 | 0.1934 | **10.18x** |
-| Trialwise / LSS (480 trials) | 480 | 480 | 481 | 0.0610 | 3.6924 | **60.53x** |
-| Trialwise / LSS (240 trials) | 240 | 240 | 241 | 0.0240 | 1.1301 | **47.09x** |
+| Block design (duration=8s, SPM) | 64 | 2 | 3 | 0.0040 | 0.0104 | **2.60x** |
+| Categorical SPM (dense, 4 conditions) | 160 | 4 | 5 | 0.0040 | 0.0358 | **8.96x** |
+| Categorical SPM + deriv + dispersion | 160 | 12 | 13 | 0.0060 | 0.0819 | **13.66x** |
+| FIR (12 bins) | 160 | 48 | 49 | 0.0190 | 0.1088 | **5.73x** |
+| Parametric modulator (SPM) | 160 | 3 | 4 | 0.0050 | 0.0314 | **6.28x** |
+| Multi-term realistic (cat + interaction + modulator) | 400 | 35 | 35 | 0.0160 | 0.2127 | **13.29x** |
+| Trialwise / LSS (480 trials) | 480 | 480 | 481 | 0.0900 | 9.1017 | **101.13x** |
+| Trialwise / LSS (240 trials) | 240 | 240 | 241 | 0.0410 | 2.2910 | **55.88x** |
 
 Ratio column: `nilearn_time / fmridesign_time`. Values **> 1** mean fmridesign is faster.
 

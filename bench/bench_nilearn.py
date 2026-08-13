@@ -71,6 +71,48 @@ def frame_times(w: dict, tr: float) -> np.ndarray:
     return np.arange(n, dtype=float) * tr
 
 
+def block_diagonal_polynomial_regs(
+    w: dict, order: int = 2
+) -> tuple[np.ndarray, list[str]]:
+    """Build the nuisance span used by fmridesign's runwise baseline.
+
+    fmridesign constructs ``order`` orthogonal-polynomial columns separately
+    for each run and uses a runwise intercept. Nilearn always supplies one
+    global constant, so the additional intercept columns here are indicators
+    for runs 2..N; together with Nilearn's constant they span the same runwise
+    intercept space without introducing a rank-deficient design.
+    """
+    n_runs = int(w["n_runs"])
+    run_len = int(w["run_len"])
+    n_rows = n_runs * run_len
+    columns: list[np.ndarray] = []
+    names: list[str] = []
+
+    # QR of [1, x, ..., x^order] gives polynomial columns orthogonal to the
+    # within-run intercept, matching the blockwise span of stats::poly().
+    x = np.linspace(-1.0, 1.0, run_len)
+    vandermonde = np.column_stack([x**degree for degree in range(order + 1)])
+    run_poly = np.linalg.qr(vandermonde, mode="reduced")[0][:, 1 : order + 1]
+
+    for run in range(n_runs):
+        rows = slice(run * run_len, (run + 1) * run_len)
+        for degree in range(order):
+            column = np.zeros(n_rows)
+            column[rows] = run_poly[:, degree]
+            columns.append(column)
+            names.append(f"poly_{degree + 1}_run_{run + 1}")
+
+    # Treatment-coded run indicators plus Nilearn's global constant span the
+    # same space as fmridesign's N one-hot runwise intercept columns.
+    for run in range(1, n_runs):
+        column = np.zeros(n_rows)
+        column[run * run_len : (run + 1) * run_len] = 1.0
+        columns.append(column)
+        names.append(f"run_{run + 1}")
+
+    return np.column_stack(columns), names
+
+
 def build_events_for_style(events: pd.DataFrame, style: str) -> list[pd.DataFrame]:
     """Return one or more nilearn event tables for the workload style."""
     if style == "categorical":
@@ -94,14 +136,15 @@ def build_events_for_style(events: pd.DataFrame, style: str) -> list[pd.DataFram
         tw["trial_type"] = [f"t{i}" for i in range(len(tw))]
         return [tw]
     if style == "multi_term":
-        # Approximate: conditions + interaction-like labels + modulator.
+        # Match the two HRF bases used by fmridesign: SPM for the categorical
+        # and interaction terms, SPMG3 for the separate modulator term.
         base = events[["onset", "duration", "trial_type"]].copy()
         inter = events[["onset", "duration"]].copy()
         task = np.where(events["trial_type"].isin(list("ACEG")), "X", "Y")
         inter["trial_type"] = events["trial_type"].astype(str) + "_" + task
         mod = events[["onset", "duration", "modulation"]].copy()
         mod["trial_type"] = "rt"
-        return [pd.concat([base, inter, mod], ignore_index=True)]
+        return [pd.concat([base, inter], ignore_index=True), mod]
     raise ValueError(f"unknown style: {style}")
 
 
@@ -109,26 +152,36 @@ def time_one(w: dict, seed: int, tr: float) -> dict:
     events = make_events(w, seed, tr)
     ft = frame_times(w, tr)
     kwargs = hrf_kwargs(w["hrf"])
-    # Isolate event/HRF path for most workloads. The multi-term workload also
-    # includes a polynomial baseline on the fmridesign side, so match that.
-    if w["style"] == "multi_term":
-        kwargs.update(drift_model="polynomial", drift_order=2)
-        # Modulator uses SPMG3 on the R side; approximate with SPM + deriv + disp.
-        kwargs["hrf_model"] = "spm + derivative + dispersion"
-    else:
-        kwargs.update(drift_model=None)
-
-    event_tables = build_events_for_style(events, w["style"])
+    kwargs.update(drift_model=None)
 
     t0 = time.perf_counter()
-    n_cols = 0
-    n_rows = 0
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        for et in event_tables:
-            X = make_first_level_design_matrix(ft, et, **kwargs)
-            n_rows = X.shape[0]
-            n_cols += X.shape[1]
+        event_tables = build_events_for_style(events, w["style"])
+        if w["style"] == "multi_term":
+            nuisance, nuisance_names = block_diagonal_polynomial_regs(w, order=2)
+            X_main = make_first_level_design_matrix(
+                ft,
+                event_tables[0],
+                hrf_model="spm",
+                drift_model=None,
+                add_regs=nuisance,
+                add_reg_names=nuisance_names,
+            )
+            X_mod = make_first_level_design_matrix(
+                ft,
+                event_tables[1],
+                hrf_model="spm + derivative + dispersion",
+                drift_model=None,
+            )
+            # The main design already contains the intercept space. Remove the
+            # extra constant that Nilearn adds to every standalone design.
+            X_mod = X_mod.drop(columns="constant")
+            n_rows = X_main.shape[0]
+            n_cols = X_main.shape[1] + X_mod.shape[1]
+        else:
+            X = make_first_level_design_matrix(ft, event_tables[0], **kwargs)
+            n_rows, n_cols = X.shape
     elapsed = time.perf_counter() - t0
     return {
         "elapsed_sec": elapsed,
