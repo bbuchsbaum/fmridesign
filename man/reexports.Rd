@@ -9,6 +9,7 @@
 \alias{sampling_frame}
 \alias{hrf_spmg1}
 \alias{regressor}
+\alias{feature_regressor}
 \alias{blocklens}
 \alias{samples}
 \alias{global_onsets}
@@ -20,6 +21,6 @@ These objects are imported from other packages. Follow the links
 below to see their documentation.
 
 \describe{
-  \item{fmrihrf}{\code{\link[fmrihrf:HRF-class]{HRF}}, \code{\link[fmrihrf]{as_hrf}}, \code{\link[fmrihrf]{blocklens}}, \code{\link[fmrihrf]{evaluate}}, \code{\link[fmrihrf]{gen_hrf}}, \code{\link[fmrihrf]{global_onsets}}, \code{\link[fmrihrf]{hrf_spmg1}}, \code{\link[fmrihrf]{regressor}}, \code{\link[fmrihrf]{samples}}, \code{\link[fmrihrf]{sampling_frame}}}
+  \item{fmrihrf}{\code{\link[fmrihrf:HRF-class]{HRF}}, \code{\link[fmrihrf]{as_hrf}}, \code{\link[fmrihrf]{blocklens}}, \code{\link[fmrihrf]{evaluate}}, \code{\link[fmrihrf]{feature_regressor}}, \code{\link[fmrihrf]{gen_hrf}}, \code{\link[fmrihrf]{global_onsets}}, \code{\link[fmrihrf]{hrf_spmg1}}, \code{\link[fmrihrf]{regressor}}, \code{\link[fmrihrf]{samples}}, \code{\link[fmrihrf]{sampling_frame}}}
 }}
 

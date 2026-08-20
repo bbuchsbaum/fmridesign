@@ -29,7 +29,7 @@ A tibble with columns:
 \item \code{basis_label} (character): human-readable label for the basis component when known
 \item \code{pretty_name} (character): concise, human-friendly label for display (e.g., "RT" or "RT_lag_02")
 \item \code{is_block_diagonal} (logical): TRUE when the regressor is per-run/block
-\item \code{modulation_type} (character): "amplitude", "parametric", or "covariate"
+\item \code{modulation_type} (character): "amplitude", "parametric", "covariate", or "feature"
 \item \code{modulation_id} (character): modulator identifier when applicable (e.g., "RT", "RT_by_group")
 }
 }
