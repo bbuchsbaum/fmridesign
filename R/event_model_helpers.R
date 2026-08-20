@@ -20,9 +20,10 @@ find_and_eval_hrf_calls <- function(expr, data, f_env) {
     external_funcs <- get_all_external_hrf_functions()
     
     # Base case: Found a target function call (built-in or external)
-    if (fun_name %in% c("hrf", "trialwise", "covariate", external_funcs)) {
+    if (fun_name %in% c("hrf", "trialwise", "covariate", "feature", external_funcs)) {
       # Evaluate the call in the formula env, using data as a mask
-      eval_env <- rlang::env_bury(f_env %||% rlang::empty_env(), !!!data)
+      data_mask <- if (is.null(data)) list() else data
+      eval_env <- rlang::env_bury(f_env %||% rlang::empty_env(), !!!data_mask)
       evaluated_spec <- try(rlang::eval_tidy(expr, env = eval_env), silent = TRUE)
       
       if (inherits(evaluated_spec, "try-error")) {
@@ -96,39 +97,44 @@ canonicalize_blockids <- function(blockids_raw, n_events) {
 parse_event_formula <- function(formula, data) {
   stopifnot(rlang::is_formula(formula))
   formula_env <- rlang::f_env(formula)
-  
-  # --- Extract and Evaluate LHS (Onsets) --- 
-  lhs_expr <- rlang::f_lhs(formula)
-  if (is.null(lhs_expr)) stop("Model formula must have a left-hand side (LHS) specifying the onset variable.", call.=FALSE)
-  
-  # Evaluate LHS in the data environment (masked)
-  onsets <- try(rlang::eval_tidy(lhs_expr, data = data, env = formula_env %||% rlang::empty_env()), silent = TRUE)
-  if (inherits(onsets, "try-error")) {
-       stop(sprintf("Failed to evaluate onset variable '%s' from formula LHS: %s", 
-                    rlang::as_label(lhs_expr), attr(onsets, "condition")$message), call. = FALSE)
-  }
-  if (!is.numeric(onsets)) {
-       stop(sprintf("Onset variable '%s' extracted from formula LHS is not numeric (class: %s).", 
-                    rlang::as_label(lhs_expr), class(onsets)[1]), call. = FALSE)
-  }
-  
-  # --- Parse and Evaluate RHS (hrfspec terms) --- 
+  data_mask <- if (is.null(data)) list() else data
+
   rhs_expr <- rlang::f_rhs(formula)
-  
-  # Recursively find and evaluate hrfspec calls
-  hrfspec_list <- find_and_eval_hrf_calls(rhs_expr, data, formula_env)
-  
+  hrfspec_list <- find_and_eval_hrf_calls(rhs_expr, data_mask, formula_env)
+
   if (length(hrfspec_list) == 0) {
       stop("No valid hrf(...) or similar terms found on the right-hand side of the formula.", call.=FALSE)
   }
-  
-  # Create the spec table
+
+  has_timing <- any(vapply(hrfspec_list, is_timing_spec, logical(1)))
+  lhs_expr <- rlang::f_lhs(formula)
+
+  if (!has_timing) {
+    onsets <- numeric(0)
+  } else {
+    if (is.null(lhs_expr)) {
+      stop("Model formula must have a left-hand side (LHS) specifying the onset variable.", call.=FALSE)
+    }
+    if (is.null(data)) {
+      stop("`data` is required when the model includes event terms (hrf/trialwise).",
+           call. = FALSE)
+    }
+    onsets <- try(rlang::eval_tidy(lhs_expr, data = data, env = formula_env %||% rlang::empty_env()), silent = TRUE)
+    if (inherits(onsets, "try-error")) {
+         stop(sprintf("Failed to evaluate onset variable '%s' from formula LHS: %s",
+                      rlang::as_label(lhs_expr), attr(onsets, "condition")$message), call. = FALSE)
+    }
+    if (!is.numeric(onsets)) {
+         stop(sprintf("Onset variable '%s' extracted from formula LHS is not numeric (class: %s).",
+                      rlang::as_label(lhs_expr), class(onsets)[1]), call. = FALSE)
+    }
+  }
+
   spec_tbl <- tibble::tibble(
     term_id = seq_along(hrfspec_list),
     spec = hrfspec_list
   )
-  
-  # Return components
+
   list(
     spec_tbl = spec_tbl,
     onsets = onsets,
@@ -280,6 +286,10 @@ build_event_model_design_matrix <- function(terms, sampling_frame, precision, pa
           }
           attr(dm, "col_metadata") <- .covariate_term_col_metadata(term)
           return(dm)
+      }
+
+      if (inherits(term, "feature_term")) {
+          return(.convolve_feature_term_matrix(term, sampling_frame, precision))
       }
 
       # Check if this term requires external processing (e.g., AFNI)
@@ -538,50 +548,71 @@ realise_event_terms <- function(parsed_spec, sampling_frame, drop_empty = TRUE, 
 #' @keywords internal
 #' @noRd
 parse_event_model <- function(formula_or_list, data, block, durations = 0) {
-  
-  stopifnot(inherits(data, "data.frame"))
-  
+
+  if (!is.null(data)) {
+    stopifnot(inherits(data, "data.frame"))
+  }
+
   spec_tbl <- NULL
   onsets <- NULL
   formula_env <- NULL
-  
+
   if (rlang::is_formula(formula_or_list)) {
     parsed_form <- parse_event_formula(formula_or_list, data)
     spec_tbl <- parsed_form$spec_tbl
     onsets <- parsed_form$onsets
     formula_env <- parsed_form$formula_env
-    stopifnot(is.numeric(onsets))
-    if(length(onsets) != nrow(data)) {
-         stop(sprintf("Length of extracted onset variable (%d) != nrow(data) (%d)",
-                      length(onsets), nrow(data)), call.=FALSE)
-    }
-    
+
   } else if (is.list(formula_or_list)) {
-    stopifnot(all(vapply(formula_or_list, inherits, TRUE, "hrfspec")), 
+    stopifnot(all(vapply(formula_or_list, inherits, TRUE, "hrfspec")),
               length(formula_or_list) > 0)
-              
+
     spec_tbl <- tibble::tibble(
         term_id = seq_along(formula_or_list),
         spec = formula_or_list
     )
-    
+    formula_env <- rlang::base_env()
+    onsets <- NULL
+
+  } else {
+    stop("`formula_or_list` must be a formula or a list of hrfspec objects.", call.=FALSE)
+  }
+
+  has_timing <- any(vapply(spec_tbl$spec, is_timing_spec, logical(1)))
+
+  if (!has_timing) {
+    return(list(
+      spec_tbl    = spec_tbl,
+      onsets      = numeric(0),
+      durations   = numeric(0),
+      blockids    = integer(0),
+      data        = if (is.null(data)) data.frame() else data,
+      formula_env = formula_env,
+      interface   = if (rlang::is_formula(formula_or_list)) "formula" else "list"
+    ))
+  }
+
+  if (is.null(data)) {
+    stop("`data` is required when the model includes event terms (hrf/trialwise).",
+         call. = FALSE)
+  }
+  if (is.null(block)) {
+    stop("`block` is required when the model includes event terms (hrf/trialwise).",
+         call. = FALSE)
+  }
+
+  if (is.null(onsets)) {
     if (!"onset" %in% names(data)) {
         stop("When providing a list of hrfspecs, `data` must contain an 'onset' column. If named differently, please use the formula interface.", call.=FALSE)
     }
     onsets <- data$onset
-    stopifnot(is.numeric(onsets))
-    if(length(onsets) != nrow(data)) {
-         stop(sprintf("Length of 'onset' column (%d) != nrow(data) (%d)",
-                      length(onsets), nrow(data)), call.=FALSE)
-    }
-    # List-based specs don't have a model formula environment, but they still
-    # need base operators for legacy expression-only fields like `subset = cond == "A"`.
-    formula_env <- rlang::base_env()
-    
-  } else {
-    stop("`formula_or_list` must be a formula or a list of hrfspec objects.", call.=FALSE)
   }
-  
+
+  stopifnot(is.numeric(onsets))
+  if (length(onsets) != nrow(data)) {
+       stop(sprintf("Length of extracted onset variable (%d) != nrow(data) (%d)",
+                    length(onsets), nrow(data)), call.=FALSE)
+  }
   stopifnot(all(!is.na(onsets)))
 
   blockids_raw <- NULL
@@ -595,10 +626,10 @@ parse_event_model <- function(formula_or_list, data, block, durations = 0) {
   } else {
     blockids_raw <- block
   }
-  
+
   blockids <- canonicalize_blockids(blockids_raw, length(onsets))
-  
-  if (is.null(durations)) durations <- 0 
+
+  if (is.null(durations)) durations <- 0
   durations_proc <- recycle_or_error(durations, length(onsets), "durations")
   stopifnot(all(!is.na(durations_proc)))
 
@@ -606,7 +637,7 @@ parse_event_model <- function(formula_or_list, data, block, durations = 0) {
     spec_tbl    = spec_tbl,
     onsets      = onsets,
     durations   = durations_proc,
-    blockids    = blockids, # Use canonicalized IDs
+    blockids    = blockids,
     data        = data,
     formula_env = formula_env,
     interface   = if (rlang::is_formula(formula_or_list)) "formula" else "list"

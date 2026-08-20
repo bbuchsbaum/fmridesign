@@ -23,7 +23,7 @@
 #'   - `basis_label` (character): human-readable label for the basis component when known
 #'   - `pretty_name` (character): concise, human-friendly label for display (e.g., "RT" or "RT_lag_02")
 #'   - `is_block_diagonal` (logical): TRUE when the regressor is per-run/block
-#'   - `modulation_type` (character): "amplitude", "parametric", or "covariate"
+#'   - `modulation_type` (character): "amplitude", "parametric", "covariate", or "feature"
 #'   - `modulation_id` (character): modulator identifier when applicable (e.g., "RT", "RT_by_group")
 #' @examples
 #' # Create event model
@@ -98,6 +98,9 @@ design_colmap.event_model <- function(x, ...) {
     } else if (inherits(ti, "covariate_convolved_term")) {
       per_term_mod_type[i] <- "covariate"
       per_term_mod_id[i]   <- ti$varname %||% NA_character_
+    } else if (inherits(ti, "feature_term")) {
+      per_term_mod_type[i] <- "feature"
+      per_term_mod_id[i]   <- ti$varname %||% NA_character_
     } else {
       per_term_mod_type[i] <- "amplitude"
       per_term_mod_id[i]   <- NA_character_
@@ -106,6 +109,10 @@ design_colmap.event_model <- function(x, ...) {
     if (inherits(ti, "covariate_convolved_term")) {
       per_term_basis_name[i]  <- NA_character_
       per_term_basis_total[i] <- NA_integer_
+    } else if (inherits(ti, "feature_term")) {
+      per_term_basis_total[i] <- tryCatch(fmrihrf::nbasis(ti$hrf), error = function(...) NA_integer_)
+      bname <- class(ti$hrf)
+      per_term_basis_name[i] <- if (length(bname)) as.character(bname[[1]]) else NA_character_
     } else {
       hrfspec <- attr(ti, "hrfspec")
       if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {

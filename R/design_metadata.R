@@ -79,6 +79,12 @@
       modulation_id   = term$varname %||% NA_character_
     ))
   }
+  if (inherits(term, "feature_term")) {
+    return(list(
+      modulation_type = "feature",
+      modulation_id   = term$varname %||% NA_character_
+    ))
+  }
 
   basis_ev <- Find(function(ev) !is.null(ev$meta$basis), term$events %||% list())
   if (!is.null(basis_ev)) {

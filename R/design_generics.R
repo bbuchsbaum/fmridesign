@@ -18,7 +18,7 @@
 #' 
 #' @return An `event_model` object describing the task design.
 #' @export
-event_model <- function(formula_or_list, data, block, sampling_frame, drop_empty=TRUE, durations=0, ...) { 
+event_model <- function(formula_or_list, data = NULL, block = NULL, sampling_frame, drop_empty=TRUE, durations=0, ...) { 
   UseMethod("event_model") 
 }
 

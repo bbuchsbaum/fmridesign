@@ -244,6 +244,31 @@ if (interactive()) {
 }
 ```
 
+## Continuous Features
+
+A sampled series such as acoustic RMS is not a list of trials. Use `feature()` so each sample is a zero-order-hold bin of width `dt`, then convolve with `fmrihrf::feature_regressor()`. That is a different model from `hrf(RT)`, which is one amplitude per event.
+
+Feature-only models do not need an event table:
+
+```{r feature_only, fig.alt="Convolved RMS feature regressor over a single run."}
+dt <- 0.2
+feat_times <- seq(0, 40, by = dt)
+rms <- abs(sin(2 * pi * feat_times / 8))
+sframe_feat <- sampling_frame(blocklens = 30, TR = 2)
+
+emodel_feat <- event_model(
+  ~ feature(rms, dt = dt, id = "rms"),
+  sampling_frame = sframe_feat,
+  precision = dt
+)
+colnames(design_matrix(emodel_feat))
+plot(emodel_feat)
+```
+
+A single matrix is one run with several series (`env_f01`, `env_f02`, ... unless the matrix has column names). Multiple runs take a list, one series per block: `feature(list(rms1, rms2), dt = 0.1, id = "rms")`. Do not pass a dense series through `hrf()` with `duration = 0`; that treats each sample as a unit-mass impulse and scales the predicted BOLD by about `1/dt`.
+
+When `mask` marks the on-period, pair the feature with a separate boxcar/`hrf()` term if you also want sound-versus-silence. Centering is applied per run, before convolution.
+
 ## Interaction Between Factors and Amplitude Modulation
 
 We can also model how a parametric modulator interacts with a factor. For example, does RT modulate the response differently for faces vs. scenes? The formula `hrf(stim, RT_centered)` creates separate RT modulators for each level of `stim`.

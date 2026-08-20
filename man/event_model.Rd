@@ -6,8 +6,8 @@
 \usage{
 event_model(
   formula_or_list,
-  data,
-  block,
+  data = NULL,
+  block = NULL,
   sampling_frame,
   durations = 0,
   drop_empty = TRUE,
@@ -20,8 +20,8 @@ event_model(
 
 event_model(
   formula_or_list,
-  data,
-  block,
+  data = NULL,
+  block = NULL,
   sampling_frame,
   durations = 0,
   drop_empty = TRUE,
@@ -34,12 +34,14 @@ event_model(
 }
 \arguments{
 \item{formula_or_list}{Either a formula (e.g., \code{onset ~ hrf(cond) + hrf(mod)})
-or a list of pre-defined \code{hrfspec} objects.}
+or a list of pre-defined \code{hrfspec} / \code{featurespec} objects. A one-sided
+formula (\code{~ feature(...)}) is allowed for feature-only models.}
 
 \item{data}{A \code{data.frame} containing event variables referenced in the formula
-or needed by the \code{hrfspec} objects.}
+or needed by the \code{hrfspec} objects. Optional for feature-only models.}
 
-\item{block}{A formula (e.g., \code{~ run}) or vector specifying the block/run for each event.}
+\item{block}{A formula (e.g., \code{~ run}) or vector specifying the block/run for each event.
+Optional for feature-only models.}
 
 \item{sampling_frame}{An object of class \code{sampling_frame} defining the scan timing (TR, block lengths).}
 

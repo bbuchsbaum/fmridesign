@@ -13,11 +13,13 @@ NULL
 #' This is the main constructor for `event_model` objects. It unifies the previous
 #' formula and list-based interfaces and uses a more efficient internal pipeline.
 #'
-#' @param formula_or_list Either a formula (e.g., `onset ~ hrf(cond) + hrf(mod)`) 
-#'        or a list of pre-defined `hrfspec` objects.
-#' @param data A `data.frame` containing event variables referenced in the formula 
-#'        or needed by the `hrfspec` objects.
+#' @param formula_or_list Either a formula (e.g., `onset ~ hrf(cond) + hrf(mod)`)
+#'        or a list of pre-defined `hrfspec` / `featurespec` objects. A one-sided
+#'        formula (`~ feature(...)`) is allowed for feature-only models.
+#' @param data A `data.frame` containing event variables referenced in the formula
+#'        or needed by the `hrfspec` objects. Optional for feature-only models.
 #' @param block A formula (e.g., `~ run`) or vector specifying the block/run for each event.
+#'        Optional for feature-only models.
 #' @param sampling_frame An object of class `sampling_frame` defining the scan timing (TR, block lengths).
 #' @param durations Numeric vector or scalar specifying event durations (seconds). Default is 0.
 #' @param drop_empty Logical indicating whether to drop empty events during term construction. Default is TRUE.
@@ -81,16 +83,22 @@ NULL
 #'
 #' @export
 #' @include event_model_helpers.R
-event_model <- function(formula_or_list, data, block, sampling_frame,
+event_model <- function(formula_or_list, data = NULL, block = NULL, sampling_frame,
                         durations = 0, drop_empty = TRUE, precision = 0.3,
                         parallel = FALSE, progress = FALSE, strict = FALSE, ...) {
+
+  if (missing(sampling_frame) || is.null(sampling_frame)) {
+    stop("`sampling_frame` is required.", call. = FALSE)
+  }
 
   # Stage 1: Parse inputs
   parsed <- parse_event_model(formula_or_list, data, block, durations)
 
   # Backstop: warn (or error, if strict) when onsets fall outside the frame.
-  check_onsets_in_frame(parsed$onsets, parsed$durations, parsed$blockids,
-                        sampling_frame, strict = strict)
+  if (length(parsed$onsets) > 0L) {
+    check_onsets_in_frame(parsed$onsets, parsed$durations, parsed$blockids,
+                          sampling_frame, strict = strict)
+  }
 
   # Stage 2: Realise event terms
   terms <- realise_event_terms(parsed, sampling_frame, drop_empty, progress)
@@ -575,7 +583,11 @@ print.event_model <- function(x, ...) {
   n_terms <- length(x$terms)
   term_names <- names(x$terms)
   n_events <- length(x$blockids)
-  n_blocks <- length(unique(x$blockids))
+  n_blocks <- if (n_events == 0L) {
+    length(fmrihrf::blocklens(x$sampling_frame))
+  } else {
+    length(unique(x$blockids))
+  }
   total_scans <- sum(fmrihrf::blocklens(x$sampling_frame))
   dm <- design_matrix(x)
   dm_dims <- dim(dm)
