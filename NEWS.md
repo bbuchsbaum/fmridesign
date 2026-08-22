@@ -40,6 +40,9 @@
 
 ## Bug fixes
 
+- `contrast_weights()` now removes rows for factor levels excluded by an
+  `hrf(..., subset = )` term from the returned term-local `weights`, keeping
+  them consistent with the reconciled full-design `offset_weights` (#17).
 - `convolve_design()` now extracts each condition column with `dmat[[i]]`, so it
   produces correct regressors for base `data.frame` inputs (its documented
   example). The previous `dmat[, i][[1]]` collapsed a data frame column to its

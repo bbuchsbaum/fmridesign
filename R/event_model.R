@@ -422,6 +422,7 @@ contrast_weights.event_model <- function(x, ...) {
                 if (any(keep)) {
                     out[term_indices_vec[m[keep]], ] <- cw$weights[keep, , drop=FALSE]
                 }
+                cw$weights <- cw$weights[keep, , drop=FALSE]
             } else {
                 if (nrow(cw$weights) != length(term_indices_vec)){
                     warning(sprintf("Contrast '%s' for term '%s' has %d rows, but term has %d columns in design matrix. Skipping.",
