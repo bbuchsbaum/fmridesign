@@ -40,6 +40,13 @@
 
 ## Bug fixes
 
+- `covariate()` now expands matrix/data-frame arguments into one non-convolved
+  regressor per column. Named inputs preserve sanitized column names, unnamed
+  matrices use `f01`, `f02`, ... suffixes, and final names follow the standard
+  `<term_tag>_<condition_tag>` grammar (`cov_x` by default, or `motion_x` with
+  `id = "motion"`). Covariate condition accessors and per-column metadata now
+  expose the individual regressor identities instead of a concatenated
+  multi-variable term name (#19).
 - `contrast_weights()` now removes rows for factor levels excluded by an
   `hrf(..., subset = )` term from the returned term-local `weights`, keeping
   them consistent with the reconciled full-design `offset_weights` (#17).

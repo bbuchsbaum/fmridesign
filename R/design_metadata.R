@@ -173,11 +173,14 @@
 .covariate_term_col_metadata <- function(term) {
   cn <- colnames(term$design_matrix) %||% character(0)
   if (length(cn) == 0L) return(.empty_col_metadata())
+  cond <- term$condition_tags %||% cn
+  if (length(cond) != length(cn)) cond <- cn
   .make_col_metadata(
     name            = cn,
-    condition       = cn,
+    condition       = cond,
+    term_tag        = attr(term, "term_tag") %||% term$varname %||% NA_character_,
     modulation_type = "covariate",
-    modulation_id   = term$varname %||% NA_character_
+    modulation_id   = cond
   )
 }
 
