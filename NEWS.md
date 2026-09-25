@@ -40,6 +40,20 @@
 
 ## Bug fixes
 
+- `baseline_model(nuisance_list = ...)` now keeps the user's nuisance column
+  names (#28). Columns are named `nuis_<name>_block_<run>` (e.g.
+  `nuis_trans_x_block_1`), matching the drift columns (`base_poly1_block_1`);
+  names are sanitised to syntactic tokens and made unique within a run, and
+  unnamed columns fall back to their original column index (`nuis_2_block_1`),
+  which is preserved when `nuisance_check = "drop"` removes columns. This
+  replaces the previous `nuis#<run>_<col>` names, so code that matched those
+  names must be updated. The original names are kept in the nuisance term's
+  `source_colnames` field.
+- `design_colmap(<baseline_model>)` now reports nuisance columns with role
+  `"nuisance"` (they were reported as `"intercept"`), takes their `run` from the
+  block structure (it was parsed from the column index, so a 3-run model with 6
+  regressors per run reported runs 1 to 6), and labels them with the user's
+  column names in `basis_label`.
 - `contrast_weights()` now removes rows for factor levels excluded by an
   `hrf(..., subset = )` term from the returned term-local `weights`, keeping
   them consistent with the reconciled full-design `offset_weights` (#17).

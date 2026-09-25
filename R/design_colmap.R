@@ -234,8 +234,23 @@ design_colmap.baseline_model <- function(x, ...) {
     term_tag_by_col[idx] <- termname
     term_index_by_col[idx] <- i
 
-    # Role + basis name heuristics
-    if (identical(termname, "drift") || grepl("^base_", colnames(term$design_matrix)[1])) {
+    # Role: the term name is authoritative; column-name heuristics are only a
+    # fallback for terms without one of the standard names. (Nuisance names
+    # such as nuis_tx_block_1 would otherwise match the intercept pattern.)
+    first_nm <- colnames(term$design_matrix)[1]
+    kind <- if (termname %in% c("drift", "block", "nuisance")) {
+      termname
+    } else if (grepl("^base_", first_nm)) {
+      "drift"
+    } else if (grepl("^nuis_|#", first_nm)) {
+      "nuisance"
+    } else if (grepl("_global$|_[0-9]+$", first_nm)) {
+      "block"
+    } else {
+      "other"
+    }
+
+    if (identical(kind, "drift")) {
       role_by_col[idx] <- "drift"
       basis_name_by_col[idx] <- if (!is.null(x$drift_spec)) x$drift_spec$basis else "baseline"
       # Parse component index (k) and run id from names like base_<basis><k>_block_<r>
@@ -247,7 +262,7 @@ design_colmap.baseline_model <- function(x, ...) {
       if (any(is.finite(k))) basis_total_by_term[i] <- max(k, na.rm = TRUE)
       is_block_diag[idx] <- TRUE
       basis_label[idx] <- ifelse(is.na(k), NA_character_, sprintf("component_%02d", k))
-    } else if (identical(termname, "block") || grepl("_global$|_[0-9]+$", colnames(term$design_matrix)[1])) {
+    } else if (identical(kind, "block")) {
       role_by_col[idx] <- "intercept"
       basis_name_by_col[idx] <- "constant"
       nm <- colnames(term$design_matrix)
@@ -268,17 +283,32 @@ design_colmap.baseline_model <- function(x, ...) {
         basis_label[idx] <- "intercept"
         basis_total_by_term[i] <- length(unique(stats::na.omit(r)))
       }
-    } else if (identical(termname, "nuisance") || grepl("#", colnames(term$design_matrix)[1], fixed = TRUE)) {
+    } else if (identical(kind, "nuisance")) {
       role_by_col[idx] <- "nuisance"
       basis_name_by_col[idx] <- "nuisance"
       nm <- colnames(term$design_matrix)
-      # Format: prefix#<block>_<col>
-      r <- suppressWarnings(as.integer(sub("^.*#([0-9]+)_.*$", "\\1", nm)))
-      k <- suppressWarnings(as.integer(sub("^.*_([0-9]+)$", "\\1", nm)))
+      ci <- term$colind
+      if (is.list(ci) && sum(lengths(ci)) == tcols) {
+        # Run membership comes from the block-diagonal bookkeeping, not names
+        r <- rep(seq_along(ci), lengths(ci))
+        k <- sequence(lengths(ci))
+      } else if (all(grepl("_block_[0-9]+$", nm))) {
+        r <- as.integer(sub("^.*_block_([0-9]+)$", "\\1", nm))
+        k <- stats::ave(seq_along(r), r, FUN = seq_along)
+      } else {
+        # Legacy format: prefix#<block>_<col>
+        r <- suppressWarnings(as.integer(sub("^.*#([0-9]+)_.*$", "\\1", nm)))
+        k <- suppressWarnings(as.integer(sub("^.*_([0-9]+)$", "\\1", nm)))
+      }
       run_by_col[idx] <- r
       basis_ix[idx] <- k
       is_block_diag[idx] <- TRUE
-      basis_label[idx] <- ifelse(is.na(k), NA_character_, sprintf("component_%02d", k))
+      src <- term$source_colnames
+      basis_label[idx] <- if (length(src) == tcols) {
+        src
+      } else {
+        ifelse(is.na(k), NA_character_, sprintf("component_%02d", k))
+      }
       # basis_total per term is not reliably inferable; leave NA
     } else {
       # Fallback: treat as baseline component, per-run if name suggests block
