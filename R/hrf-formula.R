@@ -558,10 +558,7 @@ trialwise <- function(basis   = "spmg1",
 #' @seealso [weighted_hrf_gen()] for weighted impulse HRFs
 #' @export
 boxcar_hrf_gen <- function(normalize = TRUE, min_duration = 0.1) {
-  if (!exists("hrf_boxcar", envir = asNamespace("fmrihrf"))) {
-    stop("boxcar_hrf_gen requires fmrihrf >= 0.2.0 (needs hrf_boxcar)", call. = FALSE)
-  }
-  hrf_boxcar_fn <- get("hrf_boxcar", envir = asNamespace("fmrihrf"))
+  hrf_boxcar_fn <- fmrihrf::hrf_boxcar
   function(d) {
     lapply(d$duration, function(dur) {
       .without_fmrihrf_metadata_warning(
@@ -653,10 +650,7 @@ duration_hrf_gen <- function(base = fmrihrf::HRF_SPMG1, min_duration = 0) {
 #' @export
 weighted_hrf_gen <- function(times_col = "sub_times", weights_col = "sub_weights",
                               relative = FALSE, method = "constant", normalize = FALSE) {
-  if (!exists("hrf_weighted", envir = asNamespace("fmrihrf"))) {
-    stop("weighted_hrf_gen requires fmrihrf >= 0.2.0 (needs hrf_weighted)", call. = FALSE)
-  }
-  hrf_weighted_fn <- get("hrf_weighted", envir = asNamespace("fmrihrf"))
+  hrf_weighted_fn <- fmrihrf::hrf_weighted
   function(d) {
     if (!times_col %in% names(d)) {
       stop(sprintf("weighted_hrf_gen: column '%s' not found in event data", times_col), call. = FALSE)

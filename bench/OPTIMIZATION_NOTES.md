@@ -11,7 +11,7 @@ where the next wins are.
 |---|---|---|
 | Metadata fast path | `.new_meta_tibble()` replaces per-term `tibble()` / `bind_rows()` | ~15% end-to-end on multi-term models |
 | Sparse-block convolution | `convolve.event_term()` skips all-zero columns per block | ~2.2× on 360-col trialwise/LSS |
-| Shared-HRF C++ eval | One fine-grid HRF matrix + `evaluate_regressor_cpp` per live column (no per-column `Reg` / `prep_reg_inputs`) | ~5× on the evaluate loop; ~2–3.5× end-to-end trialwise / multi-term |
+| Shared-HRF eval | One HRF per term, evaluated per live column via public `fmrihrf::evaluate(regressor(...))` | Originally called the unexported `evaluate_regressor_cpp` directly (~5× on the evaluate loop); reverted to the public API for CRAN, costing ~1.3–2× end-to-end |
 | Global matrix assembly | Single `T × p` output matrix; scatter live block columns once | Removes per-block zero-alloc + `rbind` |
 | Deferred tibble | `.convolve_event_term_matrix()` keeps matrices through `cbind`; one `as_tibble` at the end | Removes per-term `matrixToDataFrame` |
 
@@ -33,7 +33,7 @@ Trialwise / LSS profile (`event_model` + `design_matrix`, large single-trial):
 
 | Component | Share | Owner |
 |---|---|---|
-| `evaluate_regressor_cpp` (shared-HRF loop) | dominant remaining | **fmrihrf** |
+| per-column `regressor()` + `evaluate()` (shared-HRF loop) | dominant remaining | **fmrihrf** |
 | `design_matrix.event_term` / `model.matrix` | secondary | fmridesign |
 | Term realisation / event construction | secondary | fmridesign |
 
@@ -48,9 +48,9 @@ bookkeeping is no longer the primary cost after the shared-HRF + metadata opts.
    numpy convolution for dense multi-condition blocks.
 2. **Trialwise one-hot fast path** — skip `model.matrix` for pure trialwise
    terms (identity coding is known a priori) and map events → columns directly.
-3. **Export a public batch API from fmrihrf** — replace the
-   `getFromNamespace("evaluate_regressor_cpp", "fmrihrf")` bridge with a
-   supported entry point.
+3. **Export a public batch API from fmrihrf** — a supported multi-column
+   entry point would recover the per-column `Reg` / `prep_reg_inputs`
+   overhead that the public-API path now pays.
 4. **fmrireg GLM path** — separate from this suite; see
    `fmrireg/bench/glm_efficiency_benchmark.R` and the GLM efficiency PRD
    (AR estimation, `solve_glm_core` RSS-only mode, whitening reuse).

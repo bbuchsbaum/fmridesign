@@ -1123,9 +1123,9 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
 #' converts once for API compatibility.
 #'
 #' Hot-path notes:
-#' - Shared-HRF C++ evaluation skips per-column `Reg` construction /
-#'   `prep_reg_inputs` when a single HRF is used (the common case). Output is
-#'   bit-identical to `fmrihrf::evaluate(regressor(...))`.
+#' - With a single shared HRF (the common case), each live column is
+#'   evaluated directly via `fmrihrf::evaluate(regressor(...))` without
+#'   building intermediate regressor lists or data-frame subsets.
 #' - One global output matrix replaces per-block zero-alloc + `rbind`.
 #' - Per-block all-zero columns are still skipped (trialwise / LSS).
 #' - Per-onset `hrf_list` and NA-bearing blocks fall back to the previous
@@ -1190,18 +1190,13 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   n_cond <- ncol(dmat)
   cmat <- matrix(0, nrow = n_time, ncol = n_cond * nb)
 
-  # Shared-HRF path: one fine-grid HRF matrix for all columns/blocks.
+  # Shared-HRF path: one HRF for all columns/blocks, evaluated per live column.
   # Per-onset HRF lists cannot share a single kernel, so they use the legacy path.
   # Also require design rows to align with event onsets; model.matrix may drop
   # incomplete cases (NA modulators), in which case we keep tibble subsetting
   # semantics and the convolve_design() NA-filter fallback.
   use_shared_hrf <- is.null(hrf_list) && (nrow(dmat) == length(blockids))
-  hrf_span <- NULL
-  hrf_matrix <- NULL
-  if (use_shared_hrf && n_cond > 0L) {
-    hrf_span <- attr(hrf, "span") %||% 40
-    hrf_matrix <- .hrf_fine_matrix(hrf, hrf_span, precision)
-  }
+  hrf_span <- attr(hrf, "span") %||% 40
 
   eval_reg <- function(r, times, prec) {
     if (inherits(r, "per_onset_regressor_set")) {
@@ -1240,9 +1235,9 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
       if (length(keep) > 0L) {
         live <- .eval_design_cols_shared_hrf(
           dmat = dblock_mat, globons = globons_block, durations = durations_block,
-          grid = block_samples, hrf_matrix = hrf_matrix,
+          grid = block_samples, hrf = hrf,
           hrf_span = hrf_span, precision = precision, nb = nb,
-          col_idx = keep
+          col_idx = keep, summate = summate
         )
         if (nb == 1L) {
           cmat[rows, keep] <- live

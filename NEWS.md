@@ -1,3 +1,32 @@
+# fmridesign (development version)
+
+## CRAN compliance
+
+- Design-column convolution no longer reaches into fmrihrf's unexported
+  `evaluate_regressor_cpp()`. The shared-HRF fast path now evaluates each live
+  column with the public `fmrihrf::regressor()` / `fmrihrf::evaluate()` API.
+  Results are identical to the previous path on every design built by the
+  test suite; building a design matrix is roughly 1.3-2x slower (tens of
+  milliseconds on a 4-run, 1200-scan design).
+- `boxcar_hrf_gen()` and `weighted_hrf_gen()` call `fmrihrf::hrf_boxcar()` and
+  `fmrihrf::hrf_weighted()` directly instead of looking them up in fmrihrf's
+  namespace.
+- fmridesign no longer registers its own `print()` method for fmrihrf's
+  `sampling_frame` class, which overwrote fmrihrf's method on load ("Registered
+  S3 method overwritten by 'fmridesign'"). Sampling frames now print with
+  fmrihrf's method. `plot(<sampling_frame>)` is unchanged and is documented
+  under `?plot.sampling_frame`.
+
+## Bug fixes
+
+- `hrf(..., summate = FALSE)` is honoured again for sustained events. The
+  shared-HRF fast path ignored `summate` and always produced the
+  `summate = TRUE` design.
+- An event with a negative onset in the first run now fails with fmrihrf's
+  "`onsets` must be non-negative" error, as the legacy path and
+  `fmrihrf::regressor()` always did; the fast path had silently accepted it.
+  The out-of-frame warning is still raised first.
+
 # fmridesign 0.6.1
 
 ## Plotting overhaul
