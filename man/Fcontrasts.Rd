@@ -29,6 +29,13 @@ Compute F-contrasts
 \details{
 Row names of the contrast matrices can specify which levels of the term are
 tested.  Any matching is done against the design matrix column names.
+
+For terms with a multi-basis HRF (e.g. \code{"spmg2"}, \code{"spmg3"}, FIR), the
+term-level contrast \eqn{C} (one row per condition) is expanded to
+\eqn{C \otimes I_{nb}}{kronecker(C, diag(nb))}: the condition effect is
+tested jointly in every basis function, so a term with \eqn{k} conditions
+and \eqn{nb} basis functions yields a \eqn{(k \cdot nb) \times ((k-1) \cdot nb)}
+matrix for its main effect. Columns are named \verb{<contrast column>_b##}.
 }
 \examples{
 des <- data.frame(

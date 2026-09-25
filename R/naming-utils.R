@@ -242,6 +242,12 @@ cell_condition_tags <- function(cells_df) {
 #'
 #' Optionally expands condition tags with basis suffixes.
 #'
+#' The expansion is condition-major (basis index varies fastest):
+#' `A_b01, A_b02, B_b01, B_b02, ...`. This matches the column layout produced
+#' by every convolution path (`.convolve_event_term_matrix()`,
+#' `convolve.feature_term()`), `.term_col_metadata()` and
+#' `column_groups_by_condition()`. Do not change one without the others.
+#'
 #' @param cond_tags Character vector of condition tags.
 #' @param nb Number of basis functions.
 #' @return Character vector, expanded with suffixes if `nb > 1`.
@@ -252,7 +258,7 @@ add_basis <- function(cond_tags, nb) {
     return(cond_tags)
   }
   suffixes <- basis_suffix(seq_len(nb), nb)
-  as.vector(outer(cond_tags, suffixes, paste0))
+  paste0(rep(cond_tags, each = nb), rep(suffixes, times = length(cond_tags)))
 }
 
 #' Compose Final Column Names

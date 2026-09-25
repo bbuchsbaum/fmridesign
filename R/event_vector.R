@@ -1383,10 +1383,13 @@ Fcontrasts.event_term <- function(x, max_inter = 4L, ...) {
   # ---------------------------------------------------------------------- 
 
   ## --- Compute main effects matrices (without rownames yet) ---------------
+  # Row order must match expand.grid()/conditions(), where the FIRST factor
+  # varies fastest. kronecker(A, B) makes its second argument vary fastest, so
+  # the factor list is reversed before reducing.
   main <- Map(function(i) {
       mat_list <- C
       mat_list[[i]] <- D[[i]] 
-      Reduce(kronecker, mat_list)
+      Reduce(kronecker, rev(mat_list))
   }, seq_along(D)) |> 
     stats::setNames(names(evs_cat))
 
@@ -1396,7 +1399,7 @@ Fcontrasts.event_term <- function(x, max_inter = 4L, ...) {
           combn(length(D), k, simplify = FALSE, FUN = function(ix) {
               mat_list <- C
               mat_list[ix] <- D[ix] 
-              M <- Reduce(kronecker, mat_list)
+              M <- Reduce(kronecker, rev(mat_list))
               attr(M, "name") <- paste(names(evs_cat)[ix], collapse=":")
               M
           })
