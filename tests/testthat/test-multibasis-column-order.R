@@ -307,3 +307,158 @@ test_that("interaction_contrast weights map to the term's columns", {
     expect_equal(sgn("task.face_load.high"), -sgn("task.scene_load.high"), info = b)
   }
 })
+
+# --- Contrast constructors on multi-basis terms: ground truth ---------------
+# For each contrast, X %*% w must equal the same linear combination of the
+# independently built (condition, basis) truth columns, applied once per basis.
+
+.mb_fixture <- function(form_rhs, basis) {
+  ev <- data.frame(
+    onset = seq(5, 225, by = 20),
+    cat = factor(rep(c("face", "obj"), 6)),
+    load = factor(rep(c("hi", "hi", "lo", "lo"), 3)),
+    lev = factor(rep(c("a", "b", "c"), each = 4)),
+    run = 1
+  )
+  sf <- fmrihrf::sampling_frame(260, TR = 1)
+  list(ev = ev, sf = sf)
+}
+
+# Expected weights on truth columns from base-condition weights `bw`
+# (named by base condition tag), replicated over basis indices `bases`.
+.expected_signal <- function(truth, prefix, bw, nb, bases = seq_len(nb)) {
+  out <- 0
+  for (cond in names(bw)) {
+    for (j in bases) {
+      nm <- sprintf("%s%s_b%02d", prefix, cond, j)
+      out <- out + bw[[cond]] * truth[, nm]
+    }
+  }
+  out
+}
+
+test_that("unit_contrast and formula contrast target the right basis columns", {
+  fx <- .mb_fixture()
+  ev <- fx$ev; sf <- fx$sf
+  for (b in c("spmg1", "spmg3")) {
+    hrf_obj <- if (b == "spmg1") fmrihrf::HRF_SPMG1 else fmrihrf::HRF_SPMG3
+    nb <- fmrihrf::nbasis(hrf_obj)
+    em <- event_model(
+      onset ~ hrf(cat, basis = b, contrasts = contrast_set(
+        unit_contrast(~ cat == "face", name = "unit"),
+        contrast(~ face - obj, name = "form"),
+        contrast(~ face - obj, name = "fo") - unit_contrast(~ cat == "face", name = "u2")
+      )),
+      data = ev, block = ~run, sampling_frame = sf
+    )
+    X <- as.matrix(design_matrix(em))
+    truth <- .mb_truth(ev, as.character(ev$cat), c(face = "cat.face", obj = "cat.obj"),
+                       hrf_obj, sf, prefix = "cat_")
+    if (nb == 1) colnames(truth) <- sub("_b01$", "", colnames(truth))
+    pre <- "cat_"
+    sig <- function(bw) {
+      out <- 0
+      for (cond in names(bw)) {
+        nms <- if (nb == 1) paste0(pre, cond) else sprintf("%s%s_b%02d", pre, cond, seq_len(nb))
+        for (nm in nms) out <- out + bw[[cond]] * truth[, nm]
+      }
+      out
+    }
+    expect_no_warning(cw <- contrast_weights(em))
+    expect_equal(unname(drop(X %*% cw[["cat#unit"]]$offset_weights)),
+                 unname(sig(c(cat.face = 1))), tolerance = 1e-8, info = b)
+    expect_equal(unname(drop(X %*% cw[["cat#form"]]$offset_weights)),
+                 unname(sig(c(cat.face = 1, cat.obj = -1))), tolerance = 1e-8, info = b)
+    expect_equal(nrow(cw[["cat#unit"]]$weights), 2L * nb)
+    dname <- grep("fo:u2", names(cw), fixed = TRUE, value = TRUE)
+    expect_length(dname, 1)
+    expect_equal(unname(drop(X %*% cw[[dname]]$offset_weights)),
+                 unname(sig(c(cat.obj = -1))), tolerance = 1e-8, info = b)
+  }
+})
+
+test_that("unit_contrast and formula contrast on a factorial multi-basis term", {
+  fx <- .mb_fixture()
+  ev <- fx$ev; sf <- fx$sf
+  em <- event_model(
+    onset ~ hrf(cat, load, basis = "spmg2", contrasts = contrast_set(
+      unit_contrast(~ cat == "face", name = "unit"),
+      contrast(~ cat.face_load.hi - cat.obj_load.hi, name = "form")
+    )),
+    data = ev, block = ~run, sampling_frame = sf
+  )
+  X <- as.matrix(design_matrix(em))
+  key <- paste(ev$cat, ev$load, sep = ":")
+  tags <- c("face:hi" = "cat.face_load.hi", "obj:hi" = "cat.obj_load.hi",
+            "face:lo" = "cat.face_load.lo", "obj:lo" = "cat.obj_load.lo")
+  truth <- .mb_truth(ev, key, tags, fmrihrf::HRF_SPMG2, sf, prefix = "cat_load_")
+  expect_no_warning(cw <- contrast_weights(em))
+  expect_equal(unname(drop(X %*% cw[["cat_load#unit"]]$offset_weights)),
+               unname(.expected_signal(truth, "cat_load_",
+                                       c(cat.face_load.hi = 0.5, cat.face_load.lo = 0.5), 2)),
+               tolerance = 1e-8)
+  expect_equal(unname(drop(X %*% cw[["cat_load#form"]]$offset_weights)),
+               unname(.expected_signal(truth, "cat_load_",
+                                       c(cat.face_load.hi = 1, cat.obj_load.hi = -1), 2)),
+               tolerance = 1e-8)
+})
+
+test_that("remaining contrast constructors target the right basis columns", {
+  fx <- .mb_fixture()
+  ev <- fx$ev; sf <- fx$sf
+  cset <- do.call(contrast_set, c(
+    list(poly_contrast(~ lev, name = "lin", degree = 1, value_map = list(a = 1, b = 2, c = 3))),
+    unclass(one_against_all_contrast(c("a", "b", "c"), "lev")),
+    unclass(pairwise_contrasts(c("a", "b", "c"), "lev")),
+    unclass(sliding_window_contrasts(c("a", "b", "c"), "lev", window_size = 1)),
+    list(column_contrast("^lev\\.a_b01$", "^lev\\.b_b01$", name = "colab"))
+  ))
+  em <- event_model(onset ~ hrf(lev, basis = "spmg3", contrasts = cset),
+                    data = ev, block = ~run, sampling_frame = sf)
+  X <- as.matrix(design_matrix(em))
+  truth <- .mb_truth(ev, as.character(ev$lev),
+                     c(a = "lev.a", b = "lev.b", c = "lev.c"),
+                     fmrihrf::HRF_SPMG3, sf, prefix = "lev_")
+  expect_no_warning(cw <- contrast_weights(em))
+  sig <- function(name) unname(drop(X %*% cw[[paste0("lev#", name)]]$offset_weights))
+  exp <- function(bw, bases = 1:3) unname(.expected_signal(truth, "lev_", bw, 3, bases))
+
+  lin <- stats::contr.poly(3)[, 1]
+  lin_sig <- sig("lin")
+  expect_equal(lin_sig, exp(c(lev.a = lin[1], lev.b = lin[2], lev.c = lin[3])), tolerance = 1e-8)
+  expect_equal(sig("con_a_vs_other"), exp(c(lev.a = 1, lev.b = -0.5, lev.c = -0.5)),
+               tolerance = 1e-8)
+  expect_equal(sig("con_b_c"), exp(c(lev.b = 1, lev.c = -1)), tolerance = 1e-8)
+  win <- grep("^lev#win_", names(cw), value = TRUE)
+  expect_true(length(win) > 0)
+  expect_equal(sig("colab"), exp(c(lev.a = 1, lev.b = -1), bases = 1), tolerance = 1e-8)
+})
+
+test_that("Fcontrasts(<event_model>) skips terms with no categorical variable", {
+  set.seed(11)
+  ev <- data.frame(onset = seq(5, 155, by = 20), cat = factor(rep(c("face", "obj"), 4)),
+                   rt = rnorm(8), run = 1)
+  sf <- fmrihrf::sampling_frame(200, TR = 1)
+  em <- event_model(onset ~ hrf(cat, basis = "spmg2") + hrf(rt), data = ev,
+                    block = ~run, sampling_frame = sf)
+  expect_no_error(Fc <- Fcontrasts(em))
+  expect_named(Fc, "cat#cat")
+  expect_equal(qr(Fc[["cat#cat"]])$rank, 2L)
+  expect_true(all(Fc[["cat#cat"]][grep("^rt", rownames(Fc[["cat#cat"]])), ] == 0))
+
+  em_rt <- event_model(onset ~ hrf(rt), data = ev, block = ~run, sampling_frame = sf)
+  expect_identical(Fcontrasts(em_rt), list())
+  # Direct call on a continuous-only term still signals an error
+  expect_error(Fcontrasts(terms(em_rt)[[1]]), "No categorical")
+})
+
+test_that("unit_contrast honours a logical selector in A", {
+  ev <- data.frame(onset = c(5, 25, 45, 65), cond = factor(c("A", "B", "A", "B")), run = 1)
+  sf <- fmrihrf::sampling_frame(90, TR = 1)
+  term <- terms(event_model(onset ~ hrf(cond), data = ev, block = ~run,
+                            sampling_frame = sf))[[1]]
+  w <- contrast_weights(unit_contrast(~ cond == "A", name = "A"), term)$weights[, 1]
+  expect_equal(unname(w), c(1, 0))
+  w_all <- contrast_weights(unit_contrast(~ cond, name = "all"), term)$weights[, 1]
+  expect_equal(unname(w_all), c(0.5, 0.5))
+})

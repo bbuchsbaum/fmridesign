@@ -36,6 +36,11 @@ term-level contrast \eqn{C} (one row per condition) is expanded to
 tested jointly in every basis function, so a term with \eqn{k} conditions
 and \eqn{nb} basis functions yields a \eqn{(k \cdot nb) \times ((k-1) \cdot nb)}
 matrix for its main effect. Columns are named \verb{<contrast column>_b##}.
+
+Terms with no categorical variable (e.g. \code{hrf(rt)}, covariates, feature
+terms) contribute no F-contrasts; a model made only of such terms returns
+an empty list. Calling \code{Fcontrasts()} directly on such an \code{event_term}
+still signals an error.
 }
 \examples{
 des <- data.frame(

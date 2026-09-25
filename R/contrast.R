@@ -427,7 +427,10 @@ contrast <- function(form, name, where=NULL) {
 #' @description
 #' Construct a contrast that sums to 1 and is used to define contrasts against the baseline.
 #'
-#' @param A A formula representing the contrast expression.
+#' @param A A formula selecting the cells to average. A logical expression
+#'   (e.g. `~ cond == "A"`) selects the matching cells; a bare factor name
+#'   (e.g. `~ cond`) selects every cell. For a multi-basis HRF the weights are
+#'   repeated on every basis function of the selected cells.
 #' @param name A character string specifying the name of the contrast.
 #' @param where An optional formula specifying the subset of conditions to apply the contrast to.
 #'
@@ -1060,6 +1063,14 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
         rep(TRUE, nrow(term_cells))
       }
 
+      # A logical selector in `A` (e.g. `~ cond == "A"`) restricts the cells
+      # further; a bare factor name (e.g. `~ cond`) selects every cell.
+      sel <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = term_cells),
+                      error = function(e) NULL)
+      if (is.logical(sel) && length(sel) == nrow(term_cells)) {
+        keep <- keep & !is.na(sel) & sel
+      }
+
       relevant_cells <- term_cells[keep, , drop = FALSE]
 
       if (nrow(relevant_cells) == 0) {
@@ -1076,12 +1087,15 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
       }
   }
 
+  # Replicate across all basis functions of a multi-basis HRF
+  expanded <- .expand_and_filter_basis(weights_out, term, x$name)
+
   # Return structure focused on cell-based weights
   ret <- list(
     term=term,
     name=x$name,
-    weights=weights_out,
-    condnames=all_condnames,
+    weights=expanded$weights,
+    condnames=expanded$condnames,
     contrast_spec=x
   )
   
@@ -1673,13 +1687,17 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
   
   # Canonical condition names are the public row labels.
   row.names(weights) <- condnames
+  colnames(weights) <- x$name
+
+  # Replicate across all basis functions of a multi-basis HRF
+  expanded <- .expand_and_filter_basis(weights, term, x$name)
 
   # Return structure
   ret <- list(
     term=term,
     name=x$name,
-    weights=weights,
-    condnames=condnames,
+    weights=expanded$weights,
+    condnames=expanded$condnames,
     contrast_spec=x)
   
   class(ret) <- c("contrast", "list")
@@ -1708,7 +1726,7 @@ contrast_weights.contrast_diff_spec <- function(x, term,...) {
       term=term,
       name=x$name,
       weights=wts1$weights - wts2$weights,
-      condnames=longnames(term),
+      condnames=rownames(wts1$weights) %||% longnames(term),
       contrast_spec=x),
     class=c("contrast_diff", "contrast")
   )

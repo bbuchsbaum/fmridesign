@@ -91,6 +91,17 @@
   condition tags (e.g. `task.face_load.low`) and expands them across basis
   functions. It previously used raw cell labels (`face_low`) that matched no
   design column, producing all-zero weights with a warning.
+- `unit_contrast()` and formula contrasts (`contrast(~ face - obj)`), and
+  differences of contrasts built from them, now expand their weights across
+  the basis functions of a multi-basis term. They previously returned
+  zero-row weights with an "unmatched row names" warning.
+- `unit_contrast()` now applies a logical selector in `A`: previously
+  `unit_contrast(~ cond == "A")` ignored `A` and averaged over every cell
+  (weights 0.5/0.5 for two levels); it now selects level A only (weight 1).
+  A bare factor (`~ cond`) still averages over all cells.
+- `Fcontrasts(<event_model>)` skips terms with no categorical variable (e.g.
+  `hrf(rt)`, covariates) instead of failing for the whole model; a model with
+  only such terms returns an empty list.
 - `condition_basis_list()` now works for bare `event_term` objects without a
   `term_tag`, which previously returned an empty list.
 - `baseline_model(nuisance_list = ...)` now keeps the user's nuisance column

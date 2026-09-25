@@ -494,6 +494,11 @@ contrast_weights.event_model <- function(x, ...) {
 #' tested jointly in every basis function, so a term with \eqn{k} conditions
 #' and \eqn{nb} basis functions yields a \eqn{(k \cdot nb) \times ((k-1) \cdot nb)}
 #' matrix for its main effect. Columns are named `<contrast column>_b##`.
+#'
+#' Terms with no categorical variable (e.g. `hrf(rt)`, covariates, feature
+#' terms) contribute no F-contrasts; a model made only of such terms returns
+#' an empty list. Calling `Fcontrasts()` directly on such an `event_term`
+#' still signals an error.
 Fcontrasts.event_model <- function(x, ...) {
   tnames <- names(terms(x))
   tind <- attr(x$design_matrix, "col_indices") 
@@ -506,6 +511,10 @@ Fcontrasts.event_model <- function(x, ...) {
     term_i <- terms(x)[[i]]
     term_indices_vec <- tind[[ names(terms(x))[i] ]]
     
+    # Terms without a categorical variable (e.g. hrf(rt), covariates) have no
+    # omnibus condition F-test; skip them rather than failing the whole model.
+    if (!.has_categorical_event(term_i)) return(NULL)
+
     # Calculate Fcontrasts relative to the term itself
     fcon_local <- Fcontrasts(term_i)
     
@@ -580,6 +589,17 @@ Fcontrasts.event_model <- function(x, ...) {
   # Concatenate without modifying individual elements
   ret <- if (length(ret_list)) do.call(c, ret_list) else list()
   ret
+}
+
+#' Does a term contain at least one categorical event variable?
+#' @keywords internal
+#' @noRd
+.has_categorical_event <- function(term) {
+  if (!inherits(term, "event_term") || inherits(term, "feature_term")) {
+    return(FALSE)
+  }
+  evs <- term$events
+  length(evs) > 0L && any(!vapply(evs, is_continuous, logical(1)))
 }
 
 #' Expand a term-level F-contrast across the basis functions of its HRF
