@@ -7,13 +7,16 @@
 covariate(..., data, id = NULL, prefix = NULL, subset = NULL)
 }
 \arguments{
-\item{...}{A variable argument set of covariate names.}
+\item{...}{Covariate expressions. Each expression may evaluate to a numeric
+vector, matrix, or data frame. Matrix/data-frame columns are expanded into
+separate regressors.}
 
 \item{data}{A data.frame containing the variables.}
 
-\item{id}{An optional identifier for the covariate term.}
+\item{id}{An optional term identifier. As elsewhere in \code{fmridesign}, the
+identifier becomes the term tag prepended to final design-matrix columns.}
 
-\item{prefix}{An optional prefix to add to the covariate names.}
+\item{prefix}{An optional term-tag prefix used when \code{id} is not supplied.}
 
 \item{subset}{Optional expression used to subset the covariate data.}
 }
@@ -43,6 +46,13 @@ same model. For example:
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{model <- event_model(onset ~ hrf(stimulus) + covariate(motion_x, motion_y, data = cov_data), 
                     data = events, block = ~ 1, sampling_frame = sframe)
 }\if{html}{\out{</div>}}
+
+Final columns follow the package-wide
+\code{term_tag_condition_tag} convention. The default term tag is \code{cov}; \code{id}
+or \code{prefix} replaces it. Thus \code{covariate(x, y, data = d)} produces \code{cov_x}
+and \code{cov_y}, while \code{id = "motion"} produces \code{motion_x} and \code{motion_y}.
+Named matrix columns become condition tags; unnamed or duplicated matrix
+columns use deterministic \code{\link[=feature_suffix]{feature_suffix()}} tags such as \code{f01} and \code{f02}.
 }
 \examples{
 # Add motion parameters as covariates
@@ -51,6 +61,13 @@ motion_data <- data.frame(
   y = rnorm(100)   # y translation
 )
 cv <- covariate(x, y, data = motion_data, prefix = "motion")
+
+# A matrix is expanded using its column names
+lag_set <- cbind(lag_m2 = rnorm(100), lag_0 = rnorm(100),
+                 lag_p2 = rnorm(100))
+lag_data <- data.frame(row = seq_len(100))
+lag_data$lag_set <- lag_set
+cv_lags <- covariate(lag_set, data = lag_data, id = "alignment")
 
 # Combine with event model
 sframe <- sampling_frame(blocklens = c(100), TR = 2)

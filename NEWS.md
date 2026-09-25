@@ -65,6 +65,13 @@
 
 ## Bug fixes
 
+- `covariate()` now expands matrix/data-frame arguments into one non-convolved
+  regressor per column. Named inputs preserve sanitized column names, unnamed
+  matrices use `f01`, `f02`, ... suffixes, and final names follow the standard
+  `<term_tag>_<condition_tag>` grammar (`cov_x` by default, or `motion_x` with
+  `id = "motion"`). Covariate condition accessors and per-column metadata now
+  expose the individual regressor identities instead of a concatenated
+  multi-variable term name (#19).
 - **User-visible correction: multi-basis column names change.** For `hrf()`
   terms with more than one basis function (`"spmg2"`, `"spmg3"`, FIR,
   B-spline, tent, custom `nbasis > 1`) and two or more conditions, design

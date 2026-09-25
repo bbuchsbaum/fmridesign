@@ -164,6 +164,13 @@ design_colmap.event_model <- function(x, ...) {
     modulation_id   = per_term_mod_id[term_index_by_col]
   )
 
+  # A covariate term contains independent, already-sampled regressors. In
+  # legacy matrices without construction-time metadata, recover each
+  # regressor's identity from its condition tag rather than recycling the
+  # group-level term name across every column.
+  cov_rows <- !is.na(out$modulation_type) & out$modulation_type == "covariate"
+  out$modulation_id[cov_rows] <- out$condition[cov_rows]
+
   out$pretty_name <- .pretty_names_from_metadata(out)
   out
 }
@@ -181,9 +188,12 @@ design_colmap.event_model <- function(x, ...) {
 #' @noRd
 .pretty_names_from_metadata <- function(meta) {
   pretty_name <- meta$name
+  is_cov <- !is.na(meta$modulation_type) & meta$modulation_type == "covariate"
+  has_id <- !is.na(meta$modulation_id)
+  pretty_name[is_cov & has_id] <- meta$modulation_id[is_cov & has_id]
+
   is_param <- !is.na(meta$modulation_type) & meta$modulation_type == "parametric"
   if (!any(is_param)) return(pretty_name)
-  has_id <- !is.na(meta$modulation_id)
 
   mask_single <- is_param & has_id & (is.na(meta$basis_ix) | !is.finite(meta$basis_ix))
   pretty_name[mask_single] <- meta$modulation_id[mask_single]
