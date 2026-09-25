@@ -63,11 +63,40 @@
       stop("Each nuisance matrix must have nrow == block length for its block.",
            call. = FALSE)
     }
+    auto_index <- attr(nuisance_list[[i]], "nuisance_auto_index", exact = TRUE)
+    if (is.null(auto_index) || length(auto_index) != ncol(mat)) {
+      cn <- colnames(mat)
+      unnamed <- if (is.null(cn)) rep(TRUE, ncol(mat)) else (is.na(cn) | cn == "")
+      auto_index <- ifelse(unnamed, seq_len(ncol(mat)), NA_integer_)
+    }
     colnames(mat) <- .nuisance_colnames(mat)
+    attr(mat, "nuisance_auto_index") <- as.integer(auto_index)
     mat
   })
 
   mats
+}
+
+# Column labels for nuisance regressors in the design matrix. User-supplied
+# names are sanitised to syntactic, underscore-separated tokens; columns the
+# user left unnamed fall back to their original column index. Labels are made
+# unique within a run. `auto_index` is the "nuisance_auto_index" attribute
+# recorded by .as_nuisance_matrices() (NA for user-named columns).
+.nuisance_labels <- function(cn, auto_index = NULL) {
+  if (length(cn) == 0L) return(character(0))
+  if (is.null(auto_index) || length(auto_index) != length(cn)) {
+    auto_index <- rep(NA_integer_, length(cn))
+  }
+  lab <- sanitize(cn, allow_dot = FALSE)
+  # make.names() prepends "X" to names that start with a digit; the label is
+  # always prefixed, so the bare token is already syntactic.
+  strip <- grepl("^[0-9]", cn) & startsWith(lab, "X")
+  lab[strip] <- sub("^X", "", lab[strip])
+  empty <- is.na(lab) | !nzchar(lab)
+  lab[empty] <- as.character(seq_along(cn))[empty]
+  auto <- !is.na(auto_index)
+  lab[auto] <- as.character(auto_index[auto])
+  make.unique(lab, sep = "_")
 }
 
 # Repair NA values in (already-normalized) nuisance matrices per `na_action`.
@@ -360,7 +389,12 @@
   lapply(seq_along(report$nuisance_list), function(i) {
     mat <- report$nuisance_list[[i]]
     keep <- report$by_block[[i]]$keep
-    mat[, keep, drop = FALSE]
+    auto_index <- attr(mat, "nuisance_auto_index", exact = TRUE)
+    out <- mat[, keep, drop = FALSE]
+    if (!is.null(auto_index) && length(auto_index) == length(keep)) {
+      attr(out, "nuisance_auto_index") <- auto_index[keep]
+    }
+    out
   })
 }
 
@@ -524,7 +558,7 @@ get_col_inds <- function(mat_list) {
 #'
 #' @param nuisance_list list of numeric matrices or data frames, **one per run/block**.
 #' @param sframe        the sampling_frame used in the model.
-#' @param prefix        prefix used when auto-naming the columns.
+#' @param prefix        prefix for the column names (`<prefix>_<name>_block_<run>`).
 #'
 #' @return a baseline_term object (class c("baseline_term","matrix_term",...))
 #' @noRd
@@ -546,17 +580,36 @@ make_nuisance_term <- function(nuisance_list,
   full_mat <- as.matrix(Matrix::bdiag(nuisance_mats))
   ncols    <- ncol(full_mat)
 
-  ## names:  prefix#<block>_<col>
+  ## names: <prefix>_<label>_block_<block>, matching the drift columns
+  ## (base_<basis><k>_block_<block>). <label> is the sanitised user column
+  ## name, or the column index when the column was unnamed.
   colnames(full_mat) <-
-    unlist(purrr::imap(nuisance_list, function(mat, i)
-      sprintf("%s#%02d_%d",
-              prefix, as.integer(i), seq_len(ncol(mat)))))
+    unlist(lapply(seq_along(nuisance_list), function(i) {
+      mat <- nuisance_list[[i]]
+      lab <- .nuisance_labels(colnames(mat),
+                              attr(mat, "nuisance_auto_index", exact = TRUE))
+      paste0(prefix, "_", lab, "_block_", i)
+    }), use.names = FALSE)
 
   ## bookkeeping lists
   colind <- get_col_inds(lapply(nuisance_list, as.matrix))
   rowind <- split(seq_len(nrow(full_mat)), fmrihrf::blockids(sframe))
 
-  baseline_term("nuisance", full_mat, colind, rowind)
+  term <- baseline_term("nuisance", full_mat, colind, rowind)
+  # The user's own column names (e.g. motion parameter names), unsanitised,
+  # for display. Unnamed columns are labelled "<prefix> <index>".
+  term$source_colnames <- unlist(lapply(nuisance_list, function(m) {
+    cn <- colnames(m)
+    auto_index <- attr(m, "nuisance_auto_index", exact = TRUE)
+    if (is.null(cn)) {
+      cn <- sprintf("%s %d", prefix, seq_len(ncol(m)))
+    } else if (!is.null(auto_index) && length(auto_index) == length(cn)) {
+      auto <- !is.na(auto_index)
+      cn[auto] <- sprintf("%s %d", prefix, auto_index[auto])
+    }
+    cn
+  }), use.names = FALSE)
+  term
 }
 
 
