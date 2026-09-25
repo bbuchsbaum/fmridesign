@@ -881,30 +881,79 @@ interaction_contrast <- function(A, name, where = NULL) {
 #' @return A `column_contrast_spec` object containing the specification.
 #'
 #' @details
-#' This contrast type operates by finding design matrix columns whose names match
-#' the provided patterns (`pattern_A`, `pattern_B`). It calculates weights such that
-#' the average effect of the 'A' columns is compared to the average effect of the
-#' 'B' columns (or baseline if `pattern_B` is NULL). Weights are assigned as +1/nA
-#' for 'A' columns and -1/nB for 'B' columns, ensuring the contrast sums to zero
-#' if both A and B groups are present.
+#' Weights are assigned as +1/nA to the nA columns matched by `pattern_A` and
+#' -1/nB to the nB columns matched by `pattern_B`, so the contrast compares the
+#' average effect of the 'A' columns with the average of the 'B' columns (or
+#' with baseline if `pattern_B` is NULL) and sums to zero when both groups are
+#' present. A contrast is evaluated within the single term it is attached to
+#' (via `hrf(..., contrasts = )`); only that term's columns are candidates.
+#'
+#' \strong{What the patterns are matched against.} Each pattern is matched, with
+#' [grepl()] semantics, against two names for every column of the term:
+#' \enumerate{
+#'   \item the \emph{design-matrix column name}, exactly as shown by
+#'     `colnames(design_matrix(model))`: `term_tag_condition_tag`, plus a
+#'     `_b##` basis suffix for multi-basis HRFs (e.g. `cond_cond.A`,
+#'     `task_cond_task.face_cond.A`, `cond_cond.A_b02`). See
+#'     [event_model()] for the naming scheme and how the term tag is chosen;
+#'   \item the \emph{term-level condition name}, i.e. the same name without the
+#'     `term_tag_` prefix (e.g. `cond.A`, `cond.A_b02`), as returned by
+#'     `conditions(term, expand_basis = TRUE)`. This is accepted for backward
+#'     compatibility.
+#' }
+#' The design-matrix names take precedence: a pattern that matches at least one
+#' design-matrix column name selects exactly those columns, and the term-level
+#' names are consulted only when it matches none. Both routes therefore refer
+#' to the same columns (`"^cond_cond\\.A$"` and `"^cond\\.A$"` select the same
+#' column). If a pattern matches in both namespaces but selects \emph{different}
+#' columns (for example, an unanchored `"h"` against `hf_task.face` and
+#' `hf_task.house`, where only `task.house` contains "h" at term level), the
+#' pattern is ambiguous and an error is raised; anchor it on the design-matrix
+#' names (`"^hf_task\\.house$"`). If a pattern matches nothing in either
+#' namespace a warning lists the available column names, and an error follows
+#' if neither pattern selected any column.
 #'
 #' Use standard R regex syntax for the patterns. Remember to escape special
-#' characters (e.g., `\\[`, `\\.`, `\\*`).
+#' characters (e.g., `\\[`, `\\.`, `\\*`), and anchor patterns with `^` and `$`
+#' to avoid accidental partial matches.
+#'
+#' @seealso [event_model()] for the column naming scheme,
+#'   [pair_contrast()] with `basis = ` for basis-restricted condition contrasts.
 #'
 #' @examples
-#' # Test the main effect of a continuous modulator 'RT'
-#' # Assumes RT is a column name, e.g., from columns(Scale(RT))
-#' cc1 <- column_contrast(pattern_A = "^z_RT$", name = "Main_RT")
+#' des <- data.frame(
+#'   onset = seq(0, 70, by = 10),
+#'   run = 1,
+#'   cond = factor(rep(c("A", "B"), 4))
+#' )
+#' sframe <- fmrihrf::sampling_frame(blocklens = 50, TR = 2)
 #'
-#' # Compare Condition.A vs Condition.B for the 'RT' modulator effect
-#' # Assumes condition names like "Condition.A_z_RT", "Condition.B_z_RT"
-#' cc2 <- column_contrast(pattern_A = "^Condition\\.A_z_RT$",
-#'                        pattern_B = "^Condition\\.B_z_RT$",
-#'                        name = "CondA_vs_CondB_for_RT")
+#' # Patterns written against the design-matrix column names
+#' # (colnames are "cond_cond.A", "cond_cond.B")
+#' cset <- contrast_set(
+#'   column_contrast(pattern_A = "^cond_cond\\.A$",
+#'                   pattern_B = "^cond_cond\\.B$", name = "A_vs_B")
+#' )
+#' emod <- event_model(onset ~ hrf(cond, contrasts = cset),
+#'                     data = des, block = ~run, sampling_frame = sframe)
+#' colnames(design_matrix(emod))
+#' contrast_weights(emod)[["cond#A_vs_B"]]$offset_weights
 #'
-#' # Test a specific basis function (e.g., basis spline #3)
-#' # Assumes column names like "TermName_Condition.Tag_b03"
-#' cc3 <- column_contrast(pattern_A = "_b03$", name = "Basis_3_Effect")
+#' # Multi-basis HRF: select only the first basis function (_b01) of each
+#' # condition. Column names are "cond_cond.A_b01", "cond_cond.A_b02", ...
+#' cset_mb <- contrast_set(
+#'   column_contrast(pattern_A = "^cond_cond\\.A_b01$",
+#'                   pattern_B = "^cond_cond\\.B_b01$", name = "A_vs_B_b01"),
+#'   column_contrast(pattern_A = "_b01$", name = "canonical_mean")
+#' )
+#' emod_mb <- event_model(onset ~ hrf(cond, basis = "spmg3", contrasts = cset_mb),
+#'                        data = des, block = ~run, sampling_frame = sframe)
+#' colnames(design_matrix(emod_mb))
+#' contrast_weights(emod_mb)[["cond#A_vs_B_b01"]]$offset_weights
+#'
+#' # Legacy term-level patterns select the same columns
+#' cc_legacy <- column_contrast(pattern_A = "^cond\\.A_b01$",
+#'                              pattern_B = "^cond\\.B_b01$", name = "legacy")
 #'
 #' @export
 column_contrast <- function(pattern_A, pattern_B = NULL, name, where = NULL) {
@@ -1541,7 +1590,10 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
 #'
 #' @description
 #' Compute contrast weights for a `column_contrast_spec` object by targeting
-#' design matrix columns based on regex patterns.
+#' the term's design matrix columns with regex patterns. Patterns are matched
+#' against the design-matrix column names (`term_tag_condition_tag[_b##]`)
+#' first and, only if they match none, against the term-level condition names;
+#' see [column_contrast()] for the precedence rules.
 #'
 #' @param x A `column_contrast_spec` object.
 #' @param term An `event_term` object.
@@ -1550,10 +1602,11 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
 #' @return A list containing the contrast details:
 #'   \item{term}{The original `event_term` object.}
 #'   \item{name}{The name of the contrast.}
-#'   \item{weights}{A numeric matrix where rows correspond to the full design
-#'                  matrix columns (from `.condnames(term, expanded = TRUE)`)
-#'                  and columns represent the contrast(s). Usually one column.}
-#'   \item{condnames}{Character vector of all potential *expanded* condition names from `term`.}
+#'   \item{weights}{A numeric matrix with one row per column of the term (row
+#'                  names are the term-level condition names from
+#'                  `conditions(term, expand_basis = TRUE)`, in design-matrix
+#'                  column order) and one column per contrast (usually one).}
+#'   \item{condnames}{Character vector of all *expanded* condition names from `term`.}
 #'   \item{contrast_spec}{The original `column_contrast_spec` object.}
 #'
 #' @rdname contrast_weights
@@ -1561,10 +1614,9 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
 #' @import assertthat
 contrast_weights.column_contrast_spec <- function(x, term, ...) {
 
-  # --- Use .condnames helper to get expanded names --- 
-  all_colnames <- .condnames(term, expanded = TRUE)
-  # Note: .condnames() already includes error handling for conditions()
-  if (length(all_colnames) == 0) {
+  # Term-level (expanded) condition names; these index the weight rows.
+  all_condnames <- .condnames(term, expanded = TRUE)
+  if (length(all_condnames) == 0) {
       # It's possible conditions() returns empty if term has no levels/columns
       warning(paste("Column contrast '", x$name, "': Term '", term$varname %||% "<unknown>",
                     "' resulted in zero condition names. Weights will be empty."), call. = FALSE)
@@ -1581,48 +1633,43 @@ contrast_weights.column_contrast_spec <- function(x, term, ...) {
       class(ret) <- c("column_contrast", "contrast", "list")
       return(ret)
   }
-  num_all_conds <- length(all_colnames)
 
-  # --- Find indices using grep directly --- 
-  # No need for .col_index intermediary anymore if we have names
-  idx_A <- grep(x$pattern_A, all_colnames, value = FALSE)
+  # Full design-matrix column names, aligned one-to-one with all_condnames.
+  all_colnames <- .term_design_colnames(term, all_condnames)
+  term_label <- attr(term, "term_tag") %||% term$varname %||% "<unknown>"
+
+  idx_A <- .match_column_pattern(x$pattern_A, "pattern_A", all_colnames,
+                                 all_condnames, x$name, term_label)
   nA <- length(idx_A)
-  if (nA == 0) {
-    warning(paste("Column contrast '", x$name, "': pattern_A ('", x$pattern_A,
-                  "') did not match any design matrix columns for term '", term$varname %||% "<unknown>", "'."),
-            call. = FALSE)
-  }
 
   idx_B <- integer(0)
   nB <- 0
   if (!is.null(x$pattern_B)) {
-    idx_B <- grep(x$pattern_B, all_colnames, value = FALSE)
+    idx_B <- .match_column_pattern(x$pattern_B, "pattern_B", all_colnames,
+                                   all_condnames, x$name, term_label)
     nB <- length(idx_B)
-    if (nB == 0) {
-      warning(paste("Column contrast '", x$name, "': pattern_B ('", x$pattern_B,
-                    "') did not match any design matrix columns for term '", term$varname %||% "<unknown>", "'."),
-              call. = FALSE)
-    }
   }
 
-  # --- Retain overlap check --- 
+  # --- Retain overlap check ---
   if (nA > 0 && nB > 0 && any(idx_A %in% idx_B)) {
     stop(paste("Column contrast '", x$name, "': pattern_A and pattern_B match overlapping columns.",
                " Indices A: ", paste(idx_A, collapse=", "),
-               "; Indices B: ", paste(idx_B, collapse=", ")), 
+               "; Indices B: ", paste(idx_B, collapse=", ")),
          call. = FALSE)
   }
 
-  # --- Calculate weights using weight helper --- 
-  mask_A <- seq_along(all_colnames) %in% idx_A
-  mask_B <- if (!is.null(x$pattern_B)) seq_along(all_colnames) %in% idx_B else NULL
-  
+  # --- Calculate weights using weight helper ---
+  mask_A <- seq_along(all_condnames) %in% idx_A
+  mask_B <- if (!is.null(x$pattern_B)) seq_along(all_condnames) %in% idx_B else NULL
+
   # .calculate_mask_weights handles 1/nA, -1/nB, checks, and warnings
-  weights_vec <- .calculate_mask_weights(all_colnames, mask_A, mask_B)
-  
-  # Ensure output is a matrix
+  weights_vec <- .calculate_mask_weights(all_condnames, mask_A, mask_B)
+
+  # Ensure output is a matrix. Rows are term-level condition names, like every
+  # other contrast type; contrast_weights.event_model() maps them to the
+  # design-matrix columns.
   weights_mat <- matrix(weights_vec, ncol = 1)
-  rownames(weights_mat) <- all_colnames
+  rownames(weights_mat) <- all_condnames
   colnames(weights_mat) <- x$name
 
   # Return structure
@@ -1630,13 +1677,109 @@ contrast_weights.column_contrast_spec <- function(x, term, ...) {
     term = term,
     name = x$name,
     weights = weights_mat,
-    condnames = all_colnames, # These are the expanded names used for weights
+    condnames = all_condnames, # These are the expanded names used for weights
     contrast_spec = x
   )
 
   # Classify appropriately
   class(ret) <- c("column_contrast", "contrast", "list")
   ret
+}
+
+#' Design-matrix column names for a term's expanded conditions
+#'
+#' Maps the term-level expanded condition names (`condition_tag[_b##]`) to the
+#' full design-matrix column names (`term_tag_condition_tag[_b##]`) using
+#' `make_column_names()`, the same helper the convolution paths use. The result
+#' is aligned element-wise with `condnames`. If the term carries no tag (a bare
+#' `event_term` or an `Ident()`-only term), the column names equal the
+#' condition names. If the basis layout cannot be reconstructed, the condition
+#' names are returned unchanged.
+#'
+#' @param term An event_term (or feature_term) object.
+#' @param condnames Expanded condition names, `.condnames(term, TRUE)`.
+#' @return Character vector the same length as `condnames`.
+#' @keywords internal
+#' @noRd
+.term_design_colnames <- function(term, condnames) {
+  term_tag <- attr(term, "term_tag")
+  # Feature terms fall back to their varname as the tag (see
+  # .convolve_feature_term_matrix()).
+  if (is.null(term_tag) && inherits(term, "feature_term")) {
+    term_tag <- term$varname
+  }
+  if (is.null(term_tag) || length(condnames) == 0L) {
+    return(condnames)
+  }
+  base <- .condnames(term, expanded = FALSE)
+  if (length(base) == 0L || length(condnames) %% length(base) != 0L) {
+    return(condnames)
+  }
+  nb <- length(condnames) %/% length(base)
+  if (!identical(add_basis(base, nb), condnames)) {
+    return(condnames)
+  }
+  make_column_names(term_tag, base, nb)
+}
+
+#' Resolve a column_contrast pattern to column indices
+#'
+#' The pattern is matched against the full design-matrix column names first.
+#' If it matches none, it is matched against the term-level condition names
+#' (backward compatibility). A pattern that matches in both namespaces must
+#' select the same columns; otherwise it is ambiguous and an error is raised.
+#' When nothing matches in either namespace a warning lists the candidates and
+#' `integer(0)` is returned.
+#'
+#' @keywords internal
+#' @noRd
+.match_column_pattern <- function(pattern, which, colnames_full, condnames,
+                                   contrast_name, term_label) {
+  idx_full <- grep(pattern, colnames_full)
+  same_ns <- identical(colnames_full, condnames)
+  idx_cond <- if (same_ns) idx_full else grep(pattern, condnames)
+
+  if (length(idx_full) > 0L) {
+    if (length(idx_cond) > 0L && !identical(idx_full, idx_cond)) {
+      stop(sprintf(paste0(
+        "Column contrast '%s': %s ('%s') is ambiguous for term '%s': it selects ",
+        "design-matrix columns [%s] but term-level condition names [%s]. ",
+        "Anchor the pattern on the design-matrix column names, e.g. '^%s$'."),
+        contrast_name, which, pattern, term_label,
+        paste(colnames_full[idx_full], collapse = ", "),
+        paste(condnames[idx_cond], collapse = ", "),
+        gsub(".", "\\\\.", colnames_full[idx_full[1L]], fixed = TRUE)),
+        call. = FALSE)
+    }
+    return(idx_full)
+  }
+  if (length(idx_cond) > 0L) {
+    return(idx_cond)
+  }
+
+  msg <- sprintf(
+    "Column contrast '%s': %s ('%s') matched no design-matrix column of term '%s'. Available columns: %s.",
+    contrast_name, which, pattern, term_label, .truncate_names(colnames_full)
+  )
+  if (!same_ns) {
+    msg <- paste0(msg, sprintf(
+      " The term-level condition names were also tried: %s.",
+      .truncate_names(condnames)
+    ))
+  }
+  warning(msg, call. = FALSE)
+  integer(0)
+}
+
+#' Collapse a name vector for messages, truncating long vectors
+#' @keywords internal
+#' @noRd
+.truncate_names <- function(x, max_n = 10L) {
+  if (length(x) <= max_n) {
+    return(paste(x, collapse = ", "))
+  }
+  paste0(paste(x[seq_len(max_n)], collapse = ", "),
+         sprintf(", ... and %d more", length(x) - max_n))
 }
 
 #' Contrast Formula Weights

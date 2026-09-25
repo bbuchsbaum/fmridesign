@@ -72,6 +72,15 @@
   `id = "motion"`). Covariate condition accessors and per-column metadata now
   expose the individual regressor identities instead of a concatenated
   multi-variable term name (#19).
+- `column_contrast()` patterns now match the design-matrix column names, as
+  documented (`term_tag_condition_tag[_b##]`, e.g. `"^cond_cond\\.A$"` or
+  `"^cond_cond\\.A_b01$"`). Previously they were matched only against
+  term-level condition names (`cond.A`), so documented patterns selected
+  nothing. Term-level patterns still work: they are tried only when a pattern
+  matches no design-matrix column, and select the same columns. A pattern that
+  selects different columns in the two namespaces is now an error, and a
+  pattern that matches nothing warns with the available column names (#24).
+
 - **User-visible correction: multi-basis column names change.** For `hrf()`
   terms with more than one basis function (`"spmg2"`, `"spmg3"`, FIR,
   B-spline, tent, custom `nbasis > 1`) and two or more conditions, design

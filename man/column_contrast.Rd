@@ -26,29 +26,79 @@ Define a contrast by directly targeting design matrix columns using regex patter
 This is useful for contrasts involving continuous variables or specific basis functions.
 }
 \details{
-This contrast type operates by finding design matrix columns whose names match
-the provided patterns (\code{pattern_A}, \code{pattern_B}). It calculates weights such that
-the average effect of the 'A' columns is compared to the average effect of the
-'B' columns (or baseline if \code{pattern_B} is NULL). Weights are assigned as +1/nA
-for 'A' columns and -1/nB for 'B' columns, ensuring the contrast sums to zero
-if both A and B groups are present.
+Weights are assigned as +1/nA to the nA columns matched by \code{pattern_A} and
+-1/nB to the nB columns matched by \code{pattern_B}, so the contrast compares the
+average effect of the 'A' columns with the average of the 'B' columns (or
+with baseline if \code{pattern_B} is NULL) and sums to zero when both groups are
+present. A contrast is evaluated within the single term it is attached to
+(via \code{hrf(..., contrasts = )}); only that term's columns are candidates.
+
+\strong{What the patterns are matched against.} Each pattern is matched, with
+\code{\link[=grepl]{grepl()}} semantics, against two names for every column of the term:
+\enumerate{
+\item the \emph{design-matrix column name}, exactly as shown by
+\code{colnames(design_matrix(model))}: \code{term_tag_condition_tag}, plus a
+\verb{_b##} basis suffix for multi-basis HRFs (e.g. \code{cond_cond.A},
+\code{task_cond_task.face_cond.A}, \code{cond_cond.A_b02}). See
+\code{\link[=event_model]{event_model()}} for the naming scheme and how the term tag is chosen;
+\item the \emph{term-level condition name}, i.e. the same name without the
+\code{term_tag_} prefix (e.g. \code{cond.A}, \code{cond.A_b02}), as returned by
+\code{conditions(term, expand_basis = TRUE)}. This is accepted for backward
+compatibility.
+}
+The design-matrix names take precedence: a pattern that matches at least one
+design-matrix column name selects exactly those columns, and the term-level
+names are consulted only when it matches none. Both routes therefore refer
+to the same columns (\code{"^cond_cond\\\\.A$"} and \code{"^cond\\\\.A$"} select the same
+column). If a pattern matches in both namespaces but selects \emph{different}
+columns (for example, an unanchored \code{"h"} against \code{hf_task.face} and
+\code{hf_task.house}, where only \code{task.house} contains "h" at term level), the
+pattern is ambiguous and an error is raised; anchor it on the design-matrix
+names (\code{"^hf_task\\\\.house$"}). If a pattern matches nothing in either
+namespace a warning lists the available column names, and an error follows
+if neither pattern selected any column.
 
 Use standard R regex syntax for the patterns. Remember to escape special
-characters (e.g., \verb{\\\[}, \verb{\\\\.}, \verb{\\\\*}).
+characters (e.g., \verb{\\\[}, \verb{\\\\.}, \verb{\\\\*}), and anchor patterns with \code{^} and \code{$}
+to avoid accidental partial matches.
 }
 \examples{
-# Test the main effect of a continuous modulator 'RT'
-# Assumes RT is a column name, e.g., from columns(Scale(RT))
-cc1 <- column_contrast(pattern_A = "^z_RT$", name = "Main_RT")
+des <- data.frame(
+  onset = seq(0, 70, by = 10),
+  run = 1,
+  cond = factor(rep(c("A", "B"), 4))
+)
+sframe <- fmrihrf::sampling_frame(blocklens = 50, TR = 2)
 
-# Compare Condition.A vs Condition.B for the 'RT' modulator effect
-# Assumes condition names like "Condition.A_z_RT", "Condition.B_z_RT"
-cc2 <- column_contrast(pattern_A = "^Condition\\\\.A_z_RT$",
-                       pattern_B = "^Condition\\\\.B_z_RT$",
-                       name = "CondA_vs_CondB_for_RT")
+# Patterns written against the design-matrix column names
+# (colnames are "cond_cond.A", "cond_cond.B")
+cset <- contrast_set(
+  column_contrast(pattern_A = "^cond_cond\\\\.A$",
+                  pattern_B = "^cond_cond\\\\.B$", name = "A_vs_B")
+)
+emod <- event_model(onset ~ hrf(cond, contrasts = cset),
+                    data = des, block = ~run, sampling_frame = sframe)
+colnames(design_matrix(emod))
+contrast_weights(emod)[["cond#A_vs_B"]]$offset_weights
 
-# Test a specific basis function (e.g., basis spline #3)
-# Assumes column names like "TermName_Condition.Tag_b03"
-cc3 <- column_contrast(pattern_A = "_b03$", name = "Basis_3_Effect")
+# Multi-basis HRF: select only the first basis function (_b01) of each
+# condition. Column names are "cond_cond.A_b01", "cond_cond.A_b02", ...
+cset_mb <- contrast_set(
+  column_contrast(pattern_A = "^cond_cond\\\\.A_b01$",
+                  pattern_B = "^cond_cond\\\\.B_b01$", name = "A_vs_B_b01"),
+  column_contrast(pattern_A = "_b01$", name = "canonical_mean")
+)
+emod_mb <- event_model(onset ~ hrf(cond, basis = "spmg3", contrasts = cset_mb),
+                       data = des, block = ~run, sampling_frame = sframe)
+colnames(design_matrix(emod_mb))
+contrast_weights(emod_mb)[["cond#A_vs_B_b01"]]$offset_weights
 
+# Legacy term-level patterns select the same columns
+cc_legacy <- column_contrast(pattern_A = "^cond\\\\.A_b01$",
+                             pattern_B = "^cond\\\\.B_b01$", name = "legacy")
+
+}
+\seealso{
+\code{\link[=event_model]{event_model()}} for the column naming scheme,
+\code{\link[=pair_contrast]{pair_contrast()}} with \verb{basis = } for basis-restricted condition contrasts.
 }
