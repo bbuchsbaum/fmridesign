@@ -427,7 +427,10 @@ contrast <- function(form, name, where=NULL) {
 #' @description
 #' Construct a contrast that sums to 1 and is used to define contrasts against the baseline.
 #'
-#' @param A A formula representing the contrast expression.
+#' @param A A formula selecting the cells to average. A logical expression
+#'   (e.g. `~ cond == "A"`) selects the matching cells; a bare factor name
+#'   (e.g. `~ cond`) selects every cell. For a multi-basis HRF the weights are
+#'   repeated on every basis function of the selected cells.
 #' @param name A character string specifying the name of the contrast.
 #' @param where An optional formula specifying the subset of conditions to apply the contrast to.
 #'
@@ -660,6 +663,14 @@ sliding_window_contrasts <- function(levels, facname, window_size = 2, where = N
 #'   \item{`basis = 2:3`}: Test the second and third basis functions together
 #'   \item{`basis = NULL` or `basis = "all"`}: Test all basis functions (default behavior)
 #' }
+#'
+#' With the default (`basis = NULL`), the single-column t-contrast places the
+#' same weight on every basis column of a condition, i.e. it tests the *sum* of
+#' the basis coefficients. For informed bases such as `"spmg2"`/`"spmg3"`
+#' (canonical plus temporal/dispersion derivatives) that sum is rarely a
+#' meaningful quantity; the SPM convention is to contrast the canonical
+#' regressor only, so use `basis = 1` there, or test all components jointly
+#' with an F-contrast (e.g. [oneway_contrast()]).
 #'
 #' The `basis_weights` argument allows non-uniform weighting across selected basis functions:
 #' \itemize{
@@ -1052,6 +1063,14 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
         rep(TRUE, nrow(term_cells))
       }
 
+      # A logical selector in `A` (e.g. `~ cond == "A"`) restricts the cells
+      # further; a bare factor name (e.g. `~ cond`) selects every cell.
+      sel <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = term_cells),
+                      error = function(e) NULL)
+      if (is.logical(sel) && length(sel) == nrow(term_cells)) {
+        keep <- keep & !is.na(sel) & sel
+      }
+
       relevant_cells <- term_cells[keep, , drop = FALSE]
 
       if (nrow(relevant_cells) == 0) {
@@ -1068,12 +1087,15 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
       }
   }
 
+  # Replicate across all basis functions of a multi-basis HRF
+  expanded <- .expand_and_filter_basis(weights_out, term, x$name)
+
   # Return structure focused on cell-based weights
   ret <- list(
     term=term,
     name=x$name,
-    weights=weights_out,
-    condnames=all_condnames,
+    weights=expanded$weights,
+    condnames=expanded$condnames,
     contrast_spec=x
   )
   
@@ -1236,8 +1258,10 @@ contrast_weights.interaction_contrast_spec <- function(x, term,...) {
               stop(paste("Contrast '", x$name, "': Error generating interaction contrast: ", e$message), call.=FALSE)
           })
           
-          # Ensure rownames match cell identifiers
-          cell_names_rel <- apply(relevant_cells, 1, paste, collapse = "_")
+          # Row names must be the term's canonical condition tags (e.g.
+          # "task.face_load.low") so contrast_weights.event_model() can match
+          # them to design-matrix columns.
+          cell_names_rel <- cell_condition_tags(relevant_cells)
           rownames(cmat) <- cell_names_rel
           colnames(cmat) <- paste(x$name, seq_len(ncol(cmat)), sep="_") # Name F-contrast columns
           
@@ -1246,6 +1270,11 @@ contrast_weights.interaction_contrast_spec <- function(x, term,...) {
       }
   }
   
+  # Replicate across all basis functions of a multi-basis HRF
+  expanded <- .expand_and_filter_basis(weights_out, term, x$name)
+  weights_out    <- expanded$weights
+  cell_names_out <- expanded$condnames
+
   # Return structure focused on cell-based weights
   ret <- list(
     term = term,
@@ -1658,13 +1687,17 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
   
   # Canonical condition names are the public row labels.
   row.names(weights) <- condnames
+  colnames(weights) <- x$name
+
+  # Replicate across all basis functions of a multi-basis HRF
+  expanded <- .expand_and_filter_basis(weights, term, x$name)
 
   # Return structure
   ret <- list(
     term=term,
     name=x$name,
-    weights=weights,
-    condnames=condnames,
+    weights=expanded$weights,
+    condnames=expanded$condnames,
     contrast_spec=x)
   
   class(ret) <- c("contrast", "list")
@@ -1693,7 +1726,7 @@ contrast_weights.contrast_diff_spec <- function(x, term,...) {
       term=term,
       name=x$name,
       weights=wts1$weights - wts2$weights,
-      condnames=longnames(term),
+      condnames=rownames(wts1$weights) %||% longnames(term),
       contrast_spec=x),
     class=c("contrast_diff", "contrast")
   )
