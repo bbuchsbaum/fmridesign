@@ -12,3 +12,6 @@ bench/results/*.csv
 bench/results/*.json
 !bench/results/.gitkeep
 bench/__pycache__/
+
+# Local agent guidance
+/AGENTS.md
