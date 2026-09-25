@@ -1665,21 +1665,20 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
   # model.matrix might return fewer columns than expected if interactions 
   # lead to rank deficiency. drop.empty applies to the *output* matrix.
   if (isTRUE(drop.empty)) {
-      # Check for intercept columns and constant columns
-      # Intercept columns are named "(Intercept)" 
-      # Constant columns have zero variance but non-zero values (e.g., all ones)
+      # A zero-event term deliberately retains its declared zero columns (and
+      # emits fmridesign_zero_events above). For one or more events, drop only
+      # finite all-zero columns. In particular, var() is NA for a one-row
+      # factor design and must not cause every unused factor level to survive.
       is_intercept <- (colnames(mm) == "(Intercept)")
-      
-      # Calculate variance and check for all-zero columns
-      col_vars <- apply(mm, 2, var, na.rm = TRUE)
-      col_all_zero <- colSums(abs(mm), na.rm = TRUE) == 0
-      
-      # A column should be kept if:
-      # 1. It's an intercept column, OR
-      # 2. It has non-zero variance (not constant), OR  
-      # 3. It's a constant non-zero column (zero variance but not all zeros)
-      is_constant_nonzero <- (col_vars < 1e-8 | is.na(col_vars)) & !col_all_zero
-      keep_cols <- which(is_intercept | col_vars > 1e-8 | is.na(col_vars) | is_constant_nonzero)
+      if (nrow(mm) == 0L) {
+          keep_cols <- seq_len(ncol(mm))
+      } else {
+          col_all_zero <- vapply(seq_len(ncol(mm)), function(j) {
+              column <- mm[, j]
+              all(is.finite(column)) && all(column == 0)
+          }, logical(1))
+          keep_cols <- which(is_intercept | !col_all_zero)
+      }
       
       if (length(keep_cols) < ncol(mm)){
           # message("Dropping empty columns: ", paste(colnames(mm)[! (1:ncol(mm)) %in% keep_cols], collapse=", "))
