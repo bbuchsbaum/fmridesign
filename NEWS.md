@@ -17,6 +17,14 @@
   fmrihrf's method. `plot(<sampling_frame>)` is unchanged and is documented
   under `?plot.sampling_frame`.
 
+- `onsets()`, `durations()`, `blockids()` and `nbasis()` are now true
+  re-exports of fmrihrf's generics. fmridesign previously defined its own
+  generics with the same names, so dispatch was split: for example
+  `fmrihrf::onsets(<event_term>)` found no method and
+  `fmridesign::nbasis(HRF_SPMG3)` failed, and which one a bare call reached
+  depended on attach order. Attaching fmridesign no longer masks these four
+  names from fmrihrf.
+
 ## Bug fixes
 
 - `hrf(..., summate = FALSE)` is honoured again for sustained events. The
