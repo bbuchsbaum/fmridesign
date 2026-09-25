@@ -927,9 +927,9 @@ construct.baselinespec <- function(x, model_spec, ...) {
     mat <- matrix(1, nrow = sum(bl), ncol = 1)
     cnames <- paste0("base_", x$basis)
     colnames(mat) <- cnames
-    # column index is a single value, but rows are tracked per block
-    colind <- list(1)
+    # The single column is shared by every block
     rowind <- split(seq_len(nrow(mat)), fmrihrf::blockids(sampling_frame))
+    colind <- rep(list(1L), length(rowind))
     return(baseline_term(x$name, mat, colind, rowind))
   }
   
@@ -1004,14 +1004,39 @@ baseline_term <- function(varname, mat, colind, rowind) {
 #' @export
 design_matrix.baseline_term <- function(x, blockid = NULL, allrows = FALSE, ...) {
   if (is.null(blockid)) {
-    x$design_matrix
-  } else {
-    if (!allrows) {
-      x$design_matrix[unlist(x$rowind[blockid]), unlist(x$colind[blockid]), drop = FALSE]
-    } else {
-      x$design_matrix[, unlist(x$colind[blockid]), drop = FALSE]
-    }
+    return(x$design_matrix)
   }
+  if (is.null(x$rowind) || is.null(x$colind)) {
+    stop("Term '", as.character(x$varname), "' carries no block structure; ",
+         "it cannot be subset by `blockid`.", call. = FALSE)
+  }
+  cols <- .baseline_term_block_cols(x, blockid)
+  if (!allrows) {
+    x$design_matrix[unlist(x$rowind[blockid]), cols, drop = FALSE]
+  } else {
+    x$design_matrix[, cols, drop = FALSE]
+  }
+}
+
+#' Columns of a baseline term that are active in the given blocks
+#'
+#' `colind` maps each block to the columns that are non-structurally-zero in
+#' that block. Terms shared across blocks (e.g. a global intercept) list the
+#' same column for several blocks, and legacy terms may store a single entry
+#' that applies to every block. The union is returned once per column, in the
+#' term's own column order.
+#'
+#' @param x A `baseline_term`.
+#' @param blockid Block indices.
+#' @return Integer vector of column indices.
+#' @keywords internal
+#' @noRd
+.baseline_term_block_cols <- function(x, blockid) {
+  colind <- x$colind
+  if (length(colind) == 1L && length(x$rowind) > 1L) {
+    colind <- rep(colind, length(x$rowind))
+  }
+  sort(unique(as.integer(unlist(colind[blockid]))))
 }
 
 #' @export
