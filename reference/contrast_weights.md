@@ -11,7 +11,12 @@ Compute the contrast weights for a poly_contrast_spec object.
 Compute the contrast weights for a pair_contrast_spec object.
 
 Compute contrast weights for a `column_contrast_spec` object by
-targeting design matrix columns based on regex patterns.
+targeting the term's design matrix columns with regex patterns. Patterns
+are matched against the design-matrix column names
+(`term_tag_condition_tag[_b##]`) first and, only if they match none,
+against the term-level condition names; see
+[`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md)
+for the precedence rules.
 
 Compute the contrast weights for a contrast_formula_spec object.
 
@@ -102,14 +107,14 @@ A list containing the contrast details:
 
 - weights:
 
-  A numeric matrix where rows correspond to the full design matrix
-  columns (from `.condnames(term, expanded = TRUE)`) and columns
-  represent the contrast(s). Usually one column.
+  A numeric matrix with one row per column of the term (row names are
+  the term-level condition names from
+  `conditions(term, expand_basis = TRUE)`, in design-matrix column
+  order) and one column per contrast (usually one).
 
 - condnames:
 
-  Character vector of all potential *expanded* condition names from
-  `term`.
+  Character vector of all *expanded* condition names from `term`.
 
 - contrast_spec:
 

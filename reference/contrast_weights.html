@@ -5,7 +5,10 @@ Compute the contrast weights for an interaction_contrast_spec object.
 Compute the contrast weights for a poly_contrast_spec object.
 Compute the contrast weights for a pair_contrast_spec object.
 Compute contrast weights for a column_contrast_spec object by targeting
-design matrix columns based on regex patterns.
+the term's design matrix columns with regex patterns. Patterns are matched
+against the design-matrix column names (term_tag_condition_tag[_b##])
+first and, only if they match none, against the term-level condition names;
+see column_contrast() for the precedence rules.
 Compute the contrast weights for a contrast_formula_spec object.
 Compute the contrast weights for a contrast_diff_spec object.
 Compute the contrast weights for each contrast specification within a contrast_set object."><meta property="og:description" content="Compute the contrast weights for a unit_contrast_spec object.
@@ -14,7 +17,10 @@ Compute the contrast weights for an interaction_contrast_spec object.
 Compute the contrast weights for a poly_contrast_spec object.
 Compute the contrast weights for a pair_contrast_spec object.
 Compute contrast weights for a column_contrast_spec object by targeting
-design matrix columns based on regex patterns.
+the term's design matrix columns with regex patterns. Patterns are matched
+against the design-matrix column names (term_tag_condition_tag[_b##])
+first and, only if they match none, against the term-level condition names;
+see column_contrast() for the precedence rules.
 Compute the contrast weights for a contrast_formula_spec object.
 Compute the contrast weights for a contrast_diff_spec object.
 Compute the contrast weights for each contrast specification within a contrast_set object."></head><body>
@@ -68,7 +74,10 @@ Compute the contrast weights for each contrast specification within a contrast_s
 <p>Compute the contrast weights for a poly_contrast_spec object.</p>
 <p>Compute the contrast weights for a pair_contrast_spec object.</p>
 <p>Compute contrast weights for a <code>column_contrast_spec</code> object by targeting
-design matrix columns based on regex patterns.</p>
+the term's design matrix columns with regex patterns. Patterns are matched
+against the design-matrix column names (<code>term_tag_condition_tag[_b##]</code>)
+first and, only if they match none, against the term-level condition names;
+see <code><a href="column_contrast.html">column_contrast()</a></code> for the precedence rules.</p>
 <p>Compute the contrast weights for a contrast_formula_spec object.</p>
 <p>Compute the contrast weights for a contrast_diff_spec object.</p>
 <p>Compute the contrast weights for each contrast specification within a contrast_set object.</p>
@@ -143,12 +152,13 @@ design matrix columns based on regex patterns.</p>
 <dd><p>The name of the contrast.</p></dd>
 
 <dt>weights</dt>
-<dd><p>A numeric matrix where rows correspond to the full design
-matrix columns (from <code>.condnames(term, expanded = TRUE)</code>)
-and columns represent the contrast(s). Usually one column.</p></dd>
+<dd><p>A numeric matrix with one row per column of the term (row
+names are the term-level condition names from
+<code>conditions(term, expand_basis = TRUE)</code>, in design-matrix
+column order) and one column per contrast (usually one).</p></dd>
 
 <dt>condnames</dt>
-<dd><p>Character vector of all potential <em>expanded</em> condition names from <code>term</code>.</p></dd>
+<dd><p>Character vector of all <em>expanded</em> condition names from <code>term</code>.</p></dd>
 
 <dt>contrast_spec</dt>
 <dd><p>The original <code>column_contrast_spec</code> object.</p></dd>
