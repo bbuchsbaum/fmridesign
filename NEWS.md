@@ -72,6 +72,45 @@
   `id = "motion"`). Covariate condition accessors and per-column metadata now
   expose the individual regressor identities instead of a concatenated
   multi-variable term name (#19).
+- **User-visible correction: multi-basis column names change.** For `hrf()`
+  terms with more than one basis function (`"spmg2"`, `"spmg3"`, FIR,
+  B-spline, tent, custom `nbasis > 1`) and two or more conditions, design
+  columns were filled condition-major (`A_b01, A_b02, B_b01, ...`) but named
+  basis-major (`A_b01, B_b01, A_b02, ...`), so every column except the first
+  and last was mislabelled. For example, `task_task.scene_b01` held face's
+  temporal derivative. The data layout is unchanged; column names,
+  `conditions(term, expand_basis = TRUE)`, and every name-based contrast
+  (`pair_contrast()`, `oneway_contrast()`, `column_contrast()`,
+  `unit_contrast()`, `contrast()`, `interaction_contrast()`) now follow the
+  documented condition-major `term_condition_b##` layout, matching
+  `design_colmap()`. Contrast weights and coefficient labels from earlier
+  versions for such terms were attached to the wrong columns and should be
+  recomputed. Code that indexed multi-basis columns by position assuming
+  basis-major order must be updated (#23).
+- `Fcontrasts(<event_model>)` no longer returns an all-zero matrix with an
+  "unmatched row names" warning for multi-basis terms. The term-level
+  contrast is expanded to `kronecker(C, diag(nbasis))`, testing the condition
+  effect jointly in every basis function (#25).
+- `Fcontrasts()` for multi-factor terms (e.g. `hrf(task, load)`) assigned row
+  names in the wrong order, so the matrix labelled `task` tested `load` and
+  vice versa. Rows now follow `conditions()` order.
+- `interaction_contrast()` now names its rows with the term's canonical
+  condition tags (e.g. `task.face_load.low`) and expands them across basis
+  functions. It previously used raw cell labels (`face_low`) that matched no
+  design column, producing all-zero weights with a warning.
+- `unit_contrast()` and formula contrasts (`contrast(~ face - obj)`), and
+  differences of contrasts built from them, now expand their weights across
+  the basis functions of a multi-basis term. They previously returned
+  zero-row weights with an "unmatched row names" warning.
+- `unit_contrast()` now applies a logical selector in `A`: previously
+  `unit_contrast(~ cond == "A")` ignored `A` and averaged over every cell
+  (weights 0.5/0.5 for two levels); it now selects level A only (weight 1).
+  A bare factor (`~ cond`) still averages over all cells.
+- `Fcontrasts(<event_model>)` skips terms with no categorical variable (e.g.
+  `hrf(rt)`, covariates) instead of failing for the whole model; a model with
+  only such terms returns an empty list.
+- `condition_basis_list()` now works for bare `event_term` objects without a
+  `term_tag`, which previously returned an empty list.
 - `baseline_model(nuisance_list = ...)` now keeps the user's nuisance column
   names (#28). Columns are named `nuis_<name>_block_<run>` (e.g.
   `nuis_trans_x_block_1`), matching the drift columns (`base_poly1_block_1`);
