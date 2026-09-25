@@ -156,6 +156,25 @@ test_that("construct.covariatespec() names an unnamed matrix with feature suffix
   expect_equal(result$condition_tags, c("f01", "f02", "f03"))
 })
 
+test_that("single-column matrix fallback names use two-digit feature suffixes", {
+  for (column_name in list(NULL, "", NA_character_)) {
+    Mx <- matrix(seq_len(80), ncol = 1,
+                 dimnames = list(NULL, column_name))
+    cov_data <- data.frame(row = seq_len(80))
+    cov_data$Mx <- Mx
+
+    result <- construct(
+      covariate(Mx, data = cov_data),
+      list(sampling_frame = sframe)
+    )
+
+    expect_equal(names(result$design_matrix), "cov_f01")
+    expect_equal(conditions(result), "f01")
+    expect_equal(result$source_map$condition, "f01")
+    expect_equal(unname(as.matrix(result$design_matrix)), unname(Mx))
+  }
+})
+
 test_that("construct.covariatespec() expands a nested numeric data frame", {
   features <- data.frame(low = seq_len(80), high = seq_len(80) + 80)
   cov_data <- data.frame(row = seq_len(80))

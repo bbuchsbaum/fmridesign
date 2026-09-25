@@ -167,7 +167,8 @@ covariate <- function(..., data, id = NULL, prefix = NULL, subset = NULL) {
       anyNA(source_columns) || any(!nzchar(source_columns)) ||
       anyDuplicated(source_columns)
     cond_tags <- if (unusable_names) {
-      feature_suffix(seq_len(ncol(mat)), ncol(mat))
+      # Matrix fallbacks keep at least two digits, including a single column.
+      feature_suffix(seq_len(ncol(mat)), max(2L, ncol(mat)))
     } else {
       unname(.sanitizeName(source_columns))
     }
