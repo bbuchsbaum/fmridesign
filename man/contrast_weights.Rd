@@ -61,10 +61,11 @@ A list containing the term, name, weights, condition names, and contrast specifi
 A list containing the contrast details:
 \item{term}{The original \code{event_term} object.}
 \item{name}{The name of the contrast.}
-\item{weights}{A numeric matrix where rows correspond to the full design
-matrix columns (from \code{.condnames(term, expanded = TRUE)})
-and columns represent the contrast(s). Usually one column.}
-\item{condnames}{Character vector of all potential \emph{expanded} condition names from \code{term}.}
+\item{weights}{A numeric matrix with one row per column of the term (row
+names are the term-level condition names from
+\code{conditions(term, expand_basis = TRUE)}, in design-matrix
+column order) and one column per contrast (usually one).}
+\item{condnames}{Character vector of all \emph{expanded} condition names from \code{term}.}
 \item{contrast_spec}{The original \code{column_contrast_spec} object.}
 
 A list containing the term, name, weights, condition names, and contrast specification.
@@ -89,7 +90,10 @@ Compute the contrast weights for a poly_contrast_spec object.
 Compute the contrast weights for a pair_contrast_spec object.
 
 Compute contrast weights for a \code{column_contrast_spec} object by targeting
-design matrix columns based on regex patterns.
+the term's design matrix columns with regex patterns. Patterns are matched
+against the design-matrix column names (\verb{term_tag_condition_tag[_b##]})
+first and, only if they match none, against the term-level condition names;
+see \code{\link[=column_contrast]{column_contrast()}} for the precedence rules.
 
 Compute the contrast weights for a contrast_formula_spec object.
 
