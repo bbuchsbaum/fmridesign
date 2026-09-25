@@ -40,6 +40,8 @@ Suggests:
     pkgdown,
     withr,
     plotly
+Remotes:
+    bbuchsbaum/fmrihrf
 VignetteBuilder: knitr
 Config/Needs/website: github::bbuchsbaum/albersdown, albersdown
 URL: https://github.com/bbuchsbaum/fmridesign, https://bbuchsbaum.github.io/fmridesign/
@@ -70,6 +72,10 @@ Collate:
     'hrf-formula.R'
     'namespace-imports.R'
     'naming-utils.R'
+    'plot_baseline.R'
+    'plot_event_model.R'
+    'plot_heatmaps.R'
+    'plot_theme.R'
     'residualize.R'
     'sampling_frame.R'
     'validate.R'

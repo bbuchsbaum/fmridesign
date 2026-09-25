@@ -1,5 +1,30 @@
 # fmridesign 0.6.0
 
+## Plotting overhaul
+
+- All plotting methods share one visual system: the new exported
+  `theme_fmridesign()` and `fmridesign_palette()`, a colour-vision-checked
+  categorical palette, one diverging palette centred on zero, readable column
+  labels (e.g. `face × high`, `drift 3`, `tx`) and one way of marking runs.
+- `plot(<event_model>)` draws one row per condition with event onset and
+  duration marks. Rows of a term share an amplitude scale (`y_scale`).
+  Basis sets get one row per basis function, and trialwise or long-basis
+  designs switch to a heatmap with a per-trial overlap column. New `style`,
+  `show_events`, `y_scale`, `time_range`, `title` and `subtitle` arguments.
+- `design_map()` is an SPM-style image grouped by term, with raw column ranges
+  and a near-flat (dead) column check. Run boundaries are now placed
+  correctly; they were previously computed from per-event block ids.
+- `correlation_map()` shows the lower triangle with each column's variance
+  inflation factor (run means removed) on the diagonal and flags aliased
+  columns.
+- `plot_contrasts()` shows every design column, printed weights, the sum of
+  weights and each contrast's standard error per unit noise given the design.
+- `plot(<baseline_model>)` shows every time-varying term (motion regressors
+  were previously dropped), splitting translations and rotations into
+  separate lanes. User-supplied nuisance column names are kept for display.
+- `plot(<sampling_frame>)` no longer draws an empty panel; it adds `"lane"`
+  and `"grid"` styles and an `events =` overlay for checking coverage.
+
 ## New features
 
 - `baseline_model()` now checks `nuisance_list` inputs during construction for
@@ -47,6 +72,20 @@
   `id = "motion"`). Covariate condition accessors and per-column metadata now
   expose the individual regressor identities instead of a concatenated
   multi-variable term name (#19).
+- `baseline_model(nuisance_list = ...)` now keeps the user's nuisance column
+  names (#28). Columns are named `nuis_<name>_block_<run>` (e.g.
+  `nuis_trans_x_block_1`), matching the drift columns (`base_poly1_block_1`);
+  names are sanitised to syntactic tokens and made unique within a run, and
+  unnamed columns fall back to their original column index (`nuis_2_block_1`),
+  which is preserved when `nuisance_check = "drop"` removes columns. This
+  replaces the previous `nuis#<run>_<col>` names, so code that matched those
+  names must be updated. The original names are kept in the nuisance term's
+  `source_colnames` field.
+- `design_colmap(<baseline_model>)` now reports nuisance columns with role
+  `"nuisance"` (they were reported as `"intercept"`), takes their `run` from the
+  block structure (it was parsed from the column index, so a 3-run model with 6
+  regressors per run reported runs 1 to 6), and labels them with the user's
+  column names in `basis_label`.
 - `contrast_weights()` now removes rows for factor levels excluded by an
   `hrf(..., subset = )` term from the returned term-local `weights`, keeping
   them consistent with the reconciled full-design `offset_weights` (#17).

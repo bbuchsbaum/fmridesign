@@ -63,11 +63,40 @@
       stop("Each nuisance matrix must have nrow == block length for its block.",
            call. = FALSE)
     }
+    auto_index <- attr(nuisance_list[[i]], "nuisance_auto_index", exact = TRUE)
+    if (is.null(auto_index) || length(auto_index) != ncol(mat)) {
+      cn <- colnames(mat)
+      unnamed <- if (is.null(cn)) rep(TRUE, ncol(mat)) else (is.na(cn) | cn == "")
+      auto_index <- ifelse(unnamed, seq_len(ncol(mat)), NA_integer_)
+    }
     colnames(mat) <- .nuisance_colnames(mat)
+    attr(mat, "nuisance_auto_index") <- as.integer(auto_index)
     mat
   })
 
   mats
+}
+
+# Column labels for nuisance regressors in the design matrix. User-supplied
+# names are sanitised to syntactic, underscore-separated tokens; columns the
+# user left unnamed fall back to their original column index. Labels are made
+# unique within a run. `auto_index` is the "nuisance_auto_index" attribute
+# recorded by .as_nuisance_matrices() (NA for user-named columns).
+.nuisance_labels <- function(cn, auto_index = NULL) {
+  if (length(cn) == 0L) return(character(0))
+  if (is.null(auto_index) || length(auto_index) != length(cn)) {
+    auto_index <- rep(NA_integer_, length(cn))
+  }
+  lab <- sanitize(cn, allow_dot = FALSE)
+  # make.names() prepends "X" to names that start with a digit; the label is
+  # always prefixed, so the bare token is already syntactic.
+  strip <- grepl("^[0-9]", cn) & startsWith(lab, "X")
+  lab[strip] <- sub("^X", "", lab[strip])
+  empty <- is.na(lab) | !nzchar(lab)
+  lab[empty] <- as.character(seq_along(cn))[empty]
+  auto <- !is.na(auto_index)
+  lab[auto] <- as.character(auto_index[auto])
+  make.unique(lab, sep = "_")
 }
 
 # Repair NA values in (already-normalized) nuisance matrices per `na_action`.
@@ -360,7 +389,12 @@
   lapply(seq_along(report$nuisance_list), function(i) {
     mat <- report$nuisance_list[[i]]
     keep <- report$by_block[[i]]$keep
-    mat[, keep, drop = FALSE]
+    auto_index <- attr(mat, "nuisance_auto_index", exact = TRUE)
+    out <- mat[, keep, drop = FALSE]
+    if (!is.null(auto_index) && length(auto_index) == length(keep)) {
+      attr(out, "nuisance_auto_index") <- auto_index[keep]
+    }
+    out
   })
 }
 
@@ -524,7 +558,7 @@ get_col_inds <- function(mat_list) {
 #'
 #' @param nuisance_list list of numeric matrices or data frames, **one per run/block**.
 #' @param sframe        the sampling_frame used in the model.
-#' @param prefix        prefix used when auto-naming the columns.
+#' @param prefix        prefix for the column names (`<prefix>_<name>_block_<run>`).
 #'
 #' @return a baseline_term object (class c("baseline_term","matrix_term",...))
 #' @noRd
@@ -546,17 +580,36 @@ make_nuisance_term <- function(nuisance_list,
   full_mat <- as.matrix(Matrix::bdiag(nuisance_mats))
   ncols    <- ncol(full_mat)
 
-  ## names:  prefix#<block>_<col>
+  ## names: <prefix>_<label>_block_<block>, matching the drift columns
+  ## (base_<basis><k>_block_<block>). <label> is the sanitised user column
+  ## name, or the column index when the column was unnamed.
   colnames(full_mat) <-
-    unlist(purrr::imap(nuisance_list, function(mat, i)
-      sprintf("%s#%02d_%d",
-              prefix, as.integer(i), seq_len(ncol(mat)))))
+    unlist(lapply(seq_along(nuisance_list), function(i) {
+      mat <- nuisance_list[[i]]
+      lab <- .nuisance_labels(colnames(mat),
+                              attr(mat, "nuisance_auto_index", exact = TRUE))
+      paste0(prefix, "_", lab, "_block_", i)
+    }), use.names = FALSE)
 
   ## bookkeeping lists
   colind <- get_col_inds(lapply(nuisance_list, as.matrix))
   rowind <- split(seq_len(nrow(full_mat)), fmrihrf::blockids(sframe))
 
-  baseline_term("nuisance", full_mat, colind, rowind)
+  term <- baseline_term("nuisance", full_mat, colind, rowind)
+  # The user's own column names (e.g. motion parameter names), unsanitised,
+  # for display. Unnamed columns are labelled "<prefix> <index>".
+  term$source_colnames <- unlist(lapply(nuisance_list, function(m) {
+    cn <- colnames(m)
+    auto_index <- attr(m, "nuisance_auto_index", exact = TRUE)
+    if (is.null(cn)) {
+      cn <- sprintf("%s %d", prefix, seq_len(ncol(m)))
+    } else if (!is.null(auto_index) && length(auto_index) == length(cn)) {
+      auto <- !is.na(auto_index)
+      cn[auto] <- sprintf("%s %d", prefix, auto_index[auto])
+    }
+    cn
+  }), use.names = FALSE)
+  term
 }
 
 
@@ -1149,309 +1202,12 @@ print.baseline_model <- function(x, ...) {
   TRUE
 }
 
-#' Plot a Baseline Model
-#'
-#' Creates a detailed ggplot2 visualization of the baseline model design matrix.
-#' Each non-constant term is plotted over time. The plot includes separate panels
-#' for each block and supports customization of titles, axis labels, line size, and color palette.
-#'
-#' @param x A baseline_model object.
-#' @param term_name Optional term name (a character string) specifying which term to plot.
-#'   If omitted, the first non-constant term is plotted. Valid names are those
-#'   returned by \code{names(terms(x))}; in particular pass \code{"nuisance"} to
-#'   plot nuisance regressors supplied via \code{nuisance_list}, which are never
-#'   shown by the default (first-term) selection.
-#' @param title Optional title for the plot. If not provided, a default title is generated.
-#' @param xlab Label for the x-axis (default: "Time").
-#' @param ylab Label for the y-axis (default: "Design Matrix Value").
-#' @param line_size Numeric value for line thickness (default: 1).
-#' @param color_palette A palette name for the line colors (default: "Set1").
-#' @param ... Additional arguments passed to ggplot2::geom_line.
-#' @return A ggplot2 plot object.
-#' @examples
-#' sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
-#' bmod <- baseline_model(sframe = sframe)
-#' if (requireNamespace("ggplot2", quietly = TRUE)) plot(bmod)
-#'
-#' # Nuisance regressors are stored as the "nuisance" term; plot with term_name
-#' nuis <- list(matrix(rnorm(10), nrow = 5, ncol = 2))
-#' bmod2 <- baseline_model(basis = "poly", degree = 2, sframe = sframe,
-#'                         nuisance_list = nuis, nuisance_check = "none")
-#' if (requireNamespace("ggplot2", quietly = TRUE))
-#'   plot(bmod2, term_name = "nuisance")
-#'
-#' @importFrom ggplot2 ggplot aes_string geom_line facet_wrap labs theme_minimal scale_color_brewer
-#' @importFrom tidyr pivot_longer
-#' @keywords internal
-#' @export
-plot.baseline_model <- function(x, term_name = NULL, title = NULL, 
-                                xlab = "Time", ylab = "Design Matrix Value",
-                                line_size = 1, color_palette = "Set1", ...) {
-  # Extract terms and term names from the baseline model using the terms() S3 method
-  all_terms <- terms(x)
-  if (length(all_terms) == 0) {
-      stop("Baseline model contains no terms.")
-  }
-  term_names <- names(all_terms)
-  
-  # Derive time and block IDs from the sampling frame without mutating it
-  # Use run-relative sample times so each facet starts at 0 per block
-  time_vec    <- tryCatch(fmrihrf::samples(x$sampling_frame, global = FALSE), silent = TRUE)
-  blockids_vec <- tryCatch(fmrihrf::blockids(x$sampling_frame), silent = TRUE)
-  if (inherits(time_vec, "try-error") || inherits(blockids_vec, "try-error") ||
-      is.null(time_vec) || is.null(blockids_vec)) {
-    stop("Could not derive sample times or block IDs from the sampling_frame.", call. = FALSE)
-  }
-
-  # Identify constant (intercept-like) terms by inspecting their design matrices
-  # rather than their list names: the constant drift basis and block-wise
-  # intercepts are flat within every run and carry no time course worth plotting.
-  # They are skipped when picking a default term, but can still be requested
-  # explicitly via `term_name`.
-  is_constant <- vapply(all_terms, function(term)
-    .baseline_term_is_constant(design_matrix(term), blockids_vec), logical(1))
-  if (all(is_constant)) {
-    # Pure intercept/constant model: nothing varies, but still produce a (flat)
-    # plot rather than erroring so the simplest models remain plottable.
-    plotting_term_names <- term_names
-  } else {
-    plotting_term_names <- term_names[!is_constant]
-  }
-
-  # Convert each term's design matrix into a long-format tibble. Build every term
-  # (not just the plottable ones) so an explicitly requested constant term can
-  # still be plotted.
-  dflist <- lapply(all_terms, function(term) {
-    dm <- design_matrix(term) # Get matrix for this specific term
-    dm_tib <- suppressMessages(tibble::as_tibble(dm, .name_repair = "check_unique"))
-    # Add block and time info - ensure dimensions match!
-    if (nrow(dm_tib) != length(blockids_vec)) {
-        stop(paste("Row mismatch between design matrix for term", term$varname, "and sampling frame."))
-    }
-    dm_tib$.block <- blockids_vec
-    dm_tib$.time  <- time_vec
-    tidyr::pivot_longer(dm_tib, cols = -c(.time, .block),
-                        names_to = "condition", values_to = "value")
-  })
-  names(dflist) <- term_names
-
-  # Select the term to plot. With no term_name, default to the first non-constant
-  # term; an explicit term_name may match any term (constant or not), exactly or
-  # by partial match.
-  if (is.null(term_name)) {
-    plot_term <- plotting_term_names[1]
-    if (all(is_constant)) {
-      message("No term_name specified and all baseline terms are constant; plotting: ", plot_term)
-    } else {
-      message("No term_name specified, plotting the first non-constant term: ", plot_term)
-    }
-  } else {
-    exact_match <- which(term_names == term_name)
-    if (length(exact_match) == 1) {
-      plot_term <- term_names[exact_match]
-    } else {
-      # Try partial matching if no exact match
-      partial_matches <- grep(term_name, term_names, ignore.case = TRUE)
-      if (length(partial_matches) == 1) {
-        plot_term <- term_names[partial_matches]
-        message("Found unique partial match for '", term_name, "': using term '", plot_term, "'")
-      } else if (length(partial_matches) == 0) {
-        stop("Specified term_name '", term_name, "' not found. Available terms: ",
-             paste(term_names, collapse = ", "))
-      } else {
-        # Multiple partial matches
-        stop("Specified term_name '", term_name, "' matches multiple terms: ",
-             paste(term_names[partial_matches], collapse = ", "), ". Please be more specific.")
-      }
-    }
-  }
-  
-  # Get the data for the selected term and ensure stable ordering
-  dfx <- dflist[[plot_term]]
-  dfx <- dfx[order(dfx$.block, dfx$condition, dfx$.time), ]
-
-  # Hide regressors that are structurally absent from a block. Block-diagonal
-  # terms (nuisance regressors, run-wise drift/intercept bases) carry all-zero
-  # columns for every block but their own; without this each facet would draw
-  # flat zero lines for the other blocks' columns.
-  zero_tol <- sqrt(.Machine$double.eps)
-  grp <- interaction(dfx$.block, dfx$condition, drop = TRUE)
-  grp_has_signal <- stats::ave(abs(dfx$value), grp,
-                               FUN = function(v) any(v > zero_tol, na.rm = TRUE)) > 0
-  if (any(grp_has_signal)) {
-    dfx <- dfx[grp_has_signal, , drop = FALSE]
-  }
-
-  # Coerce types explicitly to avoid downstream surprises
-  dfx$.block    <- factor(dfx$.block)
-  dfx$condition <- droplevels(as.factor(dfx$condition))
-  dfx$value     <- as.numeric(dfx$value)
-  dfx$.time     <- as.numeric(dfx$.time)
-  n_cond <- length(levels(dfx$condition))
-  # Ensure block is a factor for facetting stability
-  dfx$.block <- as.factor(dfx$.block)
-  
-  # Define scale function outside the pipe
-  # Use a robust default color scale that supports many categories
-  scale_fn <- function(...) ggplot2::scale_color_hue(...)
-  
-  # Create the ggplot (handle single vs multi condition for robust legends/scales).
-  if (n_cond <= 1) {
-    p <- ggplot2::ggplot(dfx, ggplot2::aes(x = .time, y = value, group = 1)) +
-      ggplot2::geom_line(linewidth = line_size, na.rm = TRUE, colour = "#2c7fb8", ...) +
-      ggplot2::facet_wrap(ggplot2::vars(.block), ncol = 1, scales = "free_x") +
-      ggplot2::labs(title = if (!is.null(title)) title else paste("Baseline Model:", plot_term),
-                    x = xlab, y = ylab) +
-      ggplot2::theme_minimal(base_size = 14) +
-      ggplot2::theme(legend.position = "none",
-                     plot.title = ggplot2::element_text(face = "bold", hjust = 0.5),
-                     axis.title = ggplot2::element_text(face = "bold"))
-  } else {
-    p <- ggplot2::ggplot(dfx, ggplot2::aes(x = .time, y = value, colour = condition, group = condition)) +
-      ggplot2::geom_line(linewidth = line_size, na.rm = TRUE, ...) +
-      ggplot2::facet_wrap(ggplot2::vars(.block), ncol = 1, scales = "free_x") +
-      ggplot2::labs(title = if (!is.null(title)) title else paste("Baseline Model:", plot_term),
-                    x = xlab, y = ylab, colour = "Condition") +
-      scale_fn() +
-      ggplot2::theme_minimal(base_size = 14) +
-      ggplot2::theme(legend.position = "bottom",
-                     plot.title = ggplot2::element_text(face = "bold", hjust = 0.5),
-                     axis.title = ggplot2::element_text(face = "bold"))
-  }
-  
-  p
-}
-
-#' correlation_map.baseline_model
-#'
-#' @description
-#' Generates a correlation heatmap of the columns in a \code{baseline_model}'s design matrix.
-#'
-#' @param x A \code{baseline_model}.
-#' @param method Correlation method (e.g., "pearson", "spearman").
-#' @param half_matrix Logical; if TRUE, display only the lower triangle of the matrix.
-#' @param absolute_limits Logical; if TRUE, set color scale limits from -1 to 1.
-#' @param ... Additional arguments passed to internal plotting functions.
-#' @return A ggplot2 plot object.
-#' @examples
-#' sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
-#' bmod <- baseline_model(sframe = sframe)
-#' if (requireNamespace("ggplot2", quietly = TRUE)) correlation_map(bmod)
-#' @export
-correlation_map.baseline_model <- function(x,
-                                           method          = c("pearson", "spearman"),
-                                           half_matrix     = FALSE,
-                                           absolute_limits = TRUE,
-                                           ...) {
-  DM <- as.matrix(design_matrix(x))
-  .correlation_map_common(DM, method=method, half_matrix=half_matrix,
-                          absolute_limits=absolute_limits, ...)
-}
 
 
-#' Heatmap visualization of the baseline_model design matrix
-#'
-#' @description
-#' Produces a heatmap of all columns in the design matrix for a `baseline_model` object,
-#' with rows corresponding to scans and columns corresponding to regressors. By default,
-#' it draws horizontal lines separating runs (blocks), and rotates the column labels diagonally.
-#'
-#' @param x A `baseline_model` object.
-#' @param block_separators Logical; if `TRUE`, draw white horizontal lines between blocks.
-#' @param rotate_x_text Logical; if `TRUE`, rotate x-axis labels by 45 degrees.
-#' @param fill_midpoint Numeric or `NULL`; if not `NULL`, used as the `midpoint` in
-#'   [ggplot2::scale_fill_gradient2()] to center the color scale (for example at 0).
-#' @param fill_limits Numeric vector of length 2 or `NULL`; passed to the fill scale
-#'   `limits` argument. Can clip or expand the color range.
-#' @param ... Additional arguments forwarded to [ggplot2::geom_tile()].
-#'
-#' @import ggplot2
-#' @importFrom tibble as_tibble
-#' @importFrom tidyr pivot_longer
-#' @return A ggplot2 plot object.
-#' @examples
-#' sframe <- fmrihrf::sampling_frame(blocklens = 5, TR = 1)
-#' bmod <- baseline_model(sframe = sframe)
-#' if (requireNamespace("ggplot2", quietly = TRUE)) design_map(bmod)
-#' @export
-design_map.baseline_model <- function(x,
-                                      block_separators = TRUE,
-                                      rotate_x_text    = TRUE,
-                                      fill_midpoint    = NULL,
-                                      fill_limits      = NULL,
-                                      ...) {
-  # 1) Extract the design matrix
-  DM <- design_matrix(x)
-  n_scans <- nrow(DM)
-  
-  # 2) Convert to long format
-  df_long <- tibble::as_tibble(DM, .name_repair = "unique")
-  df_long$scan_number <- seq_len(n_scans)
-  df_long <- tidyr::pivot_longer(
-    df_long,
-    cols      = -scan_number,
-    names_to  = "Regressor",
-    values_to = "Value"
-  )
-  
-  # 3) Build the base ggplot
-  plt <- ggplot(df_long, aes(x = Regressor, y = scan_number, fill = Value)) +
-    geom_tile(...)
-  
-  # 4) Reverse the y-axis so that scan #1 is at top
-  plt <- plt + scale_y_reverse()
-  
-  # 5) Decide on color scale
-  #    - If fill_midpoint is set, use scale_fill_gradient2 to center the scale
-  #    - Otherwise, use a default 3-color gradient
-  if (is.null(fill_midpoint)) {
-    plt <- plt + scale_fill_gradientn(
-      colours = c("navy", "white", "firebrick"),
-      limits  = fill_limits
-    )
-  } else {
-    plt <- plt + scale_fill_gradient2(
-      midpoint = fill_midpoint,
-      low      = "navy",
-      mid      = "white",
-      high     = "firebrick",
-      limits   = fill_limits
-    )
-  }
-  
-  # 6) Optionally draw white horizontal lines to separate blocks
-  if (block_separators) {
-    block_ids  <- tryCatch(fmrihrf::blockids(x$sampling_frame), silent = TRUE)
-    if (inherits(block_ids, "try-error") || is.null(block_ids)) {
-      return(plt)
-    }
-    run_info   <- rle(block_ids)             # lengths of each block
-    row_breaks <- cumsum(run_info$lengths)   # boundary after each block
-    ncols      <- ncol(DM)
-    
-    # Add horizontal lines
-    for (rb in row_breaks[-length(row_breaks)]) {
-      plt <- plt + 
-        annotate("segment",
-                 x    = 0.5,
-                 xend = ncols + 0.5,
-                 y    = rb + 0.5,
-                 yend = rb + 0.5,
-                 color = "white", linewidth = 1)
-    }
-  }
-  
-  # 7) Clean up theme
-  plt <- plt + 
-    theme_minimal(base_size = 14) +
-    labs(x = "Regressors", y = "Scan Number", fill = "Value") +
-    theme(
-      panel.grid  = element_blank(),
-      axis.text.x = if (rotate_x_text) element_text(angle = 45, hjust = 1) else element_text()
-    )
-  
-  plt
-}
+
+
+
+
 
 
 ## ============================================================================
