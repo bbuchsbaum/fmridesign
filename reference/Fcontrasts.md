@@ -12,6 +12,9 @@ Fcontrasts(x, ...)
 
 # S3 method for class 'event_model'
 Fcontrasts(x, ...)
+
+# S3 method for class 'feature_term'
+Fcontrasts(x, ...)
 ```
 
 ## Arguments

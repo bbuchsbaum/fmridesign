@@ -180,6 +180,9 @@
 - [`events()`](https://bbuchsbaum.github.io/fmridesign/reference/events.md)
   : Retrieve canonical event information
 
+- [`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.md)
+  : Continuous Feature Term
+
 - [`feature_suffix()`](https://bbuchsbaum.github.io/fmridesign/reference/feature_suffix.md)
   : Create Feature Suffix
 
@@ -280,6 +283,7 @@
   [`print(`*`<fmri_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
   [`print(`*`<convolved_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
   [`print(`*`<event_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
+  [`print(`*`<feature_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
   : Print a Baseline Model
 
 - [`print(`*`<sampling_frame>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.sampling_frame.md)

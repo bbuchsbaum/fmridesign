@@ -64,8 +64,8 @@ print(emod)
 #> ── Design Matrix Preview ──
 #> 
 #>           condition_condition.A condition_condition.B
-#>    Scan 1   2.333                 0.000              
-#>    Scan 2   1.833                 0.000              
+#>    Scan 1   0.575                 0.000              
+#>    Scan 2   0.475                 0.000              
 #>    Scan 3   0.000                 0.000              
 #> ...
 # }

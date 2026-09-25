@@ -14,8 +14,8 @@ internal pipeline.
 ``` r
 event_model(
   formula_or_list,
-  data,
-  block,
+  data = NULL,
+  block = NULL,
   sampling_frame,
   durations = 0,
   drop_empty = TRUE,
@@ -28,8 +28,8 @@ event_model(
 
 event_model(
   formula_or_list,
-  data,
-  block,
+  data = NULL,
+  block = NULL,
   sampling_frame,
   durations = 0,
   drop_empty = TRUE,
@@ -46,17 +46,18 @@ event_model(
 - formula_or_list:
 
   Either a formula (e.g., `onset ~ hrf(cond) + hrf(mod)`) or a list of
-  pre-defined `hrfspec` objects.
+  pre-defined `hrfspec` / `featurespec` objects. A one-sided formula
+  (`~ feature(...)`) is allowed for feature-only models.
 
 - data:
 
   A `data.frame` containing event variables referenced in the formula or
-  needed by the `hrfspec` objects.
+  needed by the `hrfspec` objects. Optional for feature-only models.
 
 - block:
 
   A formula (e.g., `~ run`) or vector specifying the block/run for each
-  event.
+  event. Optional for feature-only models.
 
 - sampling_frame:
 
@@ -187,20 +188,20 @@ print(ev_model_form)
 #> ── Design Matrix Preview ──
 #> 
 #>           cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02
-#>    Scan 1   0.062       0.000      -0.021      -0.067    
-#>    Scan 2   1.138       0.000      -0.386      -0.216    
-#>    Scan 3   1.744       0.000      -0.591       0.022    
+#>    Scan 1   0.034       0.000      -0.012      -0.043    
+#>    Scan 2   1.006       0.000      -0.341      -0.225    
+#>    Scan 3   1.747       0.000      -0.592      -0.001    
 #> ...
 head(design_matrix(ev_model_form))
 #> # A tibble: 6 × 5
 #>   cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02 mod_mod_b03
 #>         <dbl>       <dbl>       <dbl>       <dbl>       <dbl>
-#> 1      0.0624      0          -0.0212     -0.0670    -0.139  
-#> 2      1.14        0          -0.386      -0.216      0.0653 
-#> 3      1.74        0          -0.591       0.0222     0.108  
-#> 4      1.20        0          -0.408       0.125      0.00147
-#> 5      0.552       0          -0.187       0.0866    -0.0277 
-#> 6      0.192       0.0341     -0.0676      0.0293    -0.0432 
+#> 1      0.0341      0          -0.0116   -0.0429      -0.112  
+#> 2      1.01        0          -0.341    -0.225        0.0362 
+#> 3      1.75        0          -0.592    -0.000951     0.118  
+#> 4      1.28        0          -0.432     0.123        0.00927
+#> 5      0.605       0          -0.205     0.0921      -0.0274 
+#> 6      0.216       0.0341     -0.0759    0.0331      -0.0444 
 
 spec1 <- hrf(cond)
 spec2 <- hrf(mod, basis = "spmg3")
@@ -223,8 +224,8 @@ print(ev_model_list)
 #> ── Design Matrix Preview ──
 #> 
 #>           cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02
-#>    Scan 1   0.062       0.000      -0.021      -0.067    
-#>    Scan 2   1.138       0.000      -0.386      -0.216    
-#>    Scan 3   1.744       0.000      -0.591       0.022    
+#>    Scan 1   0.034       0.000      -0.012      -0.043    
+#>    Scan 2   1.006       0.000      -0.341      -0.225    
+#>    Scan 3   1.747       0.000      -0.592      -0.001    
 #> ...
 ```

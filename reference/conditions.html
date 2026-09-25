@@ -39,7 +39,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Extract conditions from a design object</h1>
-      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/design_generics.R" class="external-link"><code>R/design_generics.R</code></a>, <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/event_vector.R" class="external-link"><code>R/event_vector.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/design_generics.R" class="external-link"><code>R/design_generics.R</code></a>, <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/event_vector.R" class="external-link"><code>R/event_vector.R</code></a>, <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/feature.R" class="external-link"><code>R/feature.R</code></a></small>
       <div class="d-none name"><code>conditions.Rd</code></div>
     </div>
 
@@ -58,6 +58,15 @@
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'event_term'</span></span>
+<span><span class="fu">conditions</span><span class="op">(</span></span>
+<span>  <span class="va">x</span>,</span>
+<span>  drop.empty <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  expand_basis <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  style <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"canonical"</span>, <span class="st">"display"</span><span class="op">)</span>,</span>
+<span>  <span class="va">...</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'feature_term'</span></span>
 <span><span class="fu">conditions</span><span class="op">(</span></span>
 <span>  <span class="va">x</span>,</span>
 <span>  drop.empty <span class="op">=</span> <span class="cn">TRUE</span>,</span>

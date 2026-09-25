@@ -6,6 +6,9 @@ Retrieve canonical event information
 
 ``` r
 events(x, drop.empty = FALSE, ...)
+
+# S3 method for class 'feature_term'
+events(x, ...)
 ```
 
 ## Arguments

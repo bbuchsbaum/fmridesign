@@ -21,6 +21,15 @@ conditions(
   style = c("canonical", "display"),
   ...
 )
+
+# S3 method for class 'feature_term'
+conditions(
+  x,
+  drop.empty = TRUE,
+  expand_basis = FALSE,
+  style = c("canonical", "display"),
+  ...
+)
 ```
 
 ## Arguments

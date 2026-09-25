@@ -62,6 +62,8 @@
 <div class="section level3">
 <h3 id="bug-fixes-0-6-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-6-0"></a></h3>
 <ul><li>
+<code><a href="../reference/contrast_weights.html">contrast_weights()</a></code> now removes rows for factor levels excluded by an <code>hrf(..., subset = )</code> term from the returned term-local <code>weights</code>, keeping them consistent with the reconciled full-design <code>offset_weights</code> (<a href="https://github.com/bbuchsbaum/fmridesign/issues/17" class="external-link">#17</a>).</li>
+<li>
 <code><a href="../reference/convolve_design.html">convolve_design()</a></code> now extracts each condition column with <code>dmat[[i]]</code>, so it produces correct regressors for base <code>data.frame</code> inputs (its documented example). The previous <code>dmat[, i][[1]]</code> collapsed a data frame column to its first element; the tibble-based internal call path was unaffected.</li>
 <li>
 <code><a href="../reference/contrast_weights.html">contrast_weights()</a></code> and <code><a href="../reference/Fcontrasts.html">Fcontrasts()</a></code> for <code>event_model</code> objects now name interaction-term contrasts with the same term tags used by design-matrix <code>col_indices</code>, preventing downstream consumers from dropping crossed-term contrasts because of <code>:</code>/<code>_</code> key mismatches (<a href="https://github.com/bbuchsbaum/fmridesign/issues/9" class="external-link">#9</a>).</li>

@@ -144,7 +144,7 @@ baseline(degree = 3, basis = "bs")
 #>     class(basis) <- c("bs", "basis", "matrix")
 #>     basis
 #> }
-#> <bytecode: 0x557348428c60>
+#> <bytecode: 0x5600f0f5b1e0>
 #> <environment: namespace:splines>
 #> 
 #> $intercept

@@ -6,6 +6,9 @@ Map Display and Canonical Condition Names
 
 ``` r
 condition_map(x, drop.empty = TRUE, expand_basis = FALSE, ...)
+
+# S3 method for class 'feature_term'
+condition_map(x, drop.empty = TRUE, expand_basis = FALSE, ...)
 ```
 
 ## Arguments

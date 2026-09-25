@@ -64,8 +64,8 @@ A tibble with columns:
 - `is_block_diagonal` (logical): TRUE when the regressor is
   per-run/block
 
-- `modulation_type` (character): "amplitude", "parametric", or
-  "covariate"
+- `modulation_type` (character): "amplitude", "parametric", "covariate",
+  or "feature"
 
 - `modulation_id` (character): modulator identifier when applicable
   (e.g., "RT", "RT_by_group")

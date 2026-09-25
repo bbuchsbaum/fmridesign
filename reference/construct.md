@@ -12,6 +12,9 @@ construct(x, model_spec, ...)
 construct(x, model_spec, sampling_frame = NULL, ...)
 
 construct(x, ...)
+
+# S3 method for class 'featurespec'
+construct(x, model_spec, ...)
 ```
 
 ## Arguments

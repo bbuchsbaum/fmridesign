@@ -66,8 +66,8 @@ formula and list-based interfaces and uses a more efficient internal pipeline.</
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">event_model</span><span class="op">(</span></span>
 <span>  <span class="va">formula_or_list</span>,</span>
-<span>  <span class="va">data</span>,</span>
-<span>  <span class="va">block</span>,</span>
+<span>  data <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  block <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">sampling_frame</span>,</span>
 <span>  durations <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  drop_empty <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -80,8 +80,8 @@ formula and list-based interfaces and uses a more efficient internal pipeline.</
 <span></span>
 <span><span class="fu">event_model</span><span class="op">(</span></span>
 <span>  <span class="va">formula_or_list</span>,</span>
-<span>  <span class="va">data</span>,</span>
-<span>  <span class="va">block</span>,</span>
+<span>  data <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  block <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">sampling_frame</span>,</span>
 <span>  durations <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  drop_empty <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -99,16 +99,18 @@ formula and list-based interfaces and uses a more efficient internal pipeline.</
 
 <dl><dt id="arg-formula-or-list">formula_or_list<a class="anchor" aria-label="anchor" href="#arg-formula-or-list"></a></dt>
 <dd><p>Either a formula (e.g., <code>onset ~ hrf(cond) + hrf(mod)</code>)
-or a list of pre-defined <code>hrfspec</code> objects.</p></dd>
+or a list of pre-defined <code>hrfspec</code> / <code>featurespec</code> objects. A one-sided
+formula (<code>~ feature(...)</code>) is allowed for feature-only models.</p></dd>
 
 
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
 <dd><p>A <code>data.frame</code> containing event variables referenced in the formula
-or needed by the <code>hrfspec</code> objects.</p></dd>
+or needed by the <code>hrfspec</code> objects. Optional for feature-only models.</p></dd>
 
 
 <dt id="arg-block">block<a class="anchor" aria-label="anchor" href="#arg-block"></a></dt>
-<dd><p>A formula (e.g., <code>~ run</code>) or vector specifying the block/run for each event.</p></dd>
+<dd><p>A formula (e.g., <code>~ run</code>) or vector specifying the block/run for each event.
+Optional for feature-only models.</p></dd>
 
 
 <dt id="arg-sampling-frame">sampling_frame<a class="anchor" aria-label="anchor" href="#arg-sampling-frame"></a></dt>
@@ -214,20 +216,20 @@ to ensure uniqueness (e.g., <code>condition</code>, <code>condition#1</code>).</
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ── <span style="font-weight: bold;">Design Matrix Preview</span> ──</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>           cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.062       0.000      -0.021      -0.067    </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   1.138       0.000      -0.386      -0.216    </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   1.744       0.000      -0.591       0.022    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.034       0.000      -0.012      -0.043    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   1.006       0.000      -0.341      -0.225    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   1.747       0.000      -0.592      -0.001    </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #B2B2B2;">...</span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">ev_model_form</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 6 × 5</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02 mod_mod_b03</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>      0.062<span style="text-decoration: underline;">4</span>      0          -<span style="color: #BB0000;">0.021</span><span style="color: #BB0000; text-decoration: underline;">2</span>     -<span style="color: #BB0000;">0.067</span><span style="color: #BB0000; text-decoration: underline;">0</span>    -<span style="color: #BB0000;">0.139</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>      1.14        0          -<span style="color: #BB0000;">0.386</span>      -<span style="color: #BB0000;">0.216</span>      0.065<span style="text-decoration: underline;">3</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>      1.74        0          -<span style="color: #BB0000;">0.591</span>       0.022<span style="text-decoration: underline;">2</span>     0.108  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>      1.20        0          -<span style="color: #BB0000;">0.408</span>       0.125      0.001<span style="text-decoration: underline;">47</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>      0.552       0          -<span style="color: #BB0000;">0.187</span>       0.086<span style="text-decoration: underline;">6</span>    -<span style="color: #BB0000;">0.027</span><span style="color: #BB0000; text-decoration: underline;">7</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>      0.192       0.034<span style="text-decoration: underline;">1</span>     -<span style="color: #BB0000;">0.067</span><span style="color: #BB0000; text-decoration: underline;">6</span>      0.029<span style="text-decoration: underline;">3</span>    -<span style="color: #BB0000;">0.043</span><span style="color: #BB0000; text-decoration: underline;">2</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>      0.034<span style="text-decoration: underline;">1</span>      0          -<span style="color: #BB0000;">0.011</span><span style="color: #BB0000; text-decoration: underline;">6</span>   -<span style="color: #BB0000;">0.042</span><span style="color: #BB0000; text-decoration: underline;">9</span>      -<span style="color: #BB0000;">0.112</span>  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>      1.01        0          -<span style="color: #BB0000;">0.341</span>    -<span style="color: #BB0000;">0.225</span>        0.036<span style="text-decoration: underline;">2</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>      1.75        0          -<span style="color: #BB0000;">0.592</span>    -<span style="color: #BB0000;">0.000</span><span style="color: #BB0000; text-decoration: underline;">951</span>     0.118  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>      1.28        0          -<span style="color: #BB0000;">0.432</span>     0.123        0.009<span style="text-decoration: underline;">27</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>      0.605       0          -<span style="color: #BB0000;">0.205</span>     0.092<span style="text-decoration: underline;">1</span>      -<span style="color: #BB0000;">0.027</span><span style="color: #BB0000; text-decoration: underline;">4</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">6</span>      0.216       0.034<span style="text-decoration: underline;">1</span>     -<span style="color: #BB0000;">0.075</span><span style="color: #BB0000; text-decoration: underline;">9</span>    0.033<span style="text-decoration: underline;">1</span>      -<span style="color: #BB0000;">0.044</span><span style="color: #BB0000; text-decoration: underline;">4</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">spec1</span> <span class="op">&lt;-</span> <span class="fu"><a href="hrf.html">hrf</a></span><span class="op">(</span><span class="va">cond</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">spec2</span> <span class="op">&lt;-</span> <span class="fu"><a href="hrf.html">hrf</a></span><span class="op">(</span><span class="va">mod</span>, basis <span class="op">=</span> <span class="st">"spmg3"</span><span class="op">)</span></span></span>
@@ -250,9 +252,9 @@ to ensure uniqueness (e.g., <code>condition</code>, <code>condition#1</code>).</
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ── <span style="font-weight: bold;">Design Matrix Preview</span> ──</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>           cond_cond.A cond_cond.B mod_mod_b01 mod_mod_b02</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.062       0.000      -0.021      -0.067    </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   1.138       0.000      -0.386      -0.216    </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   1.744       0.000      -0.591       0.022    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 1   0.034       0.000      -0.012      -0.043    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 2   1.006       0.000      -0.341      -0.225    </span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span>    Scan 3   1.747       0.000      -0.592      -0.001    </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #B2B2B2;">...</span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

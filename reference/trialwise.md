@@ -93,8 +93,8 @@ print(emod_trials)
 #> 
 #>           trial_.trial_factor.length.onsets...1
 #>    Scan 1   0.000                              
-#>    Scan 2   0.048                              
-#>    Scan 3   1.073                              
+#>    Scan 2   0.037                              
+#>    Scan 3   1.006                              
 #>           trial_.trial_factor.length.onsets...2
 #>    Scan 1   0.000                              
 #>    Scan 2   0.000                              
@@ -131,12 +131,12 @@ print(emod_trials_mean)
 #> 
 #>           trial_.trial_factor.length.onsets...1_b01
 #>    Scan 1   0.000                                  
-#>    Scan 2   0.048                                  
-#>    Scan 3   1.073                                  
+#>    Scan 2   0.037                                  
+#>    Scan 3   1.006                                  
 #>           trial_.trial_factor.length.onsets...2_b01
 #>    Scan 1   0.000                                  
-#>    Scan 2   0.162                                  
-#>    Scan 3   0.654                                  
+#>    Scan 2   0.131                                  
+#>    Scan 3   0.663                                  
 #>           trial_.trial_factor.length.onsets...3_b01
 #>    Scan 1   0.000                                  
 #>    Scan 2   0.000                                  

@@ -54,6 +54,9 @@ print(x, ...)
 
 # S3 method for class 'event_term'
 print(x, ...)
+
+# S3 method for class 'feature_term'
+print(x, ...)
 ```
 
 ## Arguments

@@ -6,6 +6,9 @@ Extract contrasts
 
 ``` r
 contrasts(x, ...)
+
+# S3 method for class 'feature_term'
+contrasts(x, ...)
 ```
 
 ## Arguments

@@ -309,6 +309,51 @@ if (interactive()) {
 }
 ```
 
+## Continuous Features
+
+A sampled series such as acoustic RMS is not a list of trials. Use
+[`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.md)
+so each sample is a zero-order-hold bin of width `dt`, then convolve
+with
+[`fmrihrf::feature_regressor()`](https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html).
+That is a different model from `hrf(RT)`, which is one amplitude per
+event.
+
+Feature-only models do not need an event table:
+
+``` r
+
+dt <- 0.2
+feat_times <- seq(0, 40, by = dt)
+rms <- abs(sin(2 * pi * feat_times / 8))
+sframe_feat <- sampling_frame(blocklens = 30, TR = 2)
+
+emodel_feat <- event_model(
+  ~ feature(rms, dt = dt, id = "rms"),
+  sampling_frame = sframe_feat,
+  precision = dt
+)
+colnames(design_matrix(emodel_feat))
+#> [1] "rms_rms"
+plot(emodel_feat)
+```
+
+![Convolved RMS feature regressor over a single
+run.](a_04_event_models_files/figure-html/feature_only-1.png)
+
+A single matrix is one run with several series (`env_f01`, `env_f02`, …
+unless the matrix has column names). Multiple runs take a list, one
+series per block: `feature(list(rms1, rms2), dt = 0.1, id = "rms")`. Do
+not pass a dense series through
+[`hrf()`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.md) with
+`duration = 0`; that treats each sample as a unit-mass impulse and
+scales the predicted BOLD by about `1/dt`.
+
+When `mask` marks the on-period, pair the feature with a separate
+boxcar/[`hrf()`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.md)
+term if you also want sound-versus-silence. Centering is applied per
+run, before convolution.
+
 ## Interaction Between Factors and Amplitude Modulation
 
 We can also model how a parametric modulator interacts with a factor.
@@ -718,12 +763,12 @@ head(dmat_events[, 1:6])
 #> # A tibble: 6 × 6
 #>   stim_stim.face stim_stim.object stim_stim.scene stim_stim.tool
 #>            <dbl>            <dbl>           <dbl>          <dbl>
-#> 1              0                0               0     0.06243065
-#> 2              0                0               0     1.137517  
-#> 3              0                0               0     1.743962  
-#> 4              0                0               0     1.202648  
-#> 5              0                0               0     0.5518543 
-#> 6              0                0               0     0.1917313 
+#> 1              0                0               0     0.03414240
+#> 2              0                0               0     1.005584  
+#> 3              0                0               0     1.747039  
+#> 4              0                0               0     1.275876  
+#> 5              0                0               0     0.6054147 
+#> 6              0                0               0     0.2163046 
 #> # ℹ 2 more variables: stim_RT_centered_stim.face_RT_centered <dbl>,
 #> #   stim_RT_centered_stim.object_RT_centered <dbl>
 

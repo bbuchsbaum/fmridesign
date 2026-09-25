@@ -18,6 +18,9 @@ cells(x, drop.empty = TRUE, ...)
 
 # S3 method for class 'covariate_convolved_term'
 cells(x, ...)
+
+# S3 method for class 'feature_term'
+cells(x, ...)
 ```
 
 ## Arguments
