@@ -134,6 +134,11 @@ Where:
 - `_b##`: Optional suffix added for HRFs with multiple basis functions
   (e.g., `_b01`, `_b02`).
 
+Within a multi-basis term, columns are ordered condition-major: all
+basis functions of the first condition, then all of the second, and so
+on (`cond.A_b01, cond.A_b02, cond.B_b01, cond.B_b02, ...`). The order
+returned by `conditions(term, expand_basis = TRUE)` is the same.
+
 ### Term Naming and Clash Resolution
 
 Each term in the model (typically defined by an

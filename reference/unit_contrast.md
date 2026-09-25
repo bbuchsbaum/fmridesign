@@ -13,7 +13,10 @@ unit_contrast(A, name, where = NULL)
 
 - A:
 
-  A formula representing the contrast expression.
+  A formula selecting the cells to average. A logical expression (e.g.
+  `~ cond == "A"`) selects the matching cells; a bare factor name (e.g.
+  `~ cond`) selects every cell. For a multi-basis HRF the weights are
+  repeated on every basis function of the selected cells.
 
 - name:
 

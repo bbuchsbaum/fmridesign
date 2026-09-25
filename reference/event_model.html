@@ -171,7 +171,11 @@ sampling frame, and other metadata.</p>
 <p>Where:</p><ul><li><p><code>term_tag</code>: The unique tag assigned to the <code><a href="hrf.html">hrf()</a></code> term (see below).</p></li>
 <li><p><code>condition_tag</code>: Represents the specific factor level or continuous regressor within the term (e.g., <code>condition.A</code>, <code>poly_RT_01</code>, <code>condition.A_task.go</code>).</p></li>
 <li><p><code>_b##</code>: Optional suffix added for HRFs with multiple basis functions (e.g., <code>_b01</code>, <code>_b02</code>).</p></li>
-</ul></div>
+</ul><p>Within a multi-basis term, columns are ordered condition-major: all basis
+functions of the first condition, then all of the second, and so on
+(<code>cond.A_b01, cond.A_b02, cond.B_b01, cond.B_b02, ...</code>). The order returned by
+<code>conditions(term, expand_basis = TRUE)</code> is the same.</p>
+</div>
 
 <div class="section">
 <h3 id="term-naming-and-clash-resolution">Term Naming and Clash Resolution<a class="anchor" aria-label="anchor" href="#term-naming-and-clash-resolution"></a></h3>

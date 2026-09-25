@@ -65,5 +65,36 @@ term <- event_term(
 )
 sf <- fmrihrf::sampling_frame(blocklens = 30, TR = 1)
 condition_basis_list(term, fmrihrf::HRF_SPMG1, sf)
-#> list()
+#> $condition.A
+#> # A tibble: 30 × 1
+#>    condition.A
+#>          <dbl>
+#>  1    0.000242
+#>  2    0.0150  
+#>  3    0.0671  
+#>  4    0.132   
+#>  5    0.170   
+#>  6    0.171   
+#>  7    0.145   
+#>  8    0.108   
+#>  9    0.0731  
+#> 10    0.0439  
+#> # ℹ 20 more rows
+#> 
+#> $condition.B
+#> # A tibble: 30 × 1
+#>    condition.B
+#>          <dbl>
+#>  1           0
+#>  2           0
+#>  3           0
+#>  4           0
+#>  5           0
+#>  6           0
+#>  7           0
+#>  8           0
+#>  9           0
+#> 10           0
+#> # ℹ 20 more rows
+#> 
 ```

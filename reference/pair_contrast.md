@@ -91,6 +91,15 @@ response. For example:
 - `basis = NULL` or `basis = "all"`: Test all basis functions (default
   behavior)
 
+With the default (`basis = NULL`), the single-column t-contrast places
+the same weight on every basis column of a condition, i.e. it tests the
+*sum* of the basis coefficients. For informed bases such as
+`"spmg2"`/`"spmg3"` (canonical plus temporal/dispersion derivatives)
+that sum is rarely a meaningful quantity; the SPM convention is to
+contrast the canonical regressor only, so use `basis = 1` there, or test
+all components jointly with an F-contrast (e.g.
+[`oneway_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/oneway_contrast.md)).
+
 The `basis_weights` argument allows non-uniform weighting across
 selected basis functions:
 

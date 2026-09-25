@@ -214,7 +214,11 @@ lapply(interaction_contrasts, function(x) round(x$weights, 3))
 #> A.A2_B.B2        1
 #> 
 #> $`A_B#A_by_B`
-#>      A_by_B_1
+#>           A_by_B_1
+#> A.A1_B.B1        1
+#> A.A2_B.B1       -1
+#> A.A1_B.B2       -1
+#> A.A2_B.B2        1
 ```
 
 ## Parametric Modulators: Do You Need a Contrast?

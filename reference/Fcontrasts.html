@@ -81,6 +81,16 @@
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Row names of the contrast matrices can specify which levels of the term are
 tested.  Any matching is done against the design matrix column names.</p>
+<p>For terms with a multi-basis HRF (e.g. <code>"spmg2"</code>, <code>"spmg3"</code>, FIR), the
+term-level contrast \(C\) (one row per condition) is expanded to
+\(C \otimes I_{nb}\): the condition effect is
+tested jointly in every basis function, so a term with \(k\) conditions
+and \(nb\) basis functions yields a \((k \cdot nb) \times ((k-1) \cdot nb)\)
+matrix for its main effect. Columns are named <code>&lt;contrast column&gt;_b##</code>.</p>
+<p>Terms with no categorical variable (e.g. <code>hrf(rt)</code>, covariates, feature
+terms) contribute no F-contrasts; a model made only of such terms returns
+an empty list. Calling <code>Fcontrasts()</code> directly on such an <code>event_term</code>
+still signals an error.</p>
     </div>
 
     <div class="section level2">

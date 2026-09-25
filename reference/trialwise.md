@@ -133,15 +133,15 @@ print(emod_trials_mean)
 #>    Scan 1   0.000                                  
 #>    Scan 2   0.004                                  
 #>    Scan 3   0.101                                  
-#>           trial_.trial_factor.length.onsets...2_b01
+#>           trial_.trial_factor.length.onsets...1_b02
 #>    Scan 1   0.000                                  
 #>    Scan 2   0.013                                  
 #>    Scan 3   0.066                                  
-#>           trial_.trial_factor.length.onsets...3_b01
+#>           trial_.trial_factor.length.onsets...2_b01
 #>    Scan 1   0.000                                  
 #>    Scan 2   0.000                                  
 #>    Scan 3   0.000                                  
-#>           trial_.trial_factor.length.onsets...4_b01
+#>           trial_.trial_factor.length.onsets...2_b02
 #>    Scan 1   0.000                                  
 #>    Scan 2   0.000                                  
 #>    Scan 3   0.000                                  

@@ -119,7 +119,14 @@ evaluate to TRUE/FALSE for each observation. The resulting contrast weights sum 
 allows you to test specific temporal components of the response. For example:</p><ul><li><p><code>basis = 1</code>: Test only the first basis function (often the canonical/early response)</p></li>
 <li><p><code>basis = 2:3</code>: Test the second and third basis functions together</p></li>
 <li><p><code>basis = NULL</code> or <code>basis = "all"</code>: Test all basis functions (default behavior)</p></li>
-</ul><p>The <code>basis_weights</code> argument allows non-uniform weighting across selected basis functions:</p><ul><li><p><code>basis_weights = c(.1, .2, .4, .2, .1)</code>: Gaussian-like emphasis on peak</p></li>
+</ul><p>With the default (<code>basis = NULL</code>), the single-column t-contrast places the
+same weight on every basis column of a condition, i.e. it tests the <em>sum</em> of
+the basis coefficients. For informed bases such as <code>"spmg2"</code>/<code>"spmg3"</code>
+(canonical plus temporal/dispersion derivatives) that sum is rarely a
+meaningful quantity; the SPM convention is to contrast the canonical
+regressor only, so use <code>basis = 1</code> there, or test all components jointly
+with an F-contrast (e.g. <code><a href="oneway_contrast.html">oneway_contrast()</a></code>).</p>
+<p>The <code>basis_weights</code> argument allows non-uniform weighting across selected basis functions:</p><ul><li><p><code>basis_weights = c(.1, .2, .4, .2, .1)</code>: Gaussian-like emphasis on peak</p></li>
 <li><p><code>basis_weights = c(1, 0, 0, 0, 0)</code>: Isolate first basis (equivalent to <code>basis = 1</code>)</p></li>
 <li><p>Weights are applied within each condition, maintaining contrast sum-to-zero property</p></li>
 </ul></div>

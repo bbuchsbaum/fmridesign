@@ -57,7 +57,10 @@
 
 
 <dl><dt id="arg-a">A<a class="anchor" aria-label="anchor" href="#arg-a"></a></dt>
-<dd><p>A formula representing the contrast expression.</p></dd>
+<dd><p>A formula selecting the cells to average. A logical expression
+(e.g. <code>~ cond == "A"</code>) selects the matching cells; a bare factor name
+(e.g. <code>~ cond</code>) selects every cell. For a multi-basis HRF the weights are
+repeated on every basis function of the selected cells.</p></dd>
 
 
 <dt id="arg-name">name<a class="anchor" aria-label="anchor" href="#arg-name"></a></dt>

@@ -36,6 +36,18 @@ A named list of matrices with F-contrast weights.
 Row names of the contrast matrices can specify which levels of the term
 are tested. Any matching is done against the design matrix column names.
 
+For terms with a multi-basis HRF (e.g. `"spmg2"`, `"spmg3"`, FIR), the
+term-level contrast \\C\\ (one row per condition) is expanded to \\C
+\otimes I\_{nb}\\: the condition effect is tested jointly in every basis
+function, so a term with \\k\\ conditions and \\nb\\ basis functions
+yields a \\(k \cdot nb) \times ((k-1) \cdot nb)\\ matrix for its main
+effect. Columns are named `<contrast column>_b##`.
+
+Terms with no categorical variable (e.g. `hrf(rt)`, covariates, feature
+terms) contribute no F-contrasts; a model made only of such terms
+returns an empty list. Calling `Fcontrasts()` directly on such an
+`event_term` still signals an error.
+
 ## Examples
 
 ``` r
