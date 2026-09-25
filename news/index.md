@@ -1,6 +1,6 @@
 # Changelog
 
-## fmridesign 0.6.0
+## fmridesign 0.6.1
 
 ### Plotting overhaul
 
@@ -34,6 +34,112 @@
 - `plot(<sampling_frame>)` no longer draws an empty panel; it adds
   `"lane"` and `"grid"` styles and an `events =` overlay for checking
   coverage.
+
+### Bug fixes
+
+- **User-visible correction: multi-basis column names change.** For
+  [`hrf()`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.md)
+  terms with more than one basis function (`"spmg2"`, `"spmg3"`, FIR,
+  B-spline, tent, custom `nbasis > 1`) and two or more conditions,
+  design columns were filled condition-major
+  (`A_b01, A_b02, B_b01, ...`) but named basis-major
+  (`A_b01, B_b01, A_b02, ...`), so every column except the first and
+  last was mislabelled. For example, `task_task.scene_b01` held face’s
+  temporal derivative. The data layout is unchanged; column names,
+  `conditions(term, expand_basis = TRUE)`, and every name-based contrast
+  ([`pair_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.md),
+  [`oneway_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/oneway_contrast.md),
+  [`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md),
+  [`unit_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.md),
+  [`contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast.md),
+  [`interaction_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/interaction_contrast.md))
+  now follow the documented condition-major `term_condition_b##` layout,
+  matching
+  [`design_colmap()`](https://bbuchsbaum.github.io/fmridesign/reference/design_colmap.md).
+  Contrast weights and coefficient labels from earlier versions for such
+  terms were attached to the wrong columns and should be recomputed.
+  Code that indexed multi-basis columns by position assuming basis-major
+  order must be updated
+  ([\#23](https://github.com/bbuchsbaum/fmridesign/issues/23)).
+- [`covariate()`](https://bbuchsbaum.github.io/fmridesign/reference/covariate.md)
+  now expands matrix/data-frame arguments into one non-convolved
+  regressor per column. Named inputs preserve sanitized column names,
+  unnamed matrices use `f01`, `f02`, … suffixes, and final names follow
+  the standard `<term_tag>_<condition_tag>` grammar (`cov_x` by default,
+  or `motion_x` with `id = "motion"`). Covariate condition accessors and
+  per-column metadata now expose the individual regressor identities
+  instead of a concatenated multi-variable term name
+  ([\#19](https://github.com/bbuchsbaum/fmridesign/issues/19)).
+- [`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md)
+  patterns now match the design-matrix column names, as documented
+  (`term_tag_condition_tag[_b##]`, e.g. `"^cond_cond\\.A$"` or
+  `"^cond_cond\\.A_b01$"`). Previously they were matched only against
+  term-level condition names (`cond.A`), so documented patterns selected
+  nothing. Term-level patterns still work: they are tried only when a
+  pattern matches no design-matrix column, and select the same columns.
+  A pattern that selects different columns in the two namespaces is now
+  an error, and a pattern that matches nothing warns with the available
+  column names
+  ([\#24](https://github.com/bbuchsbaum/fmridesign/issues/24)).
+- `design_matrix(<baseline_term>, blockid = )` now returns each active
+  column once. With `intercept = "global"`, requesting several runs used
+  to return one duplicate `constant_global` column per run (so
+  `blockid = 1:3` gave three identical columns rather than one); the
+  result now always equals the requested rows and non-zero columns of
+  the full term matrix, in the term’s column order. A
+  `basis = "constant", intercept = "global"` drift term likewise
+  returned zero columns for any run but the first. Terms without block
+  structure now error on `blockid` instead of returning an empty matrix.
+- `Fcontrasts(<event_model>)` no longer returns an all-zero matrix with
+  an “unmatched row names” warning for multi-basis terms. The term-level
+  contrast is expanded to `kronecker(C, diag(nbasis))`, testing the
+  condition effect jointly in every basis function
+  ([\#25](https://github.com/bbuchsbaum/fmridesign/issues/25)).
+- [`Fcontrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.md)
+  for multi-factor terms (e.g. `hrf(task, load)`) assigned row names in
+  the wrong order, so the matrix labelled `task` tested `load` and vice
+  versa. Rows now follow
+  [`conditions()`](https://bbuchsbaum.github.io/fmridesign/reference/conditions.md)
+  order.
+- [`interaction_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/interaction_contrast.md)
+  now names its rows with the term’s canonical condition tags
+  (e.g. `task.face_load.low`) and expands them across basis functions.
+  It previously used raw cell labels (`face_low`) that matched no design
+  column, producing all-zero weights with a warning.
+- [`unit_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.md)
+  and formula contrasts (`contrast(~ face - obj)`), and differences of
+  contrasts built from them, now expand their weights across the basis
+  functions of a multi-basis term. They previously returned zero-row
+  weights with an “unmatched row names” warning.
+- [`unit_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.md)
+  now applies a logical selector in `A`: previously
+  `unit_contrast(~ cond == "A")` ignored `A` and averaged over every
+  cell (weights 0.5/0.5 for two levels); it now selects level A only
+  (weight 1). A bare factor (`~ cond`) still averages over all cells.
+- `Fcontrasts(<event_model>)` skips terms with no categorical variable
+  (e.g. `hrf(rt)`, covariates) instead of failing for the whole model; a
+  model with only such terms returns an empty list.
+- [`condition_basis_list()`](https://bbuchsbaum.github.io/fmridesign/reference/condition_basis_list.md)
+  now works for bare `event_term` objects without a `term_tag`, which
+  previously returned an empty list.
+- `baseline_model(nuisance_list = ...)` now keeps the user’s nuisance
+  column names
+  ([\#28](https://github.com/bbuchsbaum/fmridesign/issues/28)). Columns
+  are named `nuis_<name>_block_<run>` (e.g. `nuis_trans_x_block_1`),
+  matching the drift columns (`base_poly1_block_1`); names are sanitised
+  to syntactic tokens and made unique within a run, and unnamed columns
+  fall back to their original column index (`nuis_2_block_1`), which is
+  preserved when `nuisance_check = "drop"` removes columns. This
+  replaces the previous `nuis#<run>_<col>` names, so code that matched
+  those names must be updated. The original names are kept in the
+  nuisance term’s `source_colnames` field.
+- `design_colmap(<baseline_model>)` now reports nuisance columns with
+  role `"nuisance"` (they were reported as `"intercept"`), takes their
+  `run` from the block structure (it was parsed from the column index,
+  so a 3-run model with 6 regressors per run reported runs 1 to 6), and
+  labels them with the user’s column names in `basis_label`.
+
+## fmridesign 0.6.0
 
 ### New features
 
@@ -91,134 +197,18 @@
 
 ### Bug fixes
 
-- [`covariate()`](https://bbuchsbaum.github.io/fmridesign/reference/covariate.md)
-  now expands matrix/data-frame arguments into one non-convolved
-  regressor per column. Named inputs preserve sanitized column names,
-  unnamed matrices use `f01`, `f02`, … suffixes, and final names follow
-  the standard `<term_tag>_<condition_tag>` grammar (`cov_x` by default,
-  or `motion_x` with `id = "motion"`). Covariate condition accessors and
-  per-column metadata now expose the individual regressor identities
-  instead of a concatenated multi-variable term name
-  ([\#19](https://github.com/bbuchsbaum/fmridesign/issues/19)).
-
-- [`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md)
-  patterns now match the design-matrix column names, as documented
-  (`term_tag_condition_tag[_b##]`, e.g. `"^cond_cond\\.A$"` or
-  `"^cond_cond\\.A_b01$"`). Previously they were matched only against
-  term-level condition names (`cond.A`), so documented patterns selected
-  nothing. Term-level patterns still work: they are tried only when a
-  pattern matches no design-matrix column, and select the same columns.
-  A pattern that selects different columns in the two namespaces is now
-  an error, and a pattern that matches nothing warns with the available
-  column names
-  ([\#24](https://github.com/bbuchsbaum/fmridesign/issues/24)).
-
-- `design_matrix(<baseline_term>, blockid = )` now returns each active
-  column once. With `intercept = "global"`, requesting several runs used
-  to return one duplicate `constant_global` column per run (so
-  `blockid = 1:3` gave three identical columns rather than one); the
-  result now always equals the requested rows and non-zero columns of
-  the full term matrix, in the term’s column order. A
-  `basis = "constant", intercept = "global"` drift term likewise
-  returned zero columns for any run but the first. Terms without block
-  structure now error on `blockid` instead of returning an empty matrix.
-
-- **User-visible correction: multi-basis column names change.** For
-  [`hrf()`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.md)
-  terms with more than one basis function (`"spmg2"`, `"spmg3"`, FIR,
-  B-spline, tent, custom `nbasis > 1`) and two or more conditions,
-  design columns were filled condition-major
-  (`A_b01, A_b02, B_b01, ...`) but named basis-major
-  (`A_b01, B_b01, A_b02, ...`), so every column except the first and
-  last was mislabelled. For example, `task_task.scene_b01` held face’s
-  temporal derivative. The data layout is unchanged; column names,
-  `conditions(term, expand_basis = TRUE)`, and every name-based contrast
-  ([`pair_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.md),
-  [`oneway_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/oneway_contrast.md),
-  [`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md),
-  [`unit_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.md),
-  [`contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast.md),
-  [`interaction_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/interaction_contrast.md))
-  now follow the documented condition-major `term_condition_b##` layout,
-  matching
-  [`design_colmap()`](https://bbuchsbaum.github.io/fmridesign/reference/design_colmap.md).
-  Contrast weights and coefficient labels from earlier versions for such
-  terms were attached to the wrong columns and should be recomputed.
-  Code that indexed multi-basis columns by position assuming basis-major
-  order must be updated
-  ([\#23](https://github.com/bbuchsbaum/fmridesign/issues/23)).
-
-- `Fcontrasts(<event_model>)` no longer returns an all-zero matrix with
-  an “unmatched row names” warning for multi-basis terms. The term-level
-  contrast is expanded to `kronecker(C, diag(nbasis))`, testing the
-  condition effect jointly in every basis function
-  ([\#25](https://github.com/bbuchsbaum/fmridesign/issues/25)).
-
-- [`Fcontrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.md)
-  for multi-factor terms (e.g. `hrf(task, load)`) assigned row names in
-  the wrong order, so the matrix labelled `task` tested `load` and vice
-  versa. Rows now follow
-  [`conditions()`](https://bbuchsbaum.github.io/fmridesign/reference/conditions.md)
-  order.
-
-- [`interaction_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/interaction_contrast.md)
-  now names its rows with the term’s canonical condition tags
-  (e.g. `task.face_load.low`) and expands them across basis functions.
-  It previously used raw cell labels (`face_low`) that matched no design
-  column, producing all-zero weights with a warning.
-
-- [`unit_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.md)
-  and formula contrasts (`contrast(~ face - obj)`), and differences of
-  contrasts built from them, now expand their weights across the basis
-  functions of a multi-basis term. They previously returned zero-row
-  weights with an “unmatched row names” warning.
-
-- [`unit_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.md)
-  now applies a logical selector in `A`: previously
-  `unit_contrast(~ cond == "A")` ignored `A` and averaged over every
-  cell (weights 0.5/0.5 for two levels); it now selects level A only
-  (weight 1). A bare factor (`~ cond`) still averages over all cells.
-
-- `Fcontrasts(<event_model>)` skips terms with no categorical variable
-  (e.g. `hrf(rt)`, covariates) instead of failing for the whole model; a
-  model with only such terms returns an empty list.
-
-- [`condition_basis_list()`](https://bbuchsbaum.github.io/fmridesign/reference/condition_basis_list.md)
-  now works for bare `event_term` objects without a `term_tag`, which
-  previously returned an empty list.
-
-- `baseline_model(nuisance_list = ...)` now keeps the user’s nuisance
-  column names
-  ([\#28](https://github.com/bbuchsbaum/fmridesign/issues/28)). Columns
-  are named `nuis_<name>_block_<run>` (e.g. `nuis_trans_x_block_1`),
-  matching the drift columns (`base_poly1_block_1`); names are sanitised
-  to syntactic tokens and made unique within a run, and unnamed columns
-  fall back to their original column index (`nuis_2_block_1`), which is
-  preserved when `nuisance_check = "drop"` removes columns. This
-  replaces the previous `nuis#<run>_<col>` names, so code that matched
-  those names must be updated. The original names are kept in the
-  nuisance term’s `source_colnames` field.
-
-- `design_colmap(<baseline_model>)` now reports nuisance columns with
-  role `"nuisance"` (they were reported as `"intercept"`), takes their
-  `run` from the block structure (it was parsed from the column index,
-  so a 3-run model with 6 regressors per run reported runs 1 to 6), and
-  labels them with the user’s column names in `basis_label`.
-
 - [`contrast_weights()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.md)
   now removes rows for factor levels excluded by an
   `hrf(..., subset = )` term from the returned term-local `weights`,
   keeping them consistent with the reconciled full-design
   `offset_weights`
   ([\#17](https://github.com/bbuchsbaum/fmridesign/issues/17)).
-
 - [`convolve_design()`](https://bbuchsbaum.github.io/fmridesign/reference/convolve_design.md)
   now extracts each condition column with `dmat[[i]]`, so it produces
   correct regressors for base `data.frame` inputs (its documented
   example). The previous `dmat[, i][[1]]` collapsed a data frame column
   to its first element; the tibble-based internal call path was
   unaffected.
-
 - [`contrast_weights()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.md)
   and
   [`Fcontrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.md)
@@ -227,27 +217,22 @@
   downstream consumers from dropping crossed-term contrasts because of
   `:`/`_` key mismatches
   ([\#9](https://github.com/bbuchsbaum/fmridesign/issues/9)).
-
 - [`event_model()`](https://bbuchsbaum.github.io/fmridesign/reference/event_model.md)
   now warns when continuous parametric modulators are all-zero or have
   zero variance, catching degenerate design columns before model fitting
   while preserving the existing design-matrix shape
   ([\#8](https://github.com/bbuchsbaum/fmridesign/issues/8)).
-
 - Fixed list-based
   [`event_model()`](https://bbuchsbaum.github.io/fmridesign/reference/event_model.md)
   specifications so `hrf(..., subset = )` expressions can use base
   operators and helper functions from the calling environment, matching
   formula-interface subset behavior.
-
 - Fixed event-model column metadata construction for factor and
   multi-basis HRF terms that expand to multiple design columns.
-
 - Event terms whose subsets select zero events now retain their
   canonical condition-column names and metadata on the resulting
   all-zero design matrix, rather than falling back to generic `col_1`,
   `col_2`, … names.
-
 - Suppressed exact, known false-positive metadata warnings produced when
   decorated HRFs are reconstructed by `fmrihrf` 0.3.0, while continuing
   to surface unrelated warnings.
