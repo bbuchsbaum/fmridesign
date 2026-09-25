@@ -202,13 +202,13 @@ emodel_rapid <- event_model(
 # Check design efficiency
 cor(design_matrix(emodel_rapid))
 #>                          stimulus_stimulus.face stimulus_stimulus.house
-#> stimulus_stimulus.face                1.0000000             -0.30394164
-#> stimulus_stimulus.house              -0.3039416              1.00000000
-#> stimulus_stimulus.object             -0.3641627             -0.09263158
+#> stimulus_stimulus.face                1.0000000              -0.3122845
+#> stimulus_stimulus.house              -0.3122845               1.0000000
+#> stimulus_stimulus.object             -0.3864067              -0.1435026
 #>                          stimulus_stimulus.object
-#> stimulus_stimulus.face                -0.36416272
-#> stimulus_stimulus.house               -0.09263158
-#> stimulus_stimulus.object               1.00000000
+#> stimulus_stimulus.face                 -0.3864067
+#> stimulus_stimulus.house                -0.1435026
+#> stimulus_stimulus.object                1.0000000
 ```
 
 ### 3. Parametric Modulation

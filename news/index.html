@@ -62,6 +62,10 @@
 <div class="section level3">
 <h3 id="bug-fixes-0-6-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-6-0"></a></h3>
 <ul><li>
+<code>baseline_model(nuisance_list = ...)</code> now keeps the user’s nuisance column names (<a href="https://github.com/bbuchsbaum/fmridesign/issues/28" class="external-link">#28</a>). Columns are named <code>nuis_&lt;name&gt;_block_&lt;run&gt;</code> (e.g. <code>nuis_trans_x_block_1</code>), matching the drift columns (<code>base_poly1_block_1</code>); names are sanitised to syntactic tokens and made unique within a run, and unnamed columns fall back to their original column index (<code>nuis_2_block_1</code>), which is preserved when <code>nuisance_check = "drop"</code> removes columns. This replaces the previous <code>nuis#&lt;run&gt;_&lt;col&gt;</code> names, so code that matched those names must be updated. The original names are kept in the nuisance term’s <code>source_colnames</code> field.</li>
+<li>
+<code>design_colmap(&lt;baseline_model&gt;)</code> now reports nuisance columns with role <code>"nuisance"</code> (they were reported as <code>"intercept"</code>), takes their <code>run</code> from the block structure (it was parsed from the column index, so a 3-run model with 6 regressors per run reported runs 1 to 6), and labels them with the user’s column names in <code>basis_label</code>.</li>
+<li>
 <code><a href="../reference/contrast_weights.html">contrast_weights()</a></code> now removes rows for factor levels excluded by an <code>hrf(..., subset = )</code> term from the returned term-local <code>weights</code>, keeping them consistent with the reconciled full-design <code>offset_weights</code> (<a href="https://github.com/bbuchsbaum/fmridesign/issues/17" class="external-link">#17</a>).</li>
 <li>
 <code><a href="../reference/convolve_design.html">convolve_design()</a></code> now extracts each condition column with <code>dmat[[i]]</code>, so it produces correct regressors for base <code>data.frame</code> inputs (its documented example). The previous <code>dmat[, i][[1]]</code> collapsed a data frame column to its first element; the tibble-based internal call path was unaffected.</li>

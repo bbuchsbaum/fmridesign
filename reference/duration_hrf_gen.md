@@ -69,6 +69,6 @@ print(emod)
 #>           condition_condition.A condition_condition.B
 #>    Scan 1   0.000                 0.000              
 #>    Scan 2   0.154                 0.000              
-#>    Scan 3   1.154                 0.000              
+#>    Scan 3   1.155                 0.000              
 #> ...
 ```

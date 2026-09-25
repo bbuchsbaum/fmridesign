@@ -763,12 +763,12 @@ head(dmat_events[, 1:6])
 #> # A tibble: 6 × 6
 #>   stim_stim.face stim_stim.object stim_stim.scene stim_stim.tool
 #>            <dbl>            <dbl>           <dbl>          <dbl>
-#> 1              0                0               0     0.03414240
-#> 2              0                0               0     1.005584  
-#> 3              0                0               0     1.747039  
-#> 4              0                0               0     1.275876  
-#> 5              0                0               0     0.6054147 
-#> 6              0                0               0     0.2163046 
+#> 1              0                0               0    0.003415606
+#> 2              0                0               0    0.1005985  
+#> 3              0                0               0    0.1747485  
+#> 4              0                0               0    0.1271370  
+#> 5              0                0               0    0.05763616 
+#> 6              0                0               0    0.01363568 
 #> # ℹ 2 more variables: stim_RT_centered_stim.face_RT_centered <dbl>,
 #> #   stim_RT_centered_stim.object_RT_centered <dbl>
 
