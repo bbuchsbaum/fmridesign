@@ -113,6 +113,16 @@
   column names
   ([\#24](https://github.com/bbuchsbaum/fmridesign/issues/24)).
 
+- `design_matrix(<baseline_term>, blockid = )` now returns each active
+  column once. With `intercept = "global"`, requesting several runs used
+  to return one duplicate `constant_global` column per run (so
+  `blockid = 1:3` gave three identical columns rather than one); the
+  result now always equals the requested rows and non-zero columns of
+  the full term matrix, in the term’s column order. A
+  `basis = "constant", intercept = "global"` drift term likewise
+  returned zero columns for any run but the first. Terms without block
+  structure now error on `blockid` instead of returning an empty matrix.
+
 - **User-visible correction: multi-basis column names change.** For
   [`hrf()`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.md)
   terms with more than one basis function (`"spmg2"`, `"spmg3"`, FIR,
