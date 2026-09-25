@@ -5,6 +5,12 @@ Map Display and Canonical Condition Names
 ## Usage
 
 ``` r
+# S3 method for class 'covariate_term'
+condition_map(x, drop.empty = TRUE, expand_basis = FALSE, ...)
+
+# S3 method for class 'covariate_convolved_term'
+condition_map(x, drop.empty = TRUE, expand_basis = FALSE, ...)
+
 condition_map(x, drop.empty = TRUE, expand_basis = FALSE, ...)
 
 # S3 method for class 'feature_term'

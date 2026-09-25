@@ -63,7 +63,9 @@ continuous covariates, or any other regressors that should not undergo HRF convo
 
 
 <dl><dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>A variable argument set of covariate names.</p></dd>
+<dd><p>Covariate expressions. Each expression may evaluate to a numeric
+vector, matrix, or data frame. Matrix/data-frame columns are expanded into
+separate regressors.</p></dd>
 
 
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
@@ -71,11 +73,12 @@ continuous covariates, or any other regressors that should not undergo HRF convo
 
 
 <dt id="arg-id">id<a class="anchor" aria-label="anchor" href="#arg-id"></a></dt>
-<dd><p>An optional identifier for the covariate term.</p></dd>
+<dd><p>An optional term identifier. As elsewhere in <code>fmridesign</code>, the
+identifier becomes the term tag prepended to final design-matrix columns.</p></dd>
 
 
 <dt id="arg-prefix">prefix<a class="anchor" aria-label="anchor" href="#arg-prefix"></a></dt>
-<dd><p>An optional prefix to add to the covariate names.</p></dd>
+<dd><p>An optional term-tag prefix used when <code>id</code> is not supplied.</p></dd>
 
 
 <dt id="arg-subset">subset<a class="anchor" aria-label="anchor" href="#arg-subset"></a></dt>
@@ -99,6 +102,12 @@ represent:</p><ul><li><p>Continuous physiological measurements (e.g., heart rate
 same model. For example:</p>
 <p></p><div class="sourceCode r"><pre><code><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">stimulus</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="../reference/covariate.html">covariate</a></span><span class="op">(</span><span class="va">motion_x</span>, <span class="va">motion_y</span>, data <span class="op">=</span> <span class="va">cov_data</span><span class="op">)</span>,</span>
 <span>                    data <span class="op">=</span> <span class="va">events</span>, block <span class="op">=</span> <span class="op">~</span> <span class="fl">1</span>, sampling_frame <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span></span></code></pre><p></p></div>
+<p>Final columns follow the package-wide
+<code>term_tag_condition_tag</code> convention. The default term tag is <code>cov</code>; <code>id</code>
+or <code>prefix</code> replaces it. Thus <code>covariate(x, y, data = d)</code> produces <code>cov_x</code>
+and <code>cov_y</code>, while <code>id = "motion"</code> produces <code>motion_x</code> and <code>motion_y</code>.
+Named matrix columns become condition tags; unnamed or duplicated matrix
+columns use deterministic <code><a href="feature_suffix.html">feature_suffix()</a></code> tags such as <code>f01</code> and <code>f02</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -116,6 +125,13 @@ same model. For example:</p>
 <span class="r-in"><span>  y <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span>   <span class="co"># y translation</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">cv</span> <span class="op">&lt;-</span> <span class="fu">covariate</span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span>, data <span class="op">=</span> <span class="va">motion_data</span>, prefix <span class="op">=</span> <span class="st">"motion"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A matrix is expanded using its column names</span></span></span>
+<span class="r-in"><span><span class="va">lag_set</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>lag_m2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span>, lag_0 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                 lag_p2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">lag_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>row <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">lag_data</span><span class="op">$</span><span class="va">lag_set</span> <span class="op">&lt;-</span> <span class="va">lag_set</span></span></span>
+<span class="r-in"><span><span class="va">cv_lags</span> <span class="op">&lt;-</span> <span class="fu">covariate</span><span class="op">(</span><span class="va">lag_set</span>, data <span class="op">=</span> <span class="va">lag_data</span>, id <span class="op">=</span> <span class="st">"alignment"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Combine with event model</span></span></span>
 <span class="r-in"><span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100</span><span class="op">)</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>

@@ -691,8 +691,11 @@ variable.</p>
 </h2>
 <p>Sometimes you want to include scan-by-scan regressors that should not
 be convolved with an HRF (e.g., motion, physiology). Use
-<code><a href="../reference/covariate.html">covariate()</a></code> within the formula. The covariate matrix must
-have one row per scan (sum of <code>blocklens</code>).</p>
+<code><a href="../reference/covariate.html">covariate()</a></code> within the formula. Covariates must have one
+row per scan (sum of <code>blocklens</code>). A matrix-valued argument
+expands to one regressor per column; named matrices preserve their
+column names, while unnamed matrices use <code>f01</code>,
+<code>f02</code>, and so on.</p>
 <p>Normally, one would add <code>motion</code> regressors to the
 <code>baseline_model</code> but we use it as an illustrative
 example.</p>
@@ -709,12 +712,15 @@ example.</p>
 <span>                          sampling_frame <span class="op">=</span> <span class="va">sframe_single_run</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">emodel_cov</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Inspect columns; motion terms are added as-is</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="fu"><a href="../reference/design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">emodel_cov</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "stim_stim.face"   "stim_stim.object" "stim_stim.scene"  "stim_stim.tool"  </span></span>
-<span><span class="co">#&gt; [5] "mx"               "my"</span></span></code></pre></div>
-<p>Note: If the covariate rows do not match the number of scans,
-construction will error with a helpful message.</p>
+<span><span class="co"># Inspect columns; the term tag and regressor tags follow the same</span></span>
+<span><span class="co"># &lt;term&gt;_&lt;condition&gt; grammar used elsewhere in event models</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/grep.html" class="external-link">grep</a></span><span class="op">(</span><span class="st">"^motion_"</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="fu"><a href="../reference/design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">emodel_cov</span><span class="op">)</span><span class="op">)</span>, value <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "motion_mx" "motion_my"</span></span>
+<span><span class="co">#&gt; [1] "motion_mx" "motion_my"</span></span></code></pre></div>
+<p>Without an explicit <code>id</code> or <code>prefix</code>,
+covariates use the compact term tag <code>cov</code> (for example,
+<code>cov_mx</code>). If the covariate rows do not match the number of
+scans, construction will error with a helpful message.</p>
 </div>
 <div class="section level2">
 <h2 id="accessing-model-components">Accessing Model Components<a class="anchor" aria-label="anchor" href="#accessing-model-components"></a>

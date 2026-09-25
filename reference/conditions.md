@@ -5,6 +5,24 @@ Extract conditions from a design object
 ## Usage
 
 ``` r
+# S3 method for class 'covariate_term'
+conditions(
+  x,
+  drop.empty = TRUE,
+  expand_basis = FALSE,
+  style = c("canonical", "display"),
+  ...
+)
+
+# S3 method for class 'covariate_convolved_term'
+conditions(
+  x,
+  drop.empty = TRUE,
+  expand_basis = FALSE,
+  style = c("canonical", "display"),
+  ...
+)
+
 conditions(
   x,
   drop.empty = TRUE,

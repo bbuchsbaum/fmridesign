@@ -705,8 +705,10 @@ if (interactive()) {
 Sometimes you want to include scan-by-scan regressors that should not be
 convolved with an HRF (e.g., motion, physiology). Use
 [`covariate()`](https://bbuchsbaum.github.io/fmridesign/reference/covariate.md)
-within the formula. The covariate matrix must have one row per scan (sum
-of `blocklens`).
+within the formula. Covariates must have one row per scan (sum of
+`blocklens`). A matrix-valued argument expands to one regressor per
+column; named matrices preserve their column names, while unnamed
+matrices use `f01`, `f02`, and so on.
 
 Normally, one would add `motion` regressors to the `baseline_model` but
 we use it as an illustrative example.
@@ -725,14 +727,16 @@ emodel_cov <- event_model(onset ~ hrf(stim) + covariate(mx, my, data = motion, i
                           sampling_frame = sframe_single_run)
 print(emodel_cov)
 
-# Inspect columns; motion terms are added as-is
-head(colnames(design_matrix(emodel_cov)))
-#> [1] "stim_stim.face"   "stim_stim.object" "stim_stim.scene"  "stim_stim.tool"  
-#> [5] "mx"               "my"
+# Inspect columns; the term tag and regressor tags follow the same
+# <term>_<condition> grammar used elsewhere in event models
+grep("^motion_", colnames(design_matrix(emodel_cov)), value = TRUE)
+#> [1] "motion_mx" "motion_my"
+#> [1] "motion_mx" "motion_my"
 ```
 
-Note: If the covariate rows do not match the number of scans,
-construction will error with a helpful message.
+Without an explicit `id` or `prefix`, covariates use the compact term
+tag `cov` (for example, `cov_mx`). If the covariate rows do not match
+the number of scans, construction will error with a helpful message.
 
 ## Accessing Model Components
 

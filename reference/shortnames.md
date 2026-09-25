@@ -5,6 +5,12 @@ Superseded by `conditions(x, style = "display")`.
 ## Usage
 
 ``` r
+# S3 method for class 'covariate_term'
+shortnames(x, ...)
+
+# S3 method for class 'covariate_convolved_term'
+shortnames(x, ...)
+
 shortnames(x, ...)
 ```
 

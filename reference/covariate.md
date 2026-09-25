@@ -15,7 +15,9 @@ covariate(..., data, id = NULL, prefix = NULL, subset = NULL)
 
 - ...:
 
-  A variable argument set of covariate names.
+  Covariate expressions. Each expression may evaluate to a numeric
+  vector, matrix, or data frame. Matrix/data-frame columns are expanded
+  into separate regressors.
 
 - data:
 
@@ -23,11 +25,13 @@ covariate(..., data, id = NULL, prefix = NULL, subset = NULL)
 
 - id:
 
-  An optional identifier for the covariate term.
+  An optional term identifier. As elsewhere in `fmridesign`, the
+  identifier becomes the term tag prepended to final design-matrix
+  columns.
 
 - prefix:
 
-  An optional prefix to add to the covariate names.
+  An optional term-tag prefix used when `id` is not supplied.
 
 - subset:
 
@@ -59,6 +63,15 @@ terms in the same model. For example:
     model <- event_model(onset ~ hrf(stimulus) + covariate(motion_x, motion_y, data = cov_data),
                         data = events, block = ~ 1, sampling_frame = sframe)
 
+Final columns follow the package-wide `term_tag_condition_tag`
+convention. The default term tag is `cov`; `id` or `prefix` replaces it.
+Thus `covariate(x, y, data = d)` produces `cov_x` and `cov_y`, while
+`id = "motion"` produces `motion_x` and `motion_y`. Named matrix columns
+become condition tags; unnamed or duplicated matrix columns use
+deterministic
+[`feature_suffix()`](https://bbuchsbaum.github.io/fmridesign/reference/feature_suffix.md)
+tags such as `f01` and `f02`.
+
 ## See also
 
 - [`event_model()`](https://bbuchsbaum.github.io/fmridesign/reference/event_model.md)
@@ -76,6 +89,13 @@ motion_data <- data.frame(
   y = rnorm(100)   # y translation
 )
 cv <- covariate(x, y, data = motion_data, prefix = "motion")
+
+# A matrix is expanded using its column names
+lag_set <- cbind(lag_m2 = rnorm(100), lag_0 = rnorm(100),
+                 lag_p2 = rnorm(100))
+lag_data <- data.frame(row = seq_len(100))
+lag_data$lag_set <- lag_set
+cv_lags <- covariate(lag_set, data = lag_data, id = "alignment")
 
 # Combine with event model
 sframe <- sampling_frame(blocklens = c(100), TR = 2)

@@ -5,6 +5,12 @@ Superseded by `conditions(x, style = "canonical")`.
 ## Usage
 
 ``` r
+# S3 method for class 'covariate_term'
+longnames(x, ...)
+
+# S3 method for class 'covariate_convolved_term'
+longnames(x, ...)
+
 longnames(x, ...)
 ```
 
