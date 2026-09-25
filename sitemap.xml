@@ -47,13 +47,11 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/contrasts.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/convolve.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/convolve_design.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.baseline_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.event_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/covariate.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_colmap.event_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_colmap.html</loc></url>
-<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_map.baseline_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_map.event_model.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_map.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.html</loc></url>
@@ -75,6 +73,8 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/events.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/feature.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/feature_suffix.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/fmridesign-plotting.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/fmridesign_palette.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-reexports.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/get_all_external_hrf_functions.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/get_basis_entry.html</loc></url>
@@ -121,6 +121,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/term_indices.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/term_matrices.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/term_names.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/theme_fmridesign.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/translate_legacy_pattern.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/trialwise.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.html</loc></url>

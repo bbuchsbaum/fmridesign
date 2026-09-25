@@ -1,7 +1,7 @@
 # Plot Event Model
 
-Creates a line plot visualization of the predicted BOLD response for
-each regressor in an event_model object.
+Draws the convolved regressors of an `event_model` against time, with
+the events that generate them marked underneath.
 
 ## Usage
 
@@ -10,14 +10,20 @@ each regressor in an event_model object.
 plot(
   x,
   term_name = NULL,
+  style = c("auto", "stacked", "overlay", "heatmap"),
+  show_events = TRUE,
   facet_threshold = Inf,
   label_mode = c("auto", "compact", "none"),
   max_labels = 30,
   abbrev_min = 10,
-  strip_text_size = 8,
+  strip_text_size = 8.5,
   block_x = c("global", "run"),
   facet_by_block = FALSE,
   show_block_bounds = TRUE,
+  y_scale = c("term", "row", "shared"),
+  time_range = NULL,
+  title = NULL,
+  subtitle = NULL,
   ...
 )
 ```
@@ -30,79 +36,109 @@ plot(
 
 - term_name:
 
-  Character. Name of specific term to plot. If NULL, plots all terms.
+  Character. Name of a specific term to plot. If `NULL`, plots all
+  terms.
+
+- style:
+
+  Layout; one of `"auto"`, `"stacked"`, `"overlay"`, `"heatmap"`.
+
+- show_events:
+
+  Logical; draw event onset marks (rugs in stacked and overlay styles,
+  ticks in heatmap style). Default `TRUE`.
 
 - facet_threshold:
 
-  Integer. Switch to faceting when number of regressors exceeds this
-  value. Default 6.
+  Integer. In `"overlay"` style, switch to one panel per regressor when
+  the number of regressors exceeds this value.
 
 - label_mode:
 
-  Character. One of `"auto"`, `"compact"`, `"none"`. In `"auto"` mode
-  the method abbreviates labels for moderate counts and suppresses
-  labels entirely when they are excessive (\> `max_labels`). `"compact"`
-  always abbreviates labels. `"none"` suppresses legend and facet strip
-  labels.
+  Character. One of `"auto"`, `"compact"`, `"none"`. `"compact"`
+  abbreviates condition labels, `"none"` suppresses them, and `"auto"`
+  suppresses them when there are more than `max_labels`.
 
 - max_labels:
 
-  Integer. When `label_mode = "auto"` and the number of regressors
-  exceeds this value, labels are suppressed. Default 30.
+  Integer. Label limit used by `label_mode = "auto"`.
 
 - abbrev_min:
 
   Integer. Minimum length used by
   [`base::abbreviate()`](https://rdrr.io/r/base/abbreviate.html) when
-  compacting labels. Default 10.
+  compacting labels.
 
 - strip_text_size:
 
-  Numeric. Strip label text size when faceting with labels. Default 8.
+  Numeric. Size of row and panel labels.
 
 - block_x:
 
-  Time axis to use for multi-run designs. `"global"` (default) uses
-  concatenated time so each block occupies a distinct x-range; `"run"`
-  uses run-relative time that restarts each block. In either case line
-  segments are grouped by block so a regressor is never connected across
-  a run boundary (this is what prevents the spurious high-frequency
-  oscillations that appear when all blocks share one block-relative
-  axis).
+  Time axis for multi-run designs. `"global"` (default) uses
+  concatenated time so each run occupies its own x-range; `"run"` uses
+  run-relative time that restarts each run (combine with
+  `facet_by_block = TRUE` to avoid overlaying runs).
 
 - facet_by_block:
 
-  Logical; if `TRUE`, draw one panel per block. Defaults to `FALSE`.
-  Useful for multi-run designs where overlaid runs are cluttered.
+  Logical; if `TRUE`, draw one column of panels per run.
 
 - show_block_bounds:
 
-  Logical; if `TRUE` (default), draw dashed vertical rules at each run's
-  start/end (`blocklen * TR`). These make late starts and overruns
-  obvious and complement the
-  [`event_model()`](https://bbuchsbaum.github.io/fmridesign/reference/event_model.md)
-  onset bounds check. Drawn only when a `sampling_frame` is available.
+  Logical; draw rules at each run's start and end. Drawn only when a
+  `sampling_frame` is available.
+
+- y_scale:
+
+  How stacked rows share their amplitude axis. `"term"` (default) gives
+  rows of the same term (and basis function) one common scale, so
+  conditions can be compared directly while terms with different units
+  (e.g. a parametric modulator) keep their own; `"row"` scales every row
+  independently; `"shared"` uses one scale for all rows.
+
+- time_range:
+
+  Optional numeric length-2 vector (seconds, in the units of the time
+  axis) to zoom into, e.g. `c(0, 60)` to inspect basis shapes.
+
+- title, subtitle:
+
+  Optional plot title and subtitle. `NULL` uses an informative default;
+  `NA` removes it.
 
 - ...:
 
-  Additional arguments (currently unused).
+  Unused; accepted for compatibility.
 
 ## Value
 
-A ggplot2 object showing the predicted BOLD timecourses.
+A ggplot2 object.
 
 ## Details
 
-This method attempts to keep labels readable when there are many
-regressors (e.g., trial-wise designs) by switching to faceting and
-either abbreviating or suppressing labels depending on thresholds. You
-can control this behavior via `label_mode`, `max_labels`, and
-`abbrev_min`.
+The default `style = "auto"` picks the layout that stays readable for
+the design at hand:
+
+- `"stacked"`: one row per condition on a shared time axis. Each row is
+  scaled on its own so response shapes stay visible, and a rug under
+  each trace marks the onsets of that condition's events. Basis sets
+  (e.g. SPMG3) are drawn in the same row, distinguished by line type.
+
+- `"heatmap"`: one raster row per regressor, used automatically for
+  large designs such as trialwise (beta-series) models, where
+  overlapping traces are unreadable. Rows are ordered by first onset.
+
+- `"overlay"`: all regressors on one shared amplitude axis, useful for
+  comparing magnitudes directly.
+
+Runs are shown as alternating light bands labelled along the top edge,
+with thin rules at each run's start and end so late starts and overruns
+are easy to spot. Lines never connect across a run boundary.
 
 ## Examples
 
 ``` r
-# Create a simple event model
 des <- data.frame(
   onset = c(0, 10, 20, 30),
   run = 1,
@@ -111,11 +147,10 @@ des <- data.frame(
 sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
 emod <- event_model(onset ~ hrf(cond), data = des, block = ~run, sampling_frame = sframe)
 
-# Plot all regressors
 plot(emod)
 
+plot(emod, style = "overlay")
 
-# Plot specific term only
 plot(emod, term_name = "cond")
 
 ```

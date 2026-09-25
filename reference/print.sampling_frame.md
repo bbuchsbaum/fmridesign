@@ -9,10 +9,19 @@ evaluation precision. The plot method visualizes runs over time.
 
 ``` r
 # S3 method for class 'sampling_frame'
-print(x, ...)
+plot(
+  x,
+  style = c("timeline", "grid", "lane"),
+  show_ticks = FALSE,
+  tick_every = 5,
+  events = NULL,
+  title = NULL,
+  subtitle = NULL,
+  ...
+)
 
 # S3 method for class 'sampling_frame'
-plot(x, style = c("timeline", "grid"), show_ticks = FALSE, tick_every = 5, ...)
+print(x, ...)
 ```
 
 ## Arguments
@@ -22,16 +31,14 @@ plot(x, style = c("timeline", "grid"), show_ticks = FALSE, tick_every = 5, ...)
   A `sampling_frame` object created by
   [`fmrihrf::sampling_frame()`](https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html).
 
-- ...:
-
-  Unused.
-
 - style:
 
   Plot style for
   [`plot()`](https://rdrr.io/r/graphics/plot.default.html). One of
-  `"timeline"` (default) or `"grid"`. `"timeline"` draws a horizontal
-  bar per run; `"grid"` shows a scan grid by run.
+  `"timeline"` (default), `"grid"` or `"lane"`. `"timeline"` draws one
+  bar per run on a shared time axis; `"grid"` shows the scans of each
+  run as cells on a within-run scan axis; `"lane"` is a compact single
+  row of adjacent run segments, annotated above each segment.
 
 - show_ticks:
 
@@ -41,8 +48,28 @@ plot(x, style = c("timeline", "grid"), show_ticks = FALSE, tick_every = 5, ...)
 
 - tick_every:
 
-  Integer; draw a tick every `tick_every` TRs when `show_ticks = TRUE`.
-  Default `5`.
+  Integer; draw a tick every `tick_every` TRs when `show_ticks = TRUE`
+  (timeline), or alternate cell shading every `tick_every` scans (grid;
+  defaults to 10 for runs over 100 scans). Default `5`.
+
+- events:
+
+  For [`plot()`](https://rdrr.io/r/graphics/plot.default.html), optional
+  events to overlay as a coverage check: an `event_model`, or a data
+  frame with an `onset` column (seconds, relative to the start of each
+  run) and a `run` (or `block`) column. Each onset is drawn as a small
+  tick under its run, so runs without events or with an empty tail stand
+  out; onsets that fall outside their run are counted in the caption.
+
+- title, subtitle:
+
+  For [`plot()`](https://rdrr.io/r/graphics/plot.default.html), optional
+  title and subtitle; the defaults describe the acquisition (runs,
+  scans, TR, total duration).
+
+- ...:
+
+  Unused.
 
 ## Value
 
@@ -61,13 +88,5 @@ print(sf)
 #> - TR: 2 s
 #> - Duration: 359 s
 plot(sf)
-#> Warning: ‘-’ not meaningful for factors
-#> Warning: reverse transformation introduced infinite values.
-#> Warning: ‘-’ not meaningful for factors
-#> Warning: reverse transformation introduced infinite values.
-#> Warning: Position guide is perpendicular to the intended axis.
-#> ℹ Did you mean to specify a different guide `position`?
-#> Warning: Removed 2 rows containing missing values or values outside the scale range
-#> (`geom_segment()`).
 
 ```

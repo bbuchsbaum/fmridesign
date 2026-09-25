@@ -114,11 +114,9 @@
 - [`correlation_map()`](https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.md)
   : Compute correlation map
 
-- [`correlation_map(`*`<baseline_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.baseline_model.md)
-  : correlation_map.baseline_model
-
 - [`correlation_map(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.event_model.md)
-  : Visualize Regressor Correlations
+  [`correlation_map(`*`<baseline_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.event_model.md)
+  : Regressor correlation heatmap
 
 - [`covariate()`](https://bbuchsbaum.github.io/fmridesign/reference/covariate.md)
   : Construct a Covariate Term
@@ -132,11 +130,9 @@
 - [`design_map()`](https://bbuchsbaum.github.io/fmridesign/reference/design_map.md)
   : Compute design map
 
-- [`design_map(`*`<baseline_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/design_map.baseline_model.md)
-  : Heatmap visualization of the baseline_model design matrix
-
 - [`design_map(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/design_map.event_model.md)
-  : Visualize Event Model Design Matrix
+  [`design_map(`*`<baseline_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/design_map.event_model.md)
+  : Design matrix heatmap
 
 - [`design_matrix()`](https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.md)
   : Extract or construct a design matrix
@@ -185,6 +181,9 @@
 
 - [`feature_suffix()`](https://bbuchsbaum.github.io/fmridesign/reference/feature_suffix.md)
   : Create Feature Suffix
+
+- [`fmridesign_palette()`](https://bbuchsbaum.github.io/fmridesign/reference/fmridesign_palette.md)
+  : Colour palettes used by fmridesign plots
 
 - [`get_all_external_hrf_functions()`](https://bbuchsbaum.github.io/fmridesign/reference/get_all_external_hrf_functions.md)
   : Get All External HRF Function Names
@@ -250,6 +249,9 @@
 - [`pairwise_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/pairwise_contrasts.md)
   : Pairwise Contrasts
 
+- [`plot(`*`<baseline_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/plot.baseline_model.md)
+  : Plot a Baseline Model
+
 - [`plot(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/plot.event_model.md)
   : Plot Event Model
 
@@ -257,7 +259,7 @@
   : plot_contrasts
 
 - [`plot_contrasts(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/plot_contrasts.event_model.md)
-  : plot_contrasts.event_model
+  : Contrast weight heatmap
 
 - [`poly_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/poly_contrast.md)
   : Polynomial Contrast
@@ -286,8 +288,8 @@
   [`print(`*`<feature_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
   : Print a Baseline Model
 
-- [`print(`*`<sampling_frame>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.sampling_frame.md)
-  [`plot(`*`<sampling_frame>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.sampling_frame.md)
+- [`plot(`*`<sampling_frame>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.sampling_frame.md)
+  [`print(`*`<sampling_frame>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.sampling_frame.md)
   : Print and Plot for sampling_frame
 
 - [`register_basis()`](https://bbuchsbaum.github.io/fmridesign/reference/register_basis.md)
@@ -336,6 +338,9 @@
 
 - [`term_names()`](https://bbuchsbaum.github.io/fmridesign/reference/term_names.md)
   : Extract term names
+
+- [`theme_fmridesign()`](https://bbuchsbaum.github.io/fmridesign/reference/theme_fmridesign.md)
+  : ggplot2 theme for fmridesign plots
 
 - [`trialwise()`](https://bbuchsbaum.github.io/fmridesign/reference/trialwise.md)
   : trialwise

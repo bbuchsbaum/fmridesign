@@ -2,6 +2,39 @@
 
 ## fmridesign 0.6.0
 
+### Plotting overhaul
+
+- All plotting methods share one visual system: the new exported
+  [`theme_fmridesign()`](https://bbuchsbaum.github.io/fmridesign/reference/theme_fmridesign.md)
+  and
+  [`fmridesign_palette()`](https://bbuchsbaum.github.io/fmridesign/reference/fmridesign_palette.md),
+  a colour-vision-checked categorical palette, one diverging palette
+  centred on zero, readable column labels (e.g. `face × high`,
+  `drift 3`, `tx`) and one way of marking runs.
+- `plot(<event_model>)` draws one row per condition with event onset and
+  duration marks. Rows of a term share an amplitude scale (`y_scale`).
+  Basis sets get one row per basis function, and trialwise or long-basis
+  designs switch to a heatmap with a per-trial overlap column. New
+  `style`, `show_events`, `y_scale`, `time_range`, `title` and
+  `subtitle` arguments.
+- [`design_map()`](https://bbuchsbaum.github.io/fmridesign/reference/design_map.md)
+  is an SPM-style image grouped by term, with raw column ranges and a
+  near-flat (dead) column check. Run boundaries are now placed
+  correctly; they were previously computed from per-event block ids.
+- [`correlation_map()`](https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.md)
+  shows the lower triangle with each column’s variance inflation factor
+  (run means removed) on the diagonal and flags aliased columns.
+- [`plot_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/plot_contrasts.md)
+  shows every design column, printed weights, the sum of weights and
+  each contrast’s standard error per unit noise given the design.
+- `plot(<baseline_model>)` shows every time-varying term (motion
+  regressors were previously dropped), splitting translations and
+  rotations into separate lanes. User-supplied nuisance column names are
+  kept for display.
+- `plot(<sampling_frame>)` no longer draws an empty panel; it adds
+  `"lane"` and `"grid"` styles and an `events =` overlay for checking
+  coverage.
+
 ### New features
 
 - [`baseline_model()`](https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.md)
