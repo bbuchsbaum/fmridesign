@@ -1,6 +1,10 @@
 # Map Display and Canonical Condition Names
 
-Map Display and Canonical Condition Names
+For an `event_model` the result also has `term` and `column_name`: the
+design-matrix column of each condition, found by its canonical name
+(columns are `<term tag>_<canonical>`). A condition with no column (an
+empty cell when `drop.empty = FALSE`, or a multi-basis term when
+`expand_basis = FALSE`) has `column_name = NA`.
 
 ## Usage
 
@@ -51,11 +55,10 @@ term <- event_term(
   blockids = c(1, 1, 1)
 )
 condition_map(term)
-#> # A tibble: 4 × 2
+#> # A tibble: 3 × 2
 #>   display      canonical                      
 #>   <chr>        <chr>                          
 #> 1 face:attend  category.face_attention.attend 
 #> 2 scene:attend category.scene_attention.attend
 #> 3 face:ignore  category.face_attention.ignore 
-#> 4 scene:ignore category.scene_attention.ignore
 ```

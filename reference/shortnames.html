@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmridesign</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.1.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Extract shortnames</h1>
-      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/covariate.R" class="external-link"><code>R/covariate.R</code></a>, <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/design_generics.R" class="external-link"><code>R/design_generics.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/covariate.R" class="external-link"><code>R/covariate.R</code></a>, <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/design_generics.R" class="external-link"><code>R/design_generics.R</code></a>, <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/event_model.R" class="external-link"><code>R/event_model.R</code></a>, and 2 more</small>
       <div class="d-none name"><code>shortnames.Rd</code></div>
     </div>
 
@@ -55,6 +55,18 @@
 <span><span class="co"># S3 method for class 'covariate_convolved_term'</span></span>
 <span><span class="fu">shortnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
+<span><span class="fu">shortnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'event_model'</span></span>
+<span><span class="fu">shortnames</span><span class="op">(</span><span class="va">x</span>, drop.empty <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'convolved_term'</span></span>
+<span><span class="fu">shortnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'event_seq'</span></span>
+<span><span class="fu">shortnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'feature_term'</span></span>
 <span><span class="fu">shortnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -69,10 +81,20 @@
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments.</p></dd>
 
+
+<dt id="arg-drop-empty">drop.empty<a class="anchor" aria-label="anchor" href="#arg-drop-empty"></a></dt>
+<dd><p>Logical; leave out cells with no events (default <code>TRUE</code>).</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Character vector of short names.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Short names give the factor levels only, joined with <code>:</code> for
+interactions (for example <code>A:x</code>). See <code><a href="longnames.html">longnames()</a></code> for the qualified
+names and how they relate to design-matrix columns.</p>
     </div>
 
     <div class="section level2">
@@ -96,7 +118,7 @@
 <span class="r-in"><span>  blockids <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">shortnames</span><span class="op">(</span><span class="va">term2</span><span class="op">)</span>  <span class="co"># Returns: "face:attend" "scene:attend" "face:ignore"</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "face:attend"  "scene:attend" "face:ignore"  "scene:ignore"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "face:attend"  "scene:attend" "face:ignore" </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

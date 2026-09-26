@@ -15,6 +15,9 @@ columns(x, ...)
 columns(x, ...)
 
 columns(x, ...)
+
+# S3 method for class 'event_model'
+columns(x, ...)
 ```
 
 ## Arguments

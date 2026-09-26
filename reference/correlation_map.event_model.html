@@ -17,7 +17,7 @@ also names the most strongly correlated pair."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">fmridesign</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.1.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -77,6 +77,8 @@ also names the most strongly correlated pair.</p>
 <span>  vif_threshold <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  title <span class="op">=</span> <span class="st">"Regressor correlations"</span>,</span>
 <span>  subtitle <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  within_run <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  label_values <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -93,6 +95,8 @@ also names the most strongly correlated pair.</p>
 <span>  vif_threshold <span class="op">=</span> <span class="fl">5</span>,</span>
 <span>  title <span class="op">=</span> <span class="st">"Baseline regressor correlations"</span>,</span>
 <span>  subtitle <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  within_run <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  label_values <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -132,7 +136,9 @@ is equivalent to <code>limits = "data"</code>.</p></dd>
 
 <dt id="arg-annotate">annotate<a class="anchor" aria-label="anchor" href="#arg-annotate"></a></dt>
 <dd><p>Logical or <code>NULL</code>; print r in each cell. <code>NULL</code> (default)
-annotates when there are at most 20 columns.</p></dd>
+annotates when there are at most 20 columns for an event model, or at
+most 12 columns (after removing run intercepts) for a baseline model,
+the threshold fmrireg's former baseline method used.</p></dd>
 
 
 <dt id="arg-flag-threshold">flag_threshold<a class="anchor" aria-label="anchor" href="#arg-flag-threshold"></a></dt>
@@ -148,8 +154,25 @@ outlined.</p></dd>
 <dd><p>Plot title and subtitle.</p></dd>
 
 
+<dt id="arg-within-run">within_run<a class="anchor" aria-label="anchor" href="#arg-within-run"></a></dt>
+<dd><p>Logical. If <code>TRUE</code>, drop the run-intercept columns,
+centre every column within each run, and correlate a column that is
+non-zero in only one run (a run-specific drift or nuisance column) on
+that run's scans only; pairs of columns specific to different runs share
+no scans and are not drawn. This is the correlation structure the model
+actually estimates with per-run intercepts. The default is <code>TRUE</code> for
+baseline models, whose columns are mostly run-specific, and <code>FALSE</code> for
+event models (runs concatenated).</p></dd>
+
+
+<dt id="arg-label-values">label_values<a class="anchor" aria-label="anchor" href="#arg-label-values"></a></dt>
+<dd><p>An alias for <code>annotate</code>, kept for compatibility with
+fmrireg's former <code><a href="correlation_map.html">correlation_map()</a></code> methods. Supply one or the other.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Passed to <code><a href="https://ggplot2.tidyverse.org/reference/geom_tile.html" class="external-link">ggplot2::geom_tile()</a></code>.</p></dd>
+<dd><p>Passed to <code><a href="https://ggplot2.tidyverse.org/reference/geom_tile.html" class="external-link">ggplot2::geom_tile()</a></code>. Anything that is not a
+<code>geom_tile()</code> argument or aesthetic is an error.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -188,6 +211,8 @@ are grouped by term, so the map lines up with <code><a href="design_map.html">de
 <span class="r-in"><span><span class="va">bmod</span> <span class="op">&lt;-</span> <span class="fu"><a href="baseline_model.html">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"poly"</span>, degree <span class="op">=</span> <span class="fl">2</span>,</span></span>
 <span class="r-in"><span>                       sframe <span class="op">=</span> <span class="fu">fmrihrf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">40</span>, <span class="fl">40</span><span class="op">)</span>, TR <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="correlation_map.html">correlation_map</a></span><span class="op">(</span><span class="va">bmod</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Removed 2 rows containing missing values or values outside the scale range</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> (`geom_tile()`).</span>
 <span class="r-plt img"><img src="correlation_map.event_model-2.png" alt="" width="700" height="433"></span>
 </code></pre></div>
     </div>

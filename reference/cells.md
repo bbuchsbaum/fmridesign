@@ -13,6 +13,9 @@ cells(x, drop.empty = TRUE, ...)
 # S3 method for class 'event'
 cells(x, drop.empty = TRUE, ...)
 
+# S3 method for class 'event_model'
+cells(x, ...)
+
 # S3 method for class 'event_term'
 cells(x, drop.empty = TRUE, ...)
 

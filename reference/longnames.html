@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">fmridesign</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.1.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,7 +39,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Extract longnames</h1>
-      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/covariate.R" class="external-link"><code>R/covariate.R</code></a>, <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/design_generics.R" class="external-link"><code>R/design_generics.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/covariate.R" class="external-link"><code>R/covariate.R</code></a>, <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/design_generics.R" class="external-link"><code>R/design_generics.R</code></a>, <a href="https://github.com/bbuchsbaum/fmridesign/blob/main/R/event_model.R" class="external-link"><code>R/event_model.R</code></a>, and 2 more</small>
       <div class="d-none name"><code>longnames.Rd</code></div>
     </div>
 
@@ -55,6 +55,18 @@
 <span><span class="co"># S3 method for class 'covariate_convolved_term'</span></span>
 <span><span class="fu">longnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
+<span><span class="fu">longnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'event_model'</span></span>
+<span><span class="fu">longnames</span><span class="op">(</span><span class="va">x</span>, drop.empty <span class="op">=</span> <span class="cn">TRUE</span>, expand_basis <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'convolved_term'</span></span>
+<span><span class="fu">longnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'event_seq'</span></span>
+<span><span class="fu">longnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'feature_term'</span></span>
 <span><span class="fu">longnames</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -69,10 +81,40 @@
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Additional arguments.</p></dd>
 
+
+<dt id="arg-drop-empty">drop.empty<a class="anchor" aria-label="anchor" href="#arg-drop-empty"></a></dt>
+<dd><p>Logical; leave out cells with no events (default <code>TRUE</code>).</p></dd>
+
+
+<dt id="arg-expand-basis">expand_basis<a class="anchor" aria-label="anchor" href="#arg-expand-basis"></a></dt>
+<dd><p>Logical; add a basis suffix for multi-basis HRFs
+(default <code>FALSE</code>).</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>Character vector of long (fully qualified) names.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Long names are the canonical condition names: each factor level is
+written <code>variable.level</code>, and the factors of an interaction are joined
+with <code>_</code> (for example <code>condition.A_attn.x</code>). With <code>expand_basis = TRUE</code>
+a <code>_bNN</code> suffix is added for each HRF basis function.</p>
+<p>They are not the design-matrix column names. A term's columns are
+<code>paste0(term_tag, "_", longnames(term, expand_basis = TRUE))</code>, so the
+column for level <code>A</code> of <code>hrf(condition)</code> is <code>condition_condition.A</code>, and
+<code>longnames(term)</code> returns <code>condition.A</code>. Use <code><a href="columns.html">columns()</a></code> (or
+<code>colnames(design_matrix(x))</code>) for the column names, and <code><a href="condition_map.html">condition_map()</a></code>
+for a table that lines the two up.</p>
+<p>With <code>drop.empty = TRUE</code> (the default) a cell of an interaction that has
+no events is left out, as it is from the design matrix, so the names line
+up one-to-one with the term's columns. <code>drop.empty = FALSE</code> lists the full
+grid of factor levels, which is what <code><a href="conditions.html">conditions()</a></code> always returns.</p>
+<p>Methods exist for <code>event_term</code>, <code>event_model</code> (all terms in order),
+<code>convolved_term</code>, <code>feature_term</code>, covariate terms, and bare events from
+<code><a href="event_factor.html">event_factor()</a></code> and friends (<code>event_seq</code>), which are named as the
+single-variable <code>event_term</code> built from them would be.</p>
     </div>
 
     <div class="section level2">
@@ -97,10 +139,21 @@
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">longnames</span><span class="op">(</span><span class="va">term2</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "category.face_attention.attend"  "category.scene_attention.attend"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [3] "category.face_attention.ignore"  "category.scene_attention.ignore"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3] "category.face_attention.ignore" </span>
 <span class="r-in"><span><span class="co"># Returns: "category.face_attention.attend"</span></span></span>
 <span class="r-in"><span><span class="co">#          "category.scene_attention.attend"</span></span></span>
 <span class="r-in"><span><span class="co">#          "category.face_attention.ignore"</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Long names versus design-matrix column names</span></span></span>
+<span class="r-in"><span><span class="va">sf</span> <span class="op">&lt;-</span> <span class="fu">fmrihrf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">30</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">des</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">10</span>, <span class="fl">20</span><span class="op">)</span>, run <span class="op">=</span> <span class="fl">1</span>,</span></span>
+<span class="r-in"><span>                  condition <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span>, <span class="st">"A"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">em</span> <span class="op">&lt;-</span> <span class="fu"><a href="event_model.html">event_model</a></span><span class="op">(</span><span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="hrf.html">hrf</a></span><span class="op">(</span><span class="va">condition</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">des</span>, block <span class="op">=</span> <span class="op">~</span><span class="va">run</span>,</span></span>
+<span class="r-in"><span>                  sampling_frame <span class="op">=</span> <span class="va">sf</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">longnames</span><span class="op">(</span><span class="va">em</span><span class="op">)</span>  <span class="co"># "condition.A" "condition.B"</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "condition.A" "condition.B"</span>
+<span class="r-in"><span><span class="fu"><a href="columns.html">columns</a></span><span class="op">(</span><span class="va">em</span><span class="op">)</span>    <span class="co"># "condition_condition.A" "condition_condition.B"</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "condition_condition.A" "condition_condition.B"</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

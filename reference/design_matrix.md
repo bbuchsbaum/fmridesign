@@ -16,6 +16,9 @@ design_matrix(x, ...)
 # S3 method for class 'event_model'
 design_matrix(x, blockid = NULL, ...)
 
+# S3 method for class 'convolved_term'
+design_matrix(x, blockid = NULL, ...)
+
 # S3 method for class 'event_term'
 design_matrix(x, drop.empty = TRUE, ...)
 ```

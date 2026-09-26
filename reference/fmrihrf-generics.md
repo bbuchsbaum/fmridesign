@@ -32,6 +32,9 @@ documented in fmrihrf.
 # S3 method for class 'covariate_convolved_term'
 nbasis(x, ...)
 
+# S3 method for class 'convolved_term'
+nbasis(x, ...)
+
 # S3 method for class 'feature_term'
 nbasis(x, ...)
 ```

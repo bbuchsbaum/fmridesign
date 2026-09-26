@@ -7,6 +7,9 @@ Extract event table
 ``` r
 event_table(x, ...)
 
+# S3 method for class 'convolved_term'
+event_table(x, ...)
+
 # S3 method for class 'feature_term'
 event_table(x, ...)
 ```

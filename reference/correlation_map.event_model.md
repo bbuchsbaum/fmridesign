@@ -23,6 +23,8 @@ correlation_map(
   vif_threshold = 5,
   title = "Regressor correlations",
   subtitle = NULL,
+  within_run = FALSE,
+  label_values = NULL,
   ...
 )
 
@@ -39,6 +41,8 @@ correlation_map(
   vif_threshold = 5,
   title = "Baseline regressor correlations",
   subtitle = NULL,
+  within_run = TRUE,
+  label_values = NULL,
   ...
 )
 ```
@@ -77,7 +81,9 @@ correlation_map(
 - annotate:
 
   Logical or `NULL`; print r in each cell. `NULL` (default) annotates
-  when there are at most 20 columns.
+  when there are at most 20 columns for an event model, or at most 12
+  columns (after removing run intercepts) for a baseline model, the
+  threshold fmrireg's former baseline method used.
 
 - flag_threshold:
 
@@ -91,10 +97,29 @@ correlation_map(
 
   Plot title and subtitle.
 
+- within_run:
+
+  Logical. If `TRUE`, drop the run-intercept columns, centre every
+  column within each run, and correlate a column that is non-zero in
+  only one run (a run-specific drift or nuisance column) on that run's
+  scans only; pairs of columns specific to different runs share no scans
+  and are not drawn. This is the correlation structure the model
+  actually estimates with per-run intercepts. The default is `TRUE` for
+  baseline models, whose columns are mostly run-specific, and `FALSE`
+  for event models (runs concatenated).
+
+- label_values:
+
+  An alias for `annotate`, kept for compatibility with fmrireg's former
+  [`correlation_map()`](https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.md)
+  methods. Supply one or the other.
+
 - ...:
 
   Passed to
   [`ggplot2::geom_tile()`](https://ggplot2.tidyverse.org/reference/geom_tile.html).
+  Anything that is not a `geom_tile()` argument or aesthetic is an
+  error.
 
 ## Value
 
@@ -135,4 +160,6 @@ correlation_map(emod)
 bmod <- baseline_model(basis = "poly", degree = 2,
                        sframe = fmrihrf::sampling_frame(c(40, 40), TR = 1))
 correlation_map(bmod)
+#> Warning: Removed 2 rows containing missing values or values outside the scale range
+#> (`geom_tile()`).
 ```

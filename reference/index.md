@@ -41,6 +41,9 @@
 - [`block()`](https://bbuchsbaum.github.io/fmridesign/reference/block.md)
   : Create a Block Variable
 
+- [`blockids(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/blockids.event_model.md)
+  : Run (block) ids of an event model's events
+
 - [`boxcar_hrf_gen()`](https://bbuchsbaum.github.io/fmridesign/reference/boxcar_hrf_gen.md)
   : Create duration-based boxcar HRF generator
 
@@ -186,6 +189,7 @@
   : Colour palettes used by fmridesign plots
 
 - [`nbasis(`*`<covariate_convolved_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-generics.md)
+  [`nbasis(`*`<convolved_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-generics.md)
   [`nbasis(`*`<feature_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-generics.md)
   : Accessor generics shared with fmrihrf
 

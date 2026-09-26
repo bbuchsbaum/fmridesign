@@ -43,6 +43,74 @@
   reached depended on attach order. Attaching fmridesign no longer masks
   these four names from fmrihrf.
 
+- fmridesign now supplies every name and accessor method for its own
+  classes, so downstream packages can use plain dispatch on the exported
+  generics instead of defining duplicates or reaching into fmridesign’s
+  namespace. New methods:
+  [`longnames()`](https://bbuchsbaum.github.io/fmridesign/reference/longnames.md)
+  and
+  [`shortnames()`](https://bbuchsbaum.github.io/fmridesign/reference/shortnames.md)
+  for `event_model`, `convolved_term`, `feature_term` and bare events
+  (`event_seq`);
+  [`columns()`](https://bbuchsbaum.github.io/fmridesign/reference/columns.md)
+  and
+  [`cells()`](https://bbuchsbaum.github.io/fmridesign/reference/cells.md)
+  for `event_model`;
+  [`conditions()`](https://bbuchsbaum.github.io/fmridesign/reference/conditions.md),
+  [`event_table()`](https://bbuchsbaum.github.io/fmridesign/reference/event_table.md),
+  [`nbasis()`](https://bbuchsbaum.github.io/fmrihrf/reference/nbasis.html)
+  and
+  [`design_matrix()`](https://bbuchsbaum.github.io/fmridesign/reference/design_matrix.md)
+  for `convolved_term`; and
+  [`conditions()`](https://bbuchsbaum.github.io/fmridesign/reference/conditions.md)
+  for `baseline_model`. They previously lived in fmrireg.
+  [`longnames()`](https://bbuchsbaum.github.io/fmridesign/reference/longnames.md)
+  uses fmridesign’s canonical `variable.level` form (`condition.A`),
+  which is the design-matrix column name without its `<term>_` prefix
+  (`condition_condition.A`);
+  [`?longnames`](https://bbuchsbaum.github.io/fmridesign/reference/longnames.md)
+  documents the relationship. Design-matrix column names are unchanged.
+
+- [`longnames()`](https://bbuchsbaum.github.io/fmridesign/reference/longnames.md),
+  [`shortnames()`](https://bbuchsbaum.github.io/fmridesign/reference/shortnames.md)
+  and
+  [`condition_map()`](https://bbuchsbaum.github.io/fmridesign/reference/condition_map.md)
+  now honour `drop.empty = TRUE` (the default): an interaction cell with
+  no events is left out, as it is from the design matrix, so the names
+  line up one-to-one with the columns. `drop.empty = FALSE` lists the
+  full grid of factor levels, which is what
+  [`conditions()`](https://bbuchsbaum.github.io/fmridesign/reference/conditions.md)
+  always returns (documented).
+
+- `condition_map(<event_model>)` finds each condition’s column by its
+  exact name, `<term tag>_<canonical>`, instead of by position. It
+  previously returned `column_name = NA` for every row of a term with an
+  empty cell or a multi-basis HRF.
+
+- `blockids(<event_model>)` is documented
+  ([`?blockids.event_model`](https://bbuchsbaum.github.io/fmridesign/reference/blockids.event_model.md)):
+  it returns one run id per event. Per-scan ids come from
+  `blockids(x$sampling_frame)`; `blocklens(x)` gives scans per run.
+  Because fmrireg previously overrode this method with per-scan ids, the
+  first call in a session prints a one-time message. The message will be
+  removed in the next release.
+
+- `correlation_map(<baseline_model>)` gains `within_run = TRUE`: run
+  intercepts are dropped, columns are centred within each run, and
+  run-specific columns are correlated on their own run, with pairs from
+  different runs left out. This reproduces fmrireg’s former method
+  exactly; `within_run = FALSE` gives the previous fmridesign behaviour
+  (runs concatenated). Cells are labelled by default when there are at
+  most 12 columns, as in fmrireg’s method (event models keep the
+  20-column default). Both methods accept `label_values` as an alias for
+  `annotate`, and the `event_model` method accepts `within_run` too
+  (default `FALSE`).
+
+- [`correlation_map()`](https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.md)
+  now errors on arguments that `geom_tile()` does not accept, instead of
+  passing them on to be dropped with a warning. The deprecated `size` is
+  still accepted.
+
 ### Bug fixes
 
 - `hrf(..., summate = FALSE)` is honoured again for sustained events.
