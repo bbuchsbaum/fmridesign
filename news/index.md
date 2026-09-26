@@ -1,5 +1,60 @@
 # Changelog
 
+## fmridesign (development version)
+
+### CRAN compliance
+
+- Design-column convolution no longer reaches into fmrihrf’s unexported
+  `evaluate_regressor_cpp()`. The shared-HRF fast path now evaluates
+  each live column with the public
+  [`fmrihrf::regressor()`](https://bbuchsbaum.github.io/fmrihrf/reference/regressor.html)
+  /
+  [`fmrihrf::evaluate()`](https://bbuchsbaum.github.io/fmrihrf/reference/evaluate.html)
+  API. Results are identical to the previous path on every design built
+  by the test suite; building a design matrix is roughly 1.3-2x slower
+  (tens of milliseconds on a 4-run, 1200-scan design).
+
+- [`boxcar_hrf_gen()`](https://bbuchsbaum.github.io/fmridesign/reference/boxcar_hrf_gen.md)
+  and
+  [`weighted_hrf_gen()`](https://bbuchsbaum.github.io/fmridesign/reference/weighted_hrf_gen.md)
+  call
+  [`fmrihrf::hrf_boxcar()`](https://bbuchsbaum.github.io/fmrihrf/reference/hrf_boxcar.html)
+  and
+  [`fmrihrf::hrf_weighted()`](https://bbuchsbaum.github.io/fmrihrf/reference/hrf_weighted.html)
+  directly instead of looking them up in fmrihrf’s namespace.
+
+- fmridesign no longer registers its own
+  [`print()`](https://rdrr.io/r/base/print.html) method for fmrihrf’s
+  `sampling_frame` class, which overwrote fmrihrf’s method on load
+  (“Registered S3 method overwritten by ‘fmridesign’”). Sampling frames
+  now print with fmrihrf’s method. `plot(<sampling_frame>)` is unchanged
+  and is documented under
+  [`?plot.sampling_frame`](https://bbuchsbaum.github.io/fmridesign/reference/plot.sampling_frame.md).
+
+- [`onsets()`](https://bbuchsbaum.github.io/fmrihrf/reference/onsets.html),
+  [`durations()`](https://bbuchsbaum.github.io/fmrihrf/reference/durations.html),
+  [`blockids()`](https://bbuchsbaum.github.io/fmrihrf/reference/blockids.html)
+  and
+  [`nbasis()`](https://bbuchsbaum.github.io/fmrihrf/reference/nbasis.html)
+  are now true re-exports of fmrihrf’s generics. fmridesign previously
+  defined its own generics with the same names, so dispatch was split:
+  for example `fmrihrf::onsets(<event_term>)` found no method and
+  `fmridesign::nbasis(HRF_SPMG3)` failed, and which one a bare call
+  reached depended on attach order. Attaching fmridesign no longer masks
+  these four names from fmrihrf.
+
+### Bug fixes
+
+- `hrf(..., summate = FALSE)` is honoured again for sustained events.
+  The shared-HRF fast path ignored `summate` and always produced the
+  `summate = TRUE` design.
+- An event with a negative onset in the first run now fails with
+  fmrihrf’s “`onsets` must be non-negative” error, as the legacy path
+  and
+  [`fmrihrf::regressor()`](https://bbuchsbaum.github.io/fmrihrf/reference/regressor.html)
+  always did; the fast path had silently accepted it. The out-of-frame
+  warning is still raised first.
+
 ## fmridesign 0.6.1
 
 ### Plotting overhaul

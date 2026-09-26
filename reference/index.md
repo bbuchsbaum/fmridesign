@@ -185,6 +185,13 @@
 - [`fmridesign_palette()`](https://bbuchsbaum.github.io/fmridesign/reference/fmridesign_palette.md)
   : Colour palettes used by fmridesign plots
 
+- [`nbasis(`*`<covariate_convolved_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-generics.md)
+  [`nbasis(`*`<feature_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-generics.md)
+  : Accessor generics shared with fmrihrf
+
+- [`fmrihrf-reexports`](https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-reexports.md)
+  : fmrihrf reexports
+
 - [`get_all_external_hrf_functions()`](https://bbuchsbaum.github.io/fmridesign/reference/get_all_external_hrf_functions.md)
   : Get All External HRF Function Names
 
@@ -255,6 +262,9 @@
 - [`plot(`*`<event_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/plot.event_model.md)
   : Plot Event Model
 
+- [`plot(`*`<sampling_frame>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/plot.sampling_frame.md)
+  : Plot a sampling_frame
+
 - [`plot_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/plot_contrasts.md)
   : plot_contrasts
 
@@ -287,10 +297,6 @@
   [`print(`*`<event_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
   [`print(`*`<feature_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.md)
   : Print a Baseline Model
-
-- [`plot(`*`<sampling_frame>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.sampling_frame.md)
-  [`print(`*`<sampling_frame>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/print.sampling_frame.md)
-  : Print and Plot for sampling_frame
 
 - [`register_basis()`](https://bbuchsbaum.github.io/fmridesign/reference/register_basis.md)
   : Register a Parametric Basis Class

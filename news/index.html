@@ -43,6 +43,22 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="development version" id="fmridesign-development-version">fmridesign (development version)<a class="anchor" aria-label="anchor" href="#fmridesign-development-version"></a></h2>
+<div class="section level3">
+<h3 id="cran-compliance-development-version">CRAN compliance<a class="anchor" aria-label="anchor" href="#cran-compliance-development-version"></a></h3>
+<ul><li><p>Design-column convolution no longer reaches into fmrihrf’s unexported <code>evaluate_regressor_cpp()</code>. The shared-HRF fast path now evaluates each live column with the public <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/regressor.html" class="external-link">fmrihrf::regressor()</a></code> / <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/evaluate.html" class="external-link">fmrihrf::evaluate()</a></code> API. Results are identical to the previous path on every design built by the test suite; building a design matrix is roughly 1.3-2x slower (tens of milliseconds on a 4-run, 1200-scan design).</p></li>
+<li><p><code><a href="../reference/boxcar_hrf_gen.html">boxcar_hrf_gen()</a></code> and <code><a href="../reference/weighted_hrf_gen.html">weighted_hrf_gen()</a></code> call <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/hrf_boxcar.html" class="external-link">fmrihrf::hrf_boxcar()</a></code> and <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/hrf_weighted.html" class="external-link">fmrihrf::hrf_weighted()</a></code> directly instead of looking them up in fmrihrf’s namespace.</p></li>
+<li><p>fmridesign no longer registers its own <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> method for fmrihrf’s <code>sampling_frame</code> class, which overwrote fmrihrf’s method on load (“Registered S3 method overwritten by ‘fmridesign’”). Sampling frames now print with fmrihrf’s method. <code>plot(&lt;sampling_frame&gt;)</code> is unchanged and is documented under <code><a href="../reference/plot.sampling_frame.html">?plot.sampling_frame</a></code>.</p></li>
+<li><p><code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/onsets.html" class="external-link">onsets()</a></code>, <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/durations.html" class="external-link">durations()</a></code>, <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/blockids.html" class="external-link">blockids()</a></code> and <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/nbasis.html" class="external-link">nbasis()</a></code> are now true re-exports of fmrihrf’s generics. fmridesign previously defined its own generics with the same names, so dispatch was split: for example <code>fmrihrf::onsets(&lt;event_term&gt;)</code> found no method and <code>fmridesign::nbasis(HRF_SPMG3)</code> failed, and which one a bare call reached depended on attach order. Attaching fmridesign no longer masks these four names from fmrihrf.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
+<ul><li>
+<code>hrf(..., summate = FALSE)</code> is honoured again for sustained events. The shared-HRF fast path ignored <code>summate</code> and always produced the <code>summate = TRUE</code> design.</li>
+<li>An event with a negative onset in the first run now fails with fmrihrf’s “<code>onsets</code> must be non-negative” error, as the legacy path and <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/regressor.html" class="external-link">fmrihrf::regressor()</a></code> always did; the fast path had silently accepted it. The out-of-frame warning is still raised first.</li>
+</ul></div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.6.1" id="fmridesign-061">fmridesign 0.6.1<a class="anchor" aria-label="anchor" href="#fmridesign-061"></a></h2>
 <div class="section level3">
 <h3 id="plotting-overhaul-0-6-1">Plotting overhaul<a class="anchor" aria-label="anchor" href="#plotting-overhaul-0-6-1"></a></h3>
