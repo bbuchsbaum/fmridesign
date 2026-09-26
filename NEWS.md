@@ -25,6 +25,46 @@
   depended on attach order. Attaching fmridesign no longer masks these four
   names from fmrihrf.
 
+- fmridesign now supplies every name and accessor method for its own classes,
+  so downstream packages can use plain dispatch on the exported generics
+  instead of defining duplicates or reaching into fmridesign's namespace.
+  New methods: `longnames()` and `shortnames()` for `event_model`,
+  `convolved_term`, `feature_term` and bare events (`event_seq`);
+  `columns()` and `cells()` for `event_model`; `conditions()`,
+  `event_table()`, `nbasis()` and `design_matrix()` for `convolved_term`;
+  and `conditions()` for `baseline_model`. They previously lived in fmrireg.
+  `longnames()` uses fmridesign's canonical `variable.level` form
+  (`condition.A`), which is the design-matrix column name without its
+  `<term>_` prefix (`condition_condition.A`); `?longnames` documents the
+  relationship. Design-matrix column names are unchanged.
+
+- `longnames()`, `shortnames()` and `condition_map()` now honour
+  `drop.empty = TRUE` (the default): an interaction cell with no events is
+  left out, as it is from the design matrix, so the names line up one-to-one
+  with the columns. `drop.empty = FALSE` lists the full grid of factor
+  levels, which is what `conditions()` always returns (documented).
+- `condition_map(<event_model>)` finds each condition's column by its exact
+  name, `<term tag>_<canonical>`, instead of by position. It previously returned `column_name = NA` for every
+  row of a term with an empty cell or a multi-basis HRF.
+- `blockids(<event_model>)` is documented (`?blockids.event_model`): it
+  returns one run id per event. Per-scan ids come from
+  `blockids(x$sampling_frame)`; `blocklens(x)` gives scans per run. Because
+  fmrireg previously overrode this method with per-scan ids, the first call in
+  a session prints a one-time message. The message will be removed in the next
+  release.
+- `correlation_map(<baseline_model>)` gains `within_run = TRUE`: run
+  intercepts are dropped, columns are centred within each run, and
+  run-specific columns are correlated on their own run, with pairs from
+  different runs left out. This reproduces fmrireg's former method exactly;
+  `within_run = FALSE` gives the previous fmridesign behaviour (runs
+  concatenated). Cells are labelled by default when there are at most 12
+  columns, as in fmrireg's method (event models keep the 20-column default).
+  Both methods accept `label_values` as an alias for `annotate`, and the
+  `event_model` method accepts `within_run` too (default `FALSE`).
+- `correlation_map()` now errors on arguments that `geom_tile()` does not
+  accept, instead of passing them on to be dropped with a warning. The
+  deprecated `size` is still accepted.
+
 ## Bug fixes
 
 - `hrf(..., summate = FALSE)` is honoured again for sustained events. The

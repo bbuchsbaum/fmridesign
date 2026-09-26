@@ -670,6 +670,88 @@ design_map.baseline_model <- function(x,
 # correlation_map
 # ---------------------------------------------------------------------------
 
+# Arguments in `...` go to geom_tile(); anything else is a caller error
+# (e.g. an argument meant for another method), so say so instead of letting
+# ggplot2 drop it with a warning.
+.fd_hm_check_tile_args <- function(...) {
+  nms <- names(list(...))
+  if (!...length()) return(invisible())
+  if (is.null(nms) || any(!nzchar(nms))) {
+    stop("correlation_map(): all arguments in `...` must be named ",
+         "(they are passed to ggplot2::geom_tile()).", call. = FALSE)
+  }
+  ok <- c(setdiff(names(formals(ggplot2::geom_tile)), c("...", "mapping", "data")),
+          ggplot2::GeomTile$parameters(TRUE), ggplot2::GeomTile$aesthetics(),
+          "size", "linewidth")
+  bad <- nms[!ggplot2::standardise_aes_names(nms) %in% ok]
+  if (length(bad)) {
+    stop("correlation_map(): unknown argument", if (length(bad) > 1L) "s" else "",
+         " ", paste0("`", bad, "`", collapse = ", "),
+         ". Extra arguments are passed to ggplot2::geom_tile().", call. = FALSE)
+  }
+  invisible()
+}
+
+# `label_values` is fmrireg's former name for `annotate`.
+.fd_hm_label_alias <- function(annotate, label_values) {
+  if (is.null(label_values)) return(annotate)
+  if (!is.null(annotate)) {
+    stop("Supply `annotate` or `label_values`, not both.", call. = FALSE)
+  }
+  label_values
+}
+
+# Correlations "within run": drop the run-intercept columns, centre every
+# column within each run, and correlate a column that is non-zero in only
+# one run (a run-specific drift or nuisance column) on that run's rows only,
+# so zero rows from other runs do not dilute it. Pairs of columns specific to
+# different runs share no rows; they are returned as NA and flagged hidden.
+.fd_hm_within_run <- function(DM, ci, run, method) {
+  keep <- ci$term != "block"
+  DM <- DM[, keep, drop = FALSE]
+  ci <- ci[keep, , drop = FALSE]
+  p <- ncol(DM)
+  runs <- sort(unique(run))
+  multi <- length(runs) > 1L
+
+  col_run <- rep(NA_integer_, p)
+  if (multi) {
+    nz <- DM != 0
+    for (j in seq_len(p)) {
+      r <- unique(run[nz[, j]])
+      if (length(r) == 1L) col_run[j] <- r
+    }
+  }
+  for (r in runs) {
+    rows <- run == r
+    DM[rows, ] <- sweep(DM[rows, , drop = FALSE], 2,
+                        colMeans(DM[rows, , drop = FALSE]), "-")
+  }
+  const <- apply(DM, 2, function(v) {
+    s <- stats::sd(v)
+    !is.finite(s) || s <= 1e-12 * max(1, max(abs(v)))
+  })
+
+  cor_q <- function(M) {
+    suppressWarnings(stats::cor(M, use = "pairwise.complete.obs", method = method))
+  }
+  R <- cor_q(DM)
+  hidden <- matrix(FALSE, p, p)
+  if (multi && any(!is.na(col_run))) {
+    for (r in sort(unique(col_run[!is.na(col_run)]))) {
+      Rr <- cor_q(DM[run == r, , drop = FALSE])
+      in_r <- which(col_run == r)
+      R[in_r, ] <- Rr[in_r, ]
+      R[, in_r] <- Rr[, in_r]
+    }
+    hidden <- outer(col_run, col_run, function(a, b) !is.na(a) & !is.na(b) & a != b)
+    R[hidden] <- NA
+  }
+  R[const, ] <- NA
+  R[, const] <- NA
+  list(DM = DM, ci = ci, R = R, hidden = hidden)
+}
+
 .fd_hm_correlation_map <- function(x,
                                    method = c("pearson", "spearman"),
                                    half_matrix = TRUE,
@@ -680,27 +762,47 @@ design_map.baseline_model <- function(x,
                                    vif_threshold = 5,
                                    title = "Regressor correlations",
                                    subtitle = NULL,
+                                   within_run = FALSE,
+                                   annotate_max = 20L,
                                    ...) {
   method <- match.arg(method)
   limits <- match.arg(limits)
+  .fd_hm_check_tile_args(...)
   DM <- as.matrix(design_matrix(x))
   ci <- .fd_hm_columns(x)
   DM <- DM[, ci$col, drop = FALSE]
-  p <- ncol(DM)
   n <- nrow(DM)
-  labs_full <- ci$full_label
   run <- .fd_hm_scan_runs(x, n)
   n_runs <- length(unique(run))
 
-  flat <- apply(DM, 2, stats::sd, na.rm = TRUE) < .Machine$double.eps
-  R <- suppressWarnings(stats::cor(DM, method = method, use = "pairwise.complete.obs"))
-  R[flat, ] <- NA
-  R[, flat] <- NA
+  hidden <- NULL
+  if (isTRUE(within_run)) {
+    wr <- .fd_hm_within_run(DM, ci, run, method)
+    DM <- wr$DM
+    ci <- wr$ci
+    R <- wr$R
+    hidden <- wr$hidden
+    if (ncol(DM) < 2L) {
+      stop("Fewer than two columns remain to correlate after removing run intercepts.",
+           call. = FALSE)
+    }
+  } else {
+    flat <- apply(DM, 2, stats::sd, na.rm = TRUE) < .Machine$double.eps
+    R <- suppressWarnings(stats::cor(DM, method = method, use = "pairwise.complete.obs"))
+    R[flat, ] <- NA
+    R[, flat] <- NA
+  }
+  p <- ncol(DM)
+  labs_full <- ci$full_label
 
   # Lower triangle below the diagonal (or every off-diagonal cell when
   # half_matrix = FALSE); the diagonal itself carries each column's VIF.
+  # With within_run = TRUE, pairs of columns that belong to different runs
+  # have no rows in common and are left out.
   ij <- expand.grid(i = seq_len(p), j = seq_len(p))
-  ij <- ij[if (isTRUE(half_matrix)) ij$i > ij$j else ij$i != ij$j, , drop = FALSE]
+  keep <- if (isTRUE(half_matrix)) ij$i > ij$j else ij$i != ij$j
+  if (!is.null(hidden)) keep <- keep & !hidden[cbind(ij$i, ij$j)]
+  ij <- ij[keep, , drop = FALSE]
   df <- data.frame(x = ij$j, y = ij$i, r = R[cbind(ij$i, ij$j)])
 
   low <- R
@@ -745,8 +847,13 @@ design_map.baseline_model <- function(x,
   }
   caption <- paste0(
     if (method == "spearman") "Spearman rank" else "Pearson",
-    " r across all ", format(n, big.mark = ","), " scans",
-    if (n_runs > 1L) " (runs concatenated)" else "",
+    if (isTRUE(within_run)) {
+      paste0(" r within runs (columns centred within each run, run intercepts removed;",
+             " run-specific columns correlated on their own run)")
+    } else {
+      paste0(" r across all ", format(n, big.mark = ","), " scans",
+             if (n_runs > 1L) " (runs concatenated)" else "")
+    },
     ".\nDiagonal: variance inflation factor of each column, with run means removed",
     if (n_runs > 1L) " (per-run intercepts)" else "", ".")
 
@@ -754,7 +861,7 @@ design_map.baseline_model <- function(x,
   groups <- .fd_hm_groups(ci$term, ci$term_label)
   bounds <- .fd_hm_boundaries(groups)
 
-  annotate <- annotate %||% (p <= 20L)
+  annotate <- annotate %||% (p <= annotate_max)
   digits <- if (p <= 10L) 2L else 1L
   df$lab <- if (isTRUE(annotate)) .fd_hm_fmt_r(df$r, digits) else ""
   df$tcol <- .fd_hm_text_col(df$r / limit)
@@ -884,12 +991,25 @@ design_map.baseline_model <- function(x,
 #'   is equivalent to `limits = "data"`.
 #' @param rotate_x_text Logical; angle column labels when they would overlap.
 #' @param annotate Logical or `NULL`; print r in each cell. `NULL` (default)
-#'   annotates when there are at most 20 columns.
+#'   annotates when there are at most 20 columns for an event model, or at
+#'   most 12 columns (after removing run intercepts) for a baseline model,
+#'   the threshold fmrireg's former baseline method used.
 #' @param flag_threshold Cells with abs(r) at or above this value are
 #'   outlined.
 #' @param vif_threshold VIFs at or above this value are flagged.
 #' @param title,subtitle Plot title and subtitle.
-#' @param ... Passed to [ggplot2::geom_tile()].
+#' @param within_run Logical. If `TRUE`, drop the run-intercept columns,
+#'   centre every column within each run, and correlate a column that is
+#'   non-zero in only one run (a run-specific drift or nuisance column) on
+#'   that run's scans only; pairs of columns specific to different runs share
+#'   no scans and are not drawn. This is the correlation structure the model
+#'   actually estimates with per-run intercepts. The default is `TRUE` for
+#'   baseline models, whose columns are mostly run-specific, and `FALSE` for
+#'   event models (runs concatenated).
+#' @param label_values An alias for `annotate`, kept for compatibility with
+#'   fmrireg's former `correlation_map()` methods. Supply one or the other.
+#' @param ... Passed to [ggplot2::geom_tile()]. Anything that is not a
+#'   `geom_tile()` argument or aesthetic is an error.
 #' @return A ggplot object.
 #' @seealso [design_map()], [check_collinearity()]
 #' @examples
@@ -915,13 +1035,17 @@ correlation_map.event_model <- function(x,
                                         vif_threshold = 5,
                                         title = "Regressor correlations",
                                         subtitle = NULL,
+                                        within_run = FALSE,
+                                        label_values = NULL,
                                         ...) {
   limits <- if (isFALSE(absolute_limits)) "data" else match.arg(limits)
+  annotate <- .fd_hm_label_alias(annotate, label_values)
   .fd_hm_correlation_map(x, method = method, half_matrix = half_matrix,
                          limits = limits, rotate_x_text = rotate_x_text,
                          annotate = annotate, flag_threshold = flag_threshold,
                          vif_threshold = vif_threshold,
-                         title = title, subtitle = subtitle, ...)
+                         title = title, subtitle = subtitle,
+                         within_run = within_run, ...)
 }
 
 #' @rdname correlation_map.event_model
@@ -942,13 +1066,17 @@ correlation_map.baseline_model <- function(x,
                                            vif_threshold = 5,
                                            title = "Baseline regressor correlations",
                                            subtitle = NULL,
+                                           within_run = TRUE,
+                                           label_values = NULL,
                                            ...) {
   limits <- if (isFALSE(absolute_limits)) "data" else match.arg(limits)
+  annotate <- .fd_hm_label_alias(annotate, label_values)
   .fd_hm_correlation_map(x, method = method, half_matrix = half_matrix,
                          limits = limits, rotate_x_text = rotate_x_text,
                          annotate = annotate, flag_threshold = flag_threshold,
                          vif_threshold = vif_threshold,
-                         title = title, subtitle = subtitle, ...)
+                         title = title, subtitle = subtitle,
+                         within_run = within_run, annotate_max = 12L, ...)
 }
 
 # ---------------------------------------------------------------------------
