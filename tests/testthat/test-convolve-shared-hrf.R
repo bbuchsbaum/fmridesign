@@ -320,25 +320,13 @@ test_that("trialwise add_sum mean column matches legacy average", {
 # Helpers and edge cases
 # ---------------------------------------------------------------------------
 
-test_that("hrf_fine_matrix matches fmrihrf .memo_hrf for common bases", {
-  memo <- utils::getFromNamespace(".memo_hrf", "fmrihrf")
-  precision <- 0.3
-  for (hrf in list(fmrihrf::HRF_SPMG1, fmrihrf::HRF_SPMG2, fmrihrf::HRF_SPMG3)) {
-    span <- attr(hrf, "span")
-    ours <- fmridesign:::.hrf_fine_matrix(hrf, span, precision)
-    theirs <- memo(hrf, span, precision)
-    expect_identical(ours, theirs)
-  }
-})
-
 test_that(".eval_design_cols_shared_hrf filters out-of-window onsets", {
-  # Onsets before grid[1] - span or after grid[end] must be dropped, matching
-  # fmrihrf:::prep_reg_inputs. Place one in-window and one far out-of-window.
+  # Onsets far outside the grid contribute nothing, exactly as in
+  # fmrihrf::evaluate(). Place one in-window and one far out-of-window.
   hrf <- fmrihrf::HRF_SPMG1
   span <- attr(hrf, "span")
   precision <- 0.3
   grid <- seq(0, 50, by = 1)
-  hrf_matrix <- fmridesign:::.hrf_fine_matrix(hrf, span, precision)
 
   # Column 1: onset inside window. Column 2: onset far after grid end.
   dmat <- matrix(c(1, 0,
@@ -348,7 +336,7 @@ test_that(".eval_design_cols_shared_hrf filters out-of-window onsets", {
 
   got <- fmridesign:::.eval_design_cols_shared_hrf(
     dmat = dmat, globons = globons, durations = durations, grid = grid,
-    hrf_matrix = hrf_matrix, hrf_span = span, precision = precision,
+    hrf = hrf, hrf_span = span, precision = precision,
     nb = 1L, col_idx = c(1L, 2L)
   )
 
@@ -364,12 +352,11 @@ test_that(".eval_design_cols_shared_hrf leaves empty columns as zeros", {
   span <- attr(hrf, "span")
   precision <- 0.3
   grid <- seq(0, 40, by = 1)
-  hrf_matrix <- fmridesign:::.hrf_fine_matrix(hrf, span, precision)
   dmat <- matrix(c(1, 0, 0,
                    0, 0, 2), nrow = 2, byrow = TRUE)
   got <- fmridesign:::.eval_design_cols_shared_hrf(
     dmat = dmat, globons = c(5, 15), durations = c(0, 0), grid = grid,
-    hrf_matrix = hrf_matrix, hrf_span = span, precision = precision,
+    hrf = hrf, hrf_span = span, precision = precision,
     nb = 1L, col_idx = c(1L, 2L, 3L)
   )
   expect_equal(dim(got), c(length(grid), 3L))
@@ -384,12 +371,11 @@ test_that("multi-basis scatter places basis columns in the correct slots", {
   span <- attr(hrf, "span")
   precision <- 0.3
   grid <- seq(0, 60, by = 1)
-  hrf_matrix <- fmridesign:::.hrf_fine_matrix(hrf, span, precision)
   nb <- fmrihrf::nbasis(hrf)
   dmat <- matrix(c(0, 1, 0), nrow = 1)
   live <- fmridesign:::.eval_design_cols_shared_hrf(
     dmat = dmat, globons = 10, durations = 0, grid = grid,
-    hrf_matrix = hrf_matrix, hrf_span = span, precision = precision,
+    hrf = hrf, hrf_span = span, precision = precision,
     nb = nb, col_idx = 2L
   )
   expect_equal(ncol(live), nb)
@@ -504,4 +490,33 @@ test_that("hrf_fun per-onset path still matches evaluate sum (legacy path)", {
   )
   # With drop.empty / naming, the A column is the SPMG1 superposition.
   expect_equal(as.numeric(dm[, a_cols[1]]), as.numeric(ref_a), tolerance = 1e-10)
+})
+
+test_that("shared-HRF path honours summate = FALSE for sustained events", {
+  # The shared path once dropped `summate`, so hrf(..., summate = FALSE) gave
+  # the summate = TRUE design. It must match fmrihrf's own evaluation.
+  des <- data.frame(
+    onset = c(10, 40, 70), run = 1L,
+    cond = factor(c("A", "B", "A")), duration = c(4, 8, 2)
+  )
+  sf <- fmrihrf::sampling_frame(blocklens = 60, TR = 2)
+  m_off <- event_model(onset ~ hrf(cond, summate = FALSE), data = des,
+                       block = ~run, sampling_frame = sf,
+                       durations = des$duration)
+  m_on <- event_model(onset ~ hrf(cond, summate = TRUE), data = des,
+                      block = ~run, sampling_frame = sf,
+                      durations = des$duration)
+  dm_off <- as.matrix(design_matrix(m_off))
+  expect_gt(max(abs(dm_off - as.matrix(design_matrix(m_on)))), 0)
+
+  ref <- fmrihrf::evaluate(
+    fmrihrf::regressor(c(10, 70), fmrihrf::HRF_SPMG1,
+                       duration = c(4, 2), summate = FALSE),
+    fmrihrf::samples(sf, global = TRUE), precision = 0.3
+  )
+  expect_identical(unname(dm_off[, 1]), as.numeric(ref))
+
+  term <- terms(m_off)[[1]]
+  .expect_shared_matches_legacy(term, attr(term, "hrfspec")$hrf, sf,
+                                summate = FALSE)
 })

@@ -556,7 +556,7 @@ cells.feature_term <- function(x, ...) {
 }
 
 
-#' @rdname fmrihrf-reexports
+#' @rdname fmrihrf-generics
 #' @export
 nbasis.feature_term <- function(x, ...) {
   fmrihrf::nbasis(x$hrf)

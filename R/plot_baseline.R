@@ -495,15 +495,39 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
          paste(desc, collapse = ", "), ".")
 }
 
-#' @rdname print.sampling_frame
-#' @param events For `plot()`, optional events to overlay as a coverage
+#' Plot a sampling_frame
+#'
+#' Visualizes the runs of a `sampling_frame` (from fmrihrf) over time.
+#' Printing a `sampling_frame` is handled by fmrihrf's own `print()` method.
+#'
+#' @param x A `sampling_frame` object created by `fmrihrf::sampling_frame()`.
+#' @param style Plot style. One of `"timeline"` (default), `"grid"` or
+#'   `"lane"`. `"timeline"` draws one bar per run on a shared time axis;
+#'   `"grid"` shows the scans of each run as cells on a within-run scan axis;
+#'   `"lane"` is a compact single row of adjacent run segments, annotated
+#'   above each segment.
+#' @param show_ticks Logical; whether to show per-TR tick marks along each
+#'   run (timeline style only). Default `FALSE`.
+#' @param tick_every Integer; draw a tick every `tick_every` TRs when
+#'   `show_ticks = TRUE` (timeline), or alternate cell shading every
+#'   `tick_every` scans (grid; defaults to 10 for runs over 100 scans).
+#'   Default `5`.
+#' @param ... Unused.
+#' @return A ggplot object.
+#'
+#' @param events Optional events to overlay as a coverage
 #'   check: an `event_model`, or a data frame with an `onset` column (seconds,
 #'   relative to the start of each run) and a `run` (or `block`) column. Each
 #'   onset is drawn as a small tick under its run, so runs without events or
 #'   with an empty tail stand out; onsets that fall outside their run are
 #'   counted in the caption.
-#' @param title,subtitle For `plot()`, optional title and subtitle; the
+#' @param title,subtitle Optional title and subtitle; the
 #'   defaults describe the acquisition (runs, scans, TR, total duration).
+#'
+#' @examples
+#' sf <- fmrihrf::sampling_frame(blocklens = c(60, 120), TR = 2)
+#' plot(sf)
+#'
 #' @method plot sampling_frame
 #' @export
 plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),

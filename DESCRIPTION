@@ -77,6 +77,5 @@ Collate:
     'plot_heatmaps.R'
     'plot_theme.R'
     'residualize.R'
-    'sampling_frame.R'
     'validate.R'
     'zzz.R'
