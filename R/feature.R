@@ -541,6 +541,19 @@ conditions.feature_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
 
 
 #' @export
+#' @rdname longnames
+longnames.feature_term <- function(x, ...) {
+  as.character(conditions(x, style = "canonical", ...))
+}
+
+#' @export
+#' @rdname shortnames
+shortnames.feature_term <- function(x, ...) {
+  as.character(conditions(x, style = "display", ...))
+}
+
+
+#' @export
 #' @rdname condition_map
 condition_map.feature_term <- function(x, drop.empty = TRUE,
                                        expand_basis = FALSE, ...) {

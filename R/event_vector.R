@@ -780,6 +780,75 @@ durations.convolved_term <- function(x, ...) {
   durations(x$evterm, ...)
 }
 
+## ============================================================================
+## Section 8b: Names and accessors for convolved terms and bare events
+## ============================================================================
+
+#' @export
+#' @rdname longnames
+longnames.convolved_term <- function(x, ...) {
+  longnames(x$evterm, ...)
+}
+
+#' @export
+#' @rdname shortnames
+shortnames.convolved_term <- function(x, ...) {
+  shortnames(x$evterm, ...)
+}
+
+#' @export
+#' @rdname conditions
+conditions.convolved_term <- function(x, ...) {
+  conditions(x$evterm, ...)
+}
+
+#' @export
+#' @rdname event_table
+event_table.convolved_term <- function(x, ...) {
+  event_table(x$evterm, ...)
+}
+
+#' @rdname fmrihrf-generics
+#' @export
+nbasis.convolved_term <- function(x, ...) {
+  hrfspec <- x$hrfspec %||% attr(x, "hrfspec")
+  if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
+    fmrihrf::nbasis(hrfspec$hrf)
+  } else {
+    1L
+  }
+}
+
+#' @export
+#' @rdname design_matrix
+design_matrix.convolved_term <- function(x, blockid = NULL, ...) {
+  if (is.null(blockid)) {
+    x$design_matrix
+  } else {
+    keep <- fmrihrf::blockids(x$sampling_frame) %in% blockid
+    x$design_matrix[keep, , drop = FALSE]
+  }
+}
+
+# A bare `event` (from event_factor(), event_variable(), ...) is named exactly
+# as the single-variable event_term built from it would be.
+.event_as_term <- function(x) {
+  event_term(stats::setNames(list(x), x$varname), onsets = x$onsets,
+             blockids = x$blockids, durations = x$durations)
+}
+
+#' @export
+#' @rdname longnames
+longnames.event_seq <- function(x, ...) {
+  longnames(.event_as_term(x), ...)
+}
+
+#' @export
+#' @rdname shortnames
+shortnames.event_seq <- function(x, ...) {
+  shortnames(.event_as_term(x), ...)
+}
+
 
 
 ## ============================================================================

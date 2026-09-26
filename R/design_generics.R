@@ -331,7 +331,29 @@ is_continuous <- function(x, ...) UseMethod("is_continuous")
 #'
 #' Superseded by `conditions(x, style = "canonical")`.
 #'
+#' Long names are the canonical condition names: each factor level is
+#' written `variable.level`, and the factors of an interaction are joined
+#' with `_` (for example `condition.A_attn.x`). With `expand_basis = TRUE`
+#' a `_bNN` suffix is added for each HRF basis function.
+#'
+#' They are not the design-matrix column names. A term's columns are
+#' `paste0(term_tag, "_", longnames(term, expand_basis = TRUE))`, so the
+#' column for level `A` of `hrf(condition)` is `condition_condition.A`, and
+#' `longnames(term)` returns `condition.A`. Use [columns()] (or
+#' `colnames(design_matrix(x))`) for the column names, and [condition_map()]
+#' for a table that lines the two up. One exception: long names span the
+#' full grid of factor levels, so an interaction cell with no events is
+#' named here but has no design-matrix column.
+#'
+#' Methods exist for `event_term`, `event_model` (all terms in order),
+#' `convolved_term`, `feature_term`, covariate terms, and bare events from
+#' [event_factor()] and friends (`event_seq`), which are named as the
+#' single-variable `event_term` built from them would be.
+#'
 #' @param x The object.
+#' @param drop.empty Passed to [conditions()].
+#' @param expand_basis Logical; add a basis suffix for multi-basis HRFs
+#'   (default `FALSE`).
 #' @param ... Additional arguments.
 #' @return Character vector of long (fully qualified) names.
 #' @examples
@@ -356,6 +378,15 @@ is_continuous <- function(x, ...) UseMethod("is_continuous")
 #' # Returns: "category.face_attention.attend"
 #' #          "category.scene_attention.attend"
 #' #          "category.face_attention.ignore"
+#'
+#' # Long names versus design-matrix column names
+#' sf <- fmrihrf::sampling_frame(blocklens = 30, TR = 2)
+#' des <- data.frame(onset = c(0, 10, 20), run = 1,
+#'                   condition = factor(c("A", "B", "A")))
+#' em <- event_model(onset ~ hrf(condition), data = des, block = ~run,
+#'                   sampling_frame = sf)
+#' longnames(em)  # "condition.A" "condition.B"
+#' columns(em)    # "condition_condition.A" "condition_condition.B"
 #' @export
 longnames <- function(x, ...) UseMethod("longnames")
 
@@ -363,7 +394,12 @@ longnames <- function(x, ...) UseMethod("longnames")
 #'
 #' Superseded by `conditions(x, style = "display")`.
 #'
+#' Short names give the factor levels only, joined with `:` for
+#' interactions (for example `A:x`). See [longnames()] for the qualified
+#' names and how they relate to design-matrix columns.
+#'
 #' @param x The object.
+#' @param drop.empty Passed to [conditions()].
 #' @param ... Additional arguments.
 #' @return Character vector of short names.
 #' @examples

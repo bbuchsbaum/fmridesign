@@ -25,6 +25,19 @@
   depended on attach order. Attaching fmridesign no longer masks these four
   names from fmrihrf.
 
+- fmridesign now supplies every name and accessor method for its own classes,
+  so downstream packages can use plain dispatch on the exported generics
+  instead of defining duplicates or reaching into fmridesign's namespace.
+  New methods: `longnames()` and `shortnames()` for `event_model`,
+  `convolved_term`, `feature_term` and bare events (`event_seq`);
+  `columns()` and `cells()` for `event_model`; `conditions()`,
+  `event_table()`, `nbasis()` and `design_matrix()` for `convolved_term`;
+  and `conditions()` for `baseline_model`. They previously lived in fmrireg.
+  `longnames()` uses fmridesign's canonical `variable.level` form
+  (`condition.A`), which is the design-matrix column name without its
+  `<term>_` prefix (`condition_condition.A`); `?longnames` documents the
+  relationship. Design-matrix column names are unchanged.
+
 ## Bug fixes
 
 - `hrf(..., summate = FALSE)` is honoured again for sustained events. The

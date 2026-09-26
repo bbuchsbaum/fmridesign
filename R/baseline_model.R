@@ -1044,6 +1044,12 @@ conditions.baseline_term <- function(x, ...) {
   colnames(x$design_matrix)
 }
 
+#' @export
+#' @rdname conditions
+conditions.baseline_model <- function(x, ...) {
+  unlist(lapply(terms(x), function(t) conditions(t, ...)), use.names = FALSE)
+}
+
 #' Construct a Block Term.
 #'
 #' Constructs a constant block intercept term based on block IDs.

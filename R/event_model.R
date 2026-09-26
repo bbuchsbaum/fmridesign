@@ -241,6 +241,36 @@ conditions.event_model <- function(x, drop.empty = TRUE, expand_basis = FALSE,
 }
 
 #' @export
+#' @rdname longnames
+longnames.event_model <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) {
+  conditions(x, drop.empty = drop.empty, expand_basis = expand_basis,
+             style = "canonical", ...)
+}
+
+#' @export
+#' @rdname shortnames
+shortnames.event_model <- function(x, drop.empty = TRUE, ...) {
+  conditions(x, drop.empty = drop.empty, style = "display", ...)
+}
+
+#' @export
+#' @rdname columns
+columns.event_model <- function(x, ...) {
+  dm <- design_matrix(x)
+  if (is.null(dm)) character(0) else colnames(dm)
+}
+
+#' @export
+#' @rdname cells
+cells.event_model <- function(x, ...) {
+  eterms <- terms(x)
+  if (length(eterms) == 0L) {
+    return(tibble::tibble())
+  }
+  dplyr::bind_rows(lapply(eterms, function(term) tibble::as_tibble(cells(term, ...))))
+}
+
+#' @export
 condition_map.event_model <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) {
   col_indices <- attr(x$design_matrix, "col_indices")
   dm_colnames <- colnames(x$design_matrix)
