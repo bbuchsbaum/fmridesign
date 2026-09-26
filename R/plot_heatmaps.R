@@ -681,7 +681,8 @@ design_map.baseline_model <- function(x,
          "(they are passed to ggplot2::geom_tile()).", call. = FALSE)
   }
   ok <- c(setdiff(names(formals(ggplot2::geom_tile)), c("...", "mapping", "data")),
-          ggplot2::GeomTile$aesthetics())
+          ggplot2::GeomTile$parameters(TRUE), ggplot2::GeomTile$aesthetics(),
+          "size", "linewidth")
   bad <- nms[!ggplot2::standardise_aes_names(nms) %in% ok]
   if (length(bad)) {
     stop("correlation_map(): unknown argument", if (length(bad) > 1L) "s" else "",
@@ -689,6 +690,15 @@ design_map.baseline_model <- function(x,
          ". Extra arguments are passed to ggplot2::geom_tile().", call. = FALSE)
   }
   invisible()
+}
+
+# `label_values` is fmrireg's former name for `annotate`.
+.fd_hm_label_alias <- function(annotate, label_values) {
+  if (is.null(label_values)) return(annotate)
+  if (!is.null(annotate)) {
+    stop("Supply `annotate` or `label_values`, not both.", call. = FALSE)
+  }
+  label_values
 }
 
 # Correlations "within run": drop the run-intercept columns, centre every
@@ -753,6 +763,7 @@ design_map.baseline_model <- function(x,
                                    title = "Regressor correlations",
                                    subtitle = NULL,
                                    within_run = FALSE,
+                                   annotate_max = 20L,
                                    ...) {
   method <- match.arg(method)
   limits <- match.arg(limits)
@@ -850,7 +861,7 @@ design_map.baseline_model <- function(x,
   groups <- .fd_hm_groups(ci$term, ci$term_label)
   bounds <- .fd_hm_boundaries(groups)
 
-  annotate <- annotate %||% (p <= 20L)
+  annotate <- annotate %||% (p <= annotate_max)
   digits <- if (p <= 10L) 2L else 1L
   df$lab <- if (isTRUE(annotate)) .fd_hm_fmt_r(df$r, digits) else ""
   df$tcol <- .fd_hm_text_col(df$r / limit)
@@ -980,7 +991,9 @@ design_map.baseline_model <- function(x,
 #'   is equivalent to `limits = "data"`.
 #' @param rotate_x_text Logical; angle column labels when they would overlap.
 #' @param annotate Logical or `NULL`; print r in each cell. `NULL` (default)
-#'   annotates when there are at most 20 columns.
+#'   annotates when there are at most 20 columns for an event model, or at
+#'   most 12 columns (after removing run intercepts) for a baseline model,
+#'   the threshold fmrireg's former baseline method used.
 #' @param flag_threshold Cells with abs(r) at or above this value are
 #'   outlined.
 #' @param vif_threshold VIFs at or above this value are flagged.
@@ -993,8 +1006,8 @@ design_map.baseline_model <- function(x,
 #'   actually estimates with per-run intercepts. The default is `TRUE` for
 #'   baseline models, whose columns are mostly run-specific, and `FALSE` for
 #'   event models (runs concatenated).
-#' @param label_values Baseline models only; an alias for `annotate` kept
-#'   for compatibility with fmrireg's former `correlation_map()` method.
+#' @param label_values An alias for `annotate`, kept for compatibility with
+#'   fmrireg's former `correlation_map()` methods. Supply one or the other.
 #' @param ... Passed to [ggplot2::geom_tile()]. Anything that is not a
 #'   `geom_tile()` argument or aesthetic is an error.
 #' @return A ggplot object.
@@ -1023,8 +1036,10 @@ correlation_map.event_model <- function(x,
                                         title = "Regressor correlations",
                                         subtitle = NULL,
                                         within_run = FALSE,
+                                        label_values = NULL,
                                         ...) {
   limits <- if (isFALSE(absolute_limits)) "data" else match.arg(limits)
+  annotate <- .fd_hm_label_alias(annotate, label_values)
   .fd_hm_correlation_map(x, method = method, half_matrix = half_matrix,
                          limits = limits, rotate_x_text = rotate_x_text,
                          annotate = annotate, flag_threshold = flag_threshold,
@@ -1055,18 +1070,13 @@ correlation_map.baseline_model <- function(x,
                                            label_values = NULL,
                                            ...) {
   limits <- if (isFALSE(absolute_limits)) "data" else match.arg(limits)
-  if (!is.null(label_values)) {
-    if (!is.null(annotate)) {
-      stop("Supply `annotate` or `label_values`, not both.", call. = FALSE)
-    }
-    annotate <- label_values
-  }
+  annotate <- .fd_hm_label_alias(annotate, label_values)
   .fd_hm_correlation_map(x, method = method, half_matrix = half_matrix,
                          limits = limits, rotate_x_text = rotate_x_text,
                          annotate = annotate, flag_threshold = flag_threshold,
                          vif_threshold = vif_threshold,
                          title = title, subtitle = subtitle,
-                         within_run = within_run, ...)
+                         within_run = within_run, annotate_max = 12L, ...)
 }
 
 # ---------------------------------------------------------------------------

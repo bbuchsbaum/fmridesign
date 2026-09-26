@@ -404,3 +404,59 @@ test_that("correlation_map rejects arguments it would otherwise drop", {
   expect_error(correlation_map(fx$em, within_rn = TRUE), "unknown argument")
   expect_s3_class(correlation_map(fx$em, within_run = TRUE), "ggplot")
 })
+
+test_that("correlation_map accepts every geom_tile argument, legacy size included", {
+  bm <- .baseline_corr_fixture()
+  fx <- .names_fixture()
+  # size is deprecated in ggplot2 but still accepted there, so not an error here
+  expect_s3_class(suppressWarnings(correlation_map(bm, size = 0.1)), "ggplot")
+  expect_s3_class(correlation_map(bm, na.rm = TRUE, linejoin = "round",
+                                  lineend = "butt", alpha = 0.8), "ggplot")
+  expect_s3_class(correlation_map(fx$em, label_values = TRUE), "ggplot")
+  expect_error(correlation_map(fx$em, label_values = TRUE, annotate = FALSE),
+               "not both")
+})
+
+test_that("default cell labels: <= 12 columns for baselines, <= 20 for events", {
+  has_text <- function(p) any(nzchar(p$data$lab))
+  sf <- fmrihrf::sampling_frame(blocklens = c(60, 60), TR = 2)
+  # 7 x 2 run-specific poly columns = 14 columns after intercepts: no labels
+  bm14 <- baseline_model(basis = "poly", degree = 7, sframe = sf)
+  expect_false(has_text(correlation_map(bm14)))
+  expect_true(has_text(correlation_map(bm14, annotate = TRUE)))
+  # 6 x 2 = 12 columns: labelled
+  bm12 <- baseline_model(basis = "poly", degree = 6, sframe = sf)
+  expect_true(has_text(correlation_map(bm12)))
+  # event model with 14 columns keeps fmridesign's 20-column default
+  des <- data.frame(onset = seq(2, 100, length.out = 28), run = rep(1:2, each = 14),
+                    cond = factor(rep(letters[1:14], 2)))
+  em <- event_model(onset ~ hrf(cond), data = des, block = ~run, sampling_frame = sf)
+  expect_true(has_text(correlation_map(em)))
+})
+
+test_that("condition_map matches columns exactly, not by name suffix", {
+  sf <- fmrihrf::sampling_frame(blocklens = 60, TR = 2)
+  # level names where one canonical name ends with another ("_cond.A")
+  des <- data.frame(onset = c(0, 10, 20, 30), run = 1,
+                    cond = factor(c("A", "x_cond.A", "A", "x_cond.A")))
+  em <- event_model(onset ~ hrf(cond), data = des, block = ~run,
+                    sampling_frame = sf)
+  cm <- condition_map(em)
+  expect_equal(cm$column_name, paste0("cond_", cm$canonical))
+  expect_equal(cm$column_name, columns(em))
+
+  # interaction with an empty cell 1:p and a level "z_a.1" whose canonical
+  # name ends with "a.1"
+  des2 <- data.frame(onset = seq(0, 50, by = 10), run = 1,
+                     a = factor(c("1", "1", "z_a.1", "z_a.1", "1", "z_a.1")),
+                     b = factor(c("q", "q", "p", "q", "q", "p")))
+  em2 <- event_model(onset ~ hrf(a, b), data = des2, block = ~run,
+                     sampling_frame = sf)
+  cm2 <- condition_map(em2, drop.empty = FALSE)
+  expect_equal(nrow(cm2), 4L)
+  expect_true(is.na(cm2$column_name[cm2$canonical == "a.1_b.p"]))
+  ok <- !is.na(cm2$column_name)
+  expect_equal(cm2$column_name[ok], paste0("a_b_", cm2$canonical[ok]))
+  expect_setequal(cm2$column_name[ok], columns(em2))
+  expect_equal(condition_map(em2)$column_name, columns(em2))
+})

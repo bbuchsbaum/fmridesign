@@ -43,8 +43,8 @@
   left out, as it is from the design matrix, so the names line up one-to-one
   with the columns. `drop.empty = FALSE` lists the full grid of factor
   levels, which is what `conditions()` always returns (documented).
-- `condition_map(<event_model>)` finds each condition's column by name
-  instead of by position. It previously returned `column_name = NA` for every
+- `condition_map(<event_model>)` finds each condition's column by its exact
+  name, `<term tag>_<canonical>`, instead of by position. It previously returned `column_name = NA` for every
   row of a term with an empty cell or a multi-basis HRF.
 - `blockids(<event_model>)` is documented (`?blockids.event_model`): it
   returns one run id per event. Per-scan ids come from
@@ -57,11 +57,13 @@
   run-specific columns are correlated on their own run, with pairs from
   different runs left out. This reproduces fmrireg's former method exactly;
   `within_run = FALSE` gives the previous fmridesign behaviour (runs
-  concatenated). `label_values` is accepted as an alias for `annotate`. The
+  concatenated). Cells are labelled by default when there are at most 12
+  columns, as in fmrireg's method (event models keep the 20-column default).
+  Both methods accept `label_values` as an alias for `annotate`, and the
   `event_model` method accepts `within_run` too (default `FALSE`).
-- `correlation_map()` now errors on arguments that are not `geom_tile()`
-  arguments or aesthetics, instead of passing them on to be dropped with a
-  warning.
+- `correlation_map()` now errors on arguments that `geom_tile()` does not
+  accept, instead of passing them on to be dropped with a warning. The
+  deprecated `size` is still accepted.
 
 ## Bug fixes
 

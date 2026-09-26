@@ -312,20 +312,32 @@ cells.event_model <- function(x, ...) {
 }
 
 # Map each canonical condition name of one term to that term's design-matrix
-# column. A term's columns are "<term tag>_<canonical name>", and the tag is
-# shared by all of them, so a column belongs to a condition when it ends in
-# "_<canonical>". Conditions without a column (empty cells, or names without
-# the basis suffix of a multi-basis term) map to NA. Columns whose names do
-# not follow the pattern at all fall back to position when the counts agree.
-.match_term_columns <- function(canonical, term_cols) {
-  out <- vapply(canonical, function(cn) {
-    hit <- which(endsWith(term_cols, paste0("_", cn)))
-    if (length(hit) == 1L) term_cols[[hit]] else NA_character_
-  }, character(1), USE.NAMES = FALSE)
-  if (all(is.na(out)) && length(term_cols) == length(canonical)) {
-    out <- term_cols
+# column. A term's columns are exactly
+# paste0(<tag>, "_", longnames(term, drop.empty = TRUE, expand_basis = TRUE)),
+# so the tag is recovered once for the block and every condition is matched
+# exactly against paste0(<tag>, "_", canonical). Conditions without a column
+# (empty cells when drop.empty = FALSE, or names without the basis suffix of a
+# multi-basis term when expand_basis = FALSE) map to NA. If the block does not
+# follow that pattern, fall back to position when the counts agree.
+.match_term_columns <- function(term, canonical, term_cols) {
+  expected <- tryCatch(
+    as.vector(longnames(term, drop.empty = TRUE, expand_basis = TRUE)),
+    error = function(e) NULL
+  )
+  tag <- NULL
+  if (length(expected) && length(expected) == length(term_cols)) {
+    first <- term_cols[[1L]]
+    suffix <- paste0("_", expected[[1L]])
+    if (endsWith(first, suffix)) {
+      cand <- substr(first, 1L, nchar(first) - nchar(suffix))
+      if (identical(paste0(cand, "_", expected), term_cols)) tag <- cand
+    }
   }
-  out
+  if (!is.null(tag)) {
+    want <- paste0(tag, "_", canonical)
+    return(ifelse(want %in% term_cols, want, NA_character_))
+  }
+  if (length(term_cols) == length(canonical)) term_cols else rep(NA_character_, length(canonical))
 }
 
 #' @export
@@ -351,7 +363,7 @@ condition_map.event_model <- function(x, drop.empty = TRUE, expand_basis = FALSE
     } else {
       character(0)
     }
-    column_name <- .match_term_columns(term_map$canonical, term_cols)
+    column_name <- .match_term_columns(term, term_map$canonical, term_cols)
 
     tibble::tibble(
       term = term_name,
