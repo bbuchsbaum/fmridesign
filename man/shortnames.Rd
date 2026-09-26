@@ -30,7 +30,7 @@ shortnames(x, ...)
 
 \item{...}{Additional arguments.}
 
-\item{drop.empty}{Passed to \code{\link[=conditions]{conditions()}}.}
+\item{drop.empty}{Logical; leave out cells with no events (default \code{TRUE}).}
 }
 \value{
 Character vector of short names.

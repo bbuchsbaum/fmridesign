@@ -38,6 +38,31 @@
   `<term>_` prefix (`condition_condition.A`); `?longnames` documents the
   relationship. Design-matrix column names are unchanged.
 
+- `longnames()`, `shortnames()` and `condition_map()` now honour
+  `drop.empty = TRUE` (the default): an interaction cell with no events is
+  left out, as it is from the design matrix, so the names line up one-to-one
+  with the columns. `drop.empty = FALSE` lists the full grid of factor
+  levels, which is what `conditions()` always returns (documented).
+- `condition_map(<event_model>)` finds each condition's column by name
+  instead of by position. It previously returned `column_name = NA` for every
+  row of a term with an empty cell or a multi-basis HRF.
+- `blockids(<event_model>)` is documented (`?blockids.event_model`): it
+  returns one run id per event. Per-scan ids come from
+  `blockids(x$sampling_frame)`; `blocklens(x)` gives scans per run. Because
+  fmrireg previously overrode this method with per-scan ids, the first call in
+  a session prints a one-time message. The message will be removed in the next
+  release.
+- `correlation_map(<baseline_model>)` gains `within_run = TRUE`: run
+  intercepts are dropped, columns are centred within each run, and
+  run-specific columns are correlated on their own run, with pairs from
+  different runs left out. This reproduces fmrireg's former method exactly;
+  `within_run = FALSE` gives the previous fmridesign behaviour (runs
+  concatenated). `label_values` is accepted as an alias for `annotate`. The
+  `event_model` method accepts `within_run` too (default `FALSE`).
+- `correlation_map()` now errors on arguments that are not `geom_tile()`
+  arguments or aesthetics, instead of passing them on to be dropped with a
+  warning.
+
 ## Bug fixes
 
 - `hrf(..., summate = FALSE)` is honoured again for sustained events. The

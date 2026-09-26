@@ -30,7 +30,7 @@ longnames(x, ...)
 
 \item{...}{Additional arguments.}
 
-\item{drop.empty}{Passed to \code{\link[=conditions]{conditions()}}.}
+\item{drop.empty}{Logical; leave out cells with no events (default \code{TRUE}).}
 
 \item{expand_basis}{Logical; add a basis suffix for multi-basis HRFs
 (default \code{FALSE}).}
@@ -52,9 +52,12 @@ They are not the design-matrix column names. A term's columns are
 column for level \code{A} of \code{hrf(condition)} is \code{condition_condition.A}, and
 \code{longnames(term)} returns \code{condition.A}. Use \code{\link[=columns]{columns()}} (or
 \code{colnames(design_matrix(x))}) for the column names, and \code{\link[=condition_map]{condition_map()}}
-for a table that lines the two up. One exception: long names span the
-full grid of factor levels, so an interaction cell with no events is
-named here but has no design-matrix column.
+for a table that lines the two up.
+
+With \code{drop.empty = TRUE} (the default) a cell of an interaction that has
+no events is left out, as it is from the design matrix, so the names line
+up one-to-one with the term's columns. \code{drop.empty = FALSE} lists the full
+grid of factor levels, which is what \code{\link[=conditions]{conditions()}} always returns.
 
 Methods exist for \code{event_term}, \code{event_model} (all terms in order),
 \code{convolved_term}, \code{feature_term}, covariate terms, and bare events from

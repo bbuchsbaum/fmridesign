@@ -17,6 +17,7 @@
   vif_threshold = 5,
   title = "Regressor correlations",
   subtitle = NULL,
+  within_run = FALSE,
   ...
 )
 
@@ -32,6 +33,8 @@
   vif_threshold = 5,
   title = "Baseline regressor correlations",
   subtitle = NULL,
+  within_run = TRUE,
+  label_values = NULL,
   ...
 )
 }
@@ -63,7 +66,20 @@ outlined.}
 
 \item{title, subtitle}{Plot title and subtitle.}
 
-\item{...}{Passed to \code{\link[ggplot2:geom_tile]{ggplot2::geom_tile()}}.}
+\item{within_run}{Logical. If \code{TRUE}, drop the run-intercept columns,
+centre every column within each run, and correlate a column that is
+non-zero in only one run (a run-specific drift or nuisance column) on
+that run's scans only; pairs of columns specific to different runs share
+no scans and are not drawn. This is the correlation structure the model
+actually estimates with per-run intercepts. The default is \code{TRUE} for
+baseline models, whose columns are mostly run-specific, and \code{FALSE} for
+event models (runs concatenated).}
+
+\item{...}{Passed to \code{\link[ggplot2:geom_tile]{ggplot2::geom_tile()}}. Anything that is not a
+\code{geom_tile()} argument or aesthetic is an error.}
+
+\item{label_values}{Baseline models only; an alias for \code{annotate} kept
+for compatibility with fmrireg's former \code{correlation_map()} method.}
 }
 \value{
 A ggplot object.

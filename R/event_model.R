@@ -156,8 +156,46 @@ blocklens.event_model <- function(x, ...) {
   fmrihrf::blocklens(x$sampling_frame)
 }
 
+# Session state for one-time notices.
+.fd_notice_state <- new.env(parent = emptyenv())
+
+#' Run (block) ids of an event model's events
+#'
+#' `blockids()` on an `event_model` returns one run id per **event**, in
+#' event order: the run each onset belongs to. It does not return one id per
+#' scan. For per-scan run ids use `blockids(x$sampling_frame)`. `blocklens(x)`
+#' gives the number of scans in each run.
+#'
+#' fmrireg releases before its switch to fmridesign's method returned per-scan
+#' ids here whenever fmrireg was loaded. To flag the change, the first call in
+#' a session prints a one-time message (class
+#' `fmridesign_blockids_per_event`).
+#'
+#' @param x An `event_model`.
+#' @param ... Unused.
+#' @return Integer vector with one run id per event.
+#' @seealso [fmrihrf::blockids()], [fmrihrf::blocklens()]
+#' @examples
+#' sf <- fmrihrf::sampling_frame(blocklens = c(20, 20), TR = 2)
+#' des <- data.frame(onset = c(0, 10, 0, 10, 20), run = c(1, 1, 2, 2, 2),
+#'                   cond = factor(c("A", "B", "A", "B", "A")))
+#' em <- event_model(onset ~ hrf(cond), data = des, block = ~run,
+#'                   sampling_frame = sf)
+#' blockids(em)                  # per event: 1 1 2 2 2
+#' blockids(em$sampling_frame)   # per scan: 20 x 1, then 20 x 2
+#' blocklens(em)                 # scans per run: 20 20
+#' @method blockids event_model
 #' @export
 blockids.event_model <- function(x, ...) {
+  # Transition notice: remove after the next fmridesign release.
+  if (!isTRUE(.fd_notice_state$blockids_event_model)) {
+    .fd_notice_state$blockids_event_model <- TRUE
+    rlang::inform(
+      paste("blockids(<event_model>) returns per-event block ids;",
+            "for per-scan ids use blockids(x$sampling_frame)."),
+      class = "fmridesign_blockids_per_event"
+    )
+  }
   x$blockids
 }
 
@@ -243,14 +281,17 @@ conditions.event_model <- function(x, drop.empty = TRUE, expand_basis = FALSE,
 #' @export
 #' @rdname longnames
 longnames.event_model <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) {
-  conditions(x, drop.empty = drop.empty, expand_basis = expand_basis,
-             style = "canonical", ...)
+  unlist(lapply(terms(x), function(t) {
+    as.vector(longnames(t, drop.empty = drop.empty, expand_basis = expand_basis, ...))
+  }), use.names = FALSE) %||% character(0)
 }
 
 #' @export
 #' @rdname shortnames
 shortnames.event_model <- function(x, drop.empty = TRUE, ...) {
-  conditions(x, drop.empty = drop.empty, style = "display", ...)
+  unlist(lapply(terms(x), function(t) {
+    as.vector(shortnames(t, drop.empty = drop.empty, ...))
+  }), use.names = FALSE) %||% character(0)
 }
 
 #' @export
@@ -268,6 +309,23 @@ cells.event_model <- function(x, ...) {
     return(tibble::tibble())
   }
   dplyr::bind_rows(lapply(eterms, function(term) tibble::as_tibble(cells(term, ...))))
+}
+
+# Map each canonical condition name of one term to that term's design-matrix
+# column. A term's columns are "<term tag>_<canonical name>", and the tag is
+# shared by all of them, so a column belongs to a condition when it ends in
+# "_<canonical>". Conditions without a column (empty cells, or names without
+# the basis suffix of a multi-basis term) map to NA. Columns whose names do
+# not follow the pattern at all fall back to position when the counts agree.
+.match_term_columns <- function(canonical, term_cols) {
+  out <- vapply(canonical, function(cn) {
+    hit <- which(endsWith(term_cols, paste0("_", cn)))
+    if (length(hit) == 1L) term_cols[[hit]] else NA_character_
+  }, character(1), USE.NAMES = FALSE)
+  if (all(is.na(out)) && length(term_cols) == length(canonical)) {
+    out <- term_cols
+  }
+  out
 }
 
 #' @export
@@ -293,7 +351,7 @@ condition_map.event_model <- function(x, drop.empty = TRUE, expand_basis = FALSE
     } else {
       character(0)
     }
-    column_name <- if (length(term_cols) == nrow(term_map)) term_cols else rep(NA_character_, nrow(term_map))
+    column_name <- .match_term_columns(term_map$canonical, term_cols)
 
     tibble::tibble(
       term = term_name,

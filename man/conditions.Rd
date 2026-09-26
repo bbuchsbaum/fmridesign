@@ -60,7 +60,10 @@ conditions(
 
 \item{...}{Additional arguments.}
 
-\item{drop.empty}{Logical whether to drop conditions with no events (default: TRUE).}
+\item{drop.empty}{Logical whether to drop conditions with no events (default: TRUE).
+The \code{event_term} and \code{event_model} methods ignore it and always return the
+full grid of factor levels, including cells with no events; \code{\link[=longnames]{longnames()}},
+\code{\link[=shortnames]{shortnames()}} and \code{\link[=condition_map]{condition_map()}} honour it.}
 
 \item{expand_basis}{Logical whether to expand basis functions (default: FALSE).}
 
