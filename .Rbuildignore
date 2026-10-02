@@ -36,3 +36,4 @@
 ^tools$
 ^manual_cards\.jsonl$
 bench
+^\.albersdown\.bak$

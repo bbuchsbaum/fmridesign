@@ -43,7 +43,7 @@ Suggests:
 Remotes:
     bbuchsbaum/fmrihrf@b9f6a90b05bdf3673ed43414eb06ec6c74200d43
 VignetteBuilder: knitr
-Config/Needs/website: github::bbuchsbaum/albersdown, albersdown
+Config/Needs/website: github::bbuchsbaum/albersdown
 URL: https://github.com/bbuchsbaum/fmridesign, https://bbuchsbaum.github.io/fmridesign/
 BugReports: https://github.com/bbuchsbaum/fmridesign/issues
 RoxygenNote: 7.3.3
