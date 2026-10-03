@@ -2,6 +2,11 @@
 
 ## New features
 
+- Added `check_estimability()` for full-design rank, exact condition numbers,
+  named weak directions, and contrast-specific estimability and variance
+  factors. Event models include run intercepts by default and report event
+  coverage per run; an explicit baseline/nuisance design can also be supplied.
+  `check_collinearity()` now documents the limitations of pairwise checks (#32).
 - `baseline_model()` now checks `nuisance_list` inputs during construction for
   zero-variance columns, duplicate or near-duplicate columns, non-finite values,
   nuisance rank deficiency, and columns aliased with baseline terms.
@@ -40,6 +45,9 @@
 
 ## Bug fixes
 
+- `contrast_set()` now combines individual specifications with nested contrast
+  sets, including those returned by `one_against_all_contrast()`. It preserves
+  leaf names and order, and reports invalid entries by argument path (#33).
 - `covariate()` now expands matrix/data-frame arguments into one non-convolved
   regressor per column. Named inputs preserve sanitized column names, unnamed
   matrices use `f01`, `f02`, ... suffixes, and final names follow the standard
