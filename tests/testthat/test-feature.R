@@ -104,21 +104,30 @@ test_that("multi-run feature evaluates each block separately", {
   bids <- fmrihrf::blockids(sframe)
   term <- terms(emod)[[1]]
 
-  y2 <- fmrihrf::evaluate(
-    fmrihrf::feature_regressor(rms2, dt = dt, hrf = term$hrf,
-                               center = TRUE, scale = "none"),
-    fmrihrf::samples(sframe, blockids = 2, global = FALSE),
-    precision = dt
-  )
-  expect_equal(as.numeric(dm[[1]][bids == 2]), as.numeric(y2), tolerance = 1e-8)
+  # Evaluate a per-run feature regressor on a given block's local sample grid.
+  eval_on_block <- function(x, block) {
+    as.numeric(fmrihrf::evaluate(
+      fmrihrf::feature_regressor(x, dt = dt, hrf = term$hrf,
+                                 center = TRUE, scale = "none"),
+      fmrihrf::samples(sframe, blockids = block, global = FALSE),
+      precision = dt
+    ))
+  }
+  col <- as.numeric(dm[[1]])
+  b1 <- col[bids == 1]
+  b2 <- col[bids == 2]
 
-  y1_on_b2 <- fmrihrf::evaluate(
-    fmrihrf::feature_regressor(rms1, dt = dt, hrf = term$hrf,
-                               center = TRUE, scale = "none"),
-    fmrihrf::samples(sframe, blockids = 2, global = FALSE),
-    precision = dt
-  )
-  expect_gt(max(abs(as.numeric(dm[[1]][bids == 2]) - as.numeric(y1_on_b2))), 0.05)
+  # Each block equals the evaluation of its own run's series.
+  expect_equal(b1, eval_on_block(rms1, 1), tolerance = 1e-8)
+  expect_equal(b2, eval_on_block(rms2, 2), tolerance = 1e-8)
+
+  # ...and is clearly distinguishable from the other run's series. The
+  # separation is expressed relative to the column's own magnitude so it does
+  # not depend on the HRF's absolute amplitude (fmrihrf rescaled HRF_SPMG1 to
+  # the SPM 1/Gamma(6) constant, shrinking every value ~10x).
+  rel_dist <- function(a, b) sqrt(sum((a - b)^2)) / sqrt(sum(a^2))
+  expect_gt(rel_dist(b2, eval_on_block(rms1, 2)), 0.5)
+  expect_gt(rel_dist(b1, eval_on_block(rms2, 1)), 0.5)
 })
 
 test_that("centering is per run, not global", {

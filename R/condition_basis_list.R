@@ -43,10 +43,9 @@ condition_basis_list <- function(x, hrf, sampling_frame, ...,
   if (length(base_tags) == 0L || ncol(dm) == 0L) return(list())
 
   nb <- fmrihrf::nbasis(hrf)
+  # Use exactly the tag convolve() used: a bare event_term (no "term_tag"
+  # attribute) produces unprefixed column names.
   term_tag <- attr(x, "term_tag")
-  if (is.null(term_tag) && nzchar(x$varname)) {
-    term_tag <- sanitize(x$varname, allow_dot = FALSE)
-  }
 
   cols_by_cond_matrix <- vapply(base_tags, function(ct) {
     make_column_names(term_tag, ct, nb)

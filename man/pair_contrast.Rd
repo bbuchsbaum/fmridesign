@@ -50,6 +50,14 @@ allows you to test specific temporal components of the response. For example:
 \item{\code{basis = NULL} or \code{basis = "all"}}: Test all basis functions (default behavior)
 }
 
+With the default (\code{basis = NULL}), the single-column t-contrast places the
+same weight on every basis column of a condition, i.e. it tests the \emph{sum} of
+the basis coefficients. For informed bases such as \code{"spmg2"}/\code{"spmg3"}
+(canonical plus temporal/dispersion derivatives) that sum is rarely a
+meaningful quantity; the SPM convention is to contrast the canonical
+regressor only, so use \code{basis = 1} there, or test all components jointly
+with an F-contrast (e.g. \code{\link[=oneway_contrast]{oneway_contrast()}}).
+
 The \code{basis_weights} argument allows non-uniform weighting across selected basis functions:
 \itemize{
 \item{\code{basis_weights = c(.1, .2, .4, .2, .1)}}: Gaussian-like emphasis on peak

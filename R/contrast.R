@@ -427,7 +427,10 @@ contrast <- function(form, name, where=NULL) {
 #' @description
 #' Construct a contrast that sums to 1 and is used to define contrasts against the baseline.
 #'
-#' @param A A formula representing the contrast expression.
+#' @param A A formula selecting the cells to average. A logical expression
+#'   (e.g. `~ cond == "A"`) selects the matching cells; a bare factor name
+#'   (e.g. `~ cond`) selects every cell. For a multi-basis HRF the weights are
+#'   repeated on every basis function of the selected cells.
 #' @param name A character string specifying the name of the contrast.
 #' @param where An optional formula specifying the subset of conditions to apply the contrast to.
 #'
@@ -683,6 +686,14 @@ sliding_window_contrasts <- function(levels, facname, window_size = 2, where = N
 #'   \item{`basis = 2:3`}: Test the second and third basis functions together
 #'   \item{`basis = NULL` or `basis = "all"`}: Test all basis functions (default behavior)
 #' }
+#'
+#' With the default (`basis = NULL`), the single-column t-contrast places the
+#' same weight on every basis column of a condition, i.e. it tests the *sum* of
+#' the basis coefficients. For informed bases such as `"spmg2"`/`"spmg3"`
+#' (canonical plus temporal/dispersion derivatives) that sum is rarely a
+#' meaningful quantity; the SPM convention is to contrast the canonical
+#' regressor only, so use `basis = 1` there, or test all components jointly
+#' with an F-contrast (e.g. [oneway_contrast()]).
 #'
 #' The `basis_weights` argument allows non-uniform weighting across selected basis functions:
 #' \itemize{
@@ -1075,6 +1086,14 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
         rep(TRUE, nrow(term_cells))
       }
 
+      # A logical selector in `A` (e.g. `~ cond == "A"`) restricts the cells
+      # further; a bare factor name (e.g. `~ cond`) selects every cell.
+      sel <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = term_cells),
+                      error = function(e) NULL)
+      if (is.logical(sel) && length(sel) == nrow(term_cells)) {
+        keep <- keep & !is.na(sel) & sel
+      }
+
       relevant_cells <- term_cells[keep, , drop = FALSE]
 
       if (nrow(relevant_cells) == 0) {
@@ -1091,12 +1110,15 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
       }
   }
 
+  # Replicate across all basis functions of a multi-basis HRF
+  expanded <- .expand_and_filter_basis(weights_out, term, x$name)
+
   # Return structure focused on cell-based weights
   ret <- list(
     term=term,
     name=x$name,
-    weights=weights_out,
-    condnames=all_condnames,
+    weights=expanded$weights,
+    condnames=expanded$condnames,
     contrast_spec=x
   )
   
@@ -1259,8 +1281,10 @@ contrast_weights.interaction_contrast_spec <- function(x, term,...) {
               stop(paste("Contrast '", x$name, "': Error generating interaction contrast: ", e$message), call.=FALSE)
           })
           
-          # Ensure rownames match cell identifiers
-          cell_names_rel <- apply(relevant_cells, 1, paste, collapse = "_")
+          # Row names must be the term's canonical condition tags (e.g.
+          # "task.face_load.low") so contrast_weights.event_model() can match
+          # them to design-matrix columns.
+          cell_names_rel <- cell_condition_tags(relevant_cells)
           rownames(cmat) <- cell_names_rel
           colnames(cmat) <- paste(x$name, seq_len(ncol(cmat)), sep="_") # Name F-contrast columns
           
@@ -1269,6 +1293,11 @@ contrast_weights.interaction_contrast_spec <- function(x, term,...) {
       }
   }
   
+  # Replicate across all basis functions of a multi-basis HRF
+  expanded <- .expand_and_filter_basis(weights_out, term, x$name)
+  weights_out    <- expanded$weights
+  cell_names_out <- expanded$condnames
+
   # Return structure focused on cell-based weights
   ret <- list(
     term = term,
@@ -1681,13 +1710,17 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
   
   # Canonical condition names are the public row labels.
   row.names(weights) <- condnames
+  colnames(weights) <- x$name
+
+  # Replicate across all basis functions of a multi-basis HRF
+  expanded <- .expand_and_filter_basis(weights, term, x$name)
 
   # Return structure
   ret <- list(
     term=term,
     name=x$name,
-    weights=weights,
-    condnames=condnames,
+    weights=expanded$weights,
+    condnames=expanded$condnames,
     contrast_spec=x)
   
   class(ret) <- c("contrast", "list")
@@ -1716,7 +1749,7 @@ contrast_weights.contrast_diff_spec <- function(x, term,...) {
       term=term,
       name=x$name,
       weights=wts1$weights - wts2$weights,
-      condnames=longnames(term),
+      condnames=rownames(wts1$weights) %||% longnames(term),
       contrast_spec=x),
     class=c("contrast_diff", "contrast")
   )
@@ -1907,205 +1940,7 @@ plot_contrasts <- function(x, ...) {
   UseMethod("plot_contrasts")
 }
 
-#' plot_contrasts.event_model
-#'
-#' @description
-#' Produces a heatmap of all contrasts defined for an \code{event_model}.
-#' Rows = each contrast (or column of an F-contrast), columns = each regressor in
-#' the full design matrix, and the fill color = the contrast weight.
-#'
-#' @param x An \code{event_model} with (lazily) defined contrasts.
-#' @param absolute_limits Logical; if \code{TRUE}, the color scale is fixed at (-1,1).
-#'   If \code{FALSE}, the range is set to (min, max) of the weights.
-#' @param rotate_x_text Logical; if \code{TRUE}, rotate x-axis labels for readability.
-#' @param scale_mode Character; 'auto', 'diverging', or 'one_sided' color scaling.
-#' @param coord_fixed Logical; if TRUE, use fixed aspect ratio.
-#' @param ... Further arguments passed to \code{geom_tile}, e.g. \code{color="grey80"}.
-#'
-#' @return A \code{ggplot2} object (a heatmap).
-#' @examples
-#' # Create event model with contrasts
-#' des <- data.frame(
-#'   onset = c(0, 10, 20, 30, 40, 50),
-#'   run = 1,
-#'   cond = factor(c("A", "B", "C", "A", "B", "C"))
-#' )
-#' sframe <- fmrihrf::sampling_frame(blocklens = 60, TR = 1)
-#' cset <- contrast_set(
-#'   A_vs_B = pair_contrast(~ cond == "A", ~ cond == "B", name = "A_vs_B"),
-#'   B_vs_C = pair_contrast(~ cond == "B", ~ cond == "C", name = "B_vs_C")
-#' )
-#' emod <- event_model(onset ~ hrf(cond, contrasts = cset),
-#'                     data = des, block = ~run, sampling_frame = sframe)
-#' plot_contrasts(emod)
-#' @import ggplot2
-#' @export
-plot_contrasts.event_model <- function(
-    x,
-    absolute_limits = FALSE,
-    rotate_x_text   = TRUE,
-    scale_mode      = c("auto", "diverging", "one_sided"),
-    coord_fixed     = TRUE,
-    ...
-) {
-  # 1) Extract all the design-matrix column names
-  dm <- design_matrix(x)
-  regressor_names <- colnames(dm)
-  
-  # 2) Gather contrast weights (the nested list by term, then by contrast)
-  cws <- contrast_weights(x)
-  
-  # Flatten everything into one big matrix of contrast weights
-  big_mat  <- NULL
-  rownames <- character(0)
-  
-  add_contrast_row <- function(vec, row_name) {
-    if (is.null(big_mat)) {
-      big_mat <<- matrix(vec, nrow = 1)
-      colnames(big_mat) <<- regressor_names
-      rownames <<- row_name
-    } else {
-      big_mat <<- rbind(big_mat, vec)
-      rownames <<- c(rownames, row_name)
-    }
-  }
-  
-  for (contrast_nm in names(cws)) {
-    cw_obj <- cws[[contrast_nm]]
-    if (is.null(cw_obj)) next
 
-    # By default, we store offset_weights in cw_obj$offset_weights
-    W <- cw_obj$offset_weights
-    if (is.null(W)) next  # skip if no offset_weights
-
-    # (#designCols x #contrastCols)
-    ncols <- ncol(W)
-    for (k in seq_len(ncols)) {
-      this_col <- W[, k]
-      if (ncols > 1) {
-        row_label <- paste0(contrast_nm, "_component", k)
-      } else {
-        row_label <- contrast_nm
-      }
-      add_contrast_row(this_col, row_label)
-    }
-  }
-  
-  if (is.null(big_mat)) {
-    stop("No contrasts found in this event_model.")
-  }
-  
-  rownames(big_mat) <- rownames
-  
-  # 3) Convert big_mat to a long data frame using modern base R approach
-  # Create indices for row and column positions
-  row_indices <- rep(seq_len(nrow(big_mat)), ncol(big_mat))
-  col_indices <- rep(seq_len(ncol(big_mat)), each = nrow(big_mat))
-  
-  # Create the long format data frame
-  df_long <- data.frame(
-    ContrastName = rownames(big_mat)[row_indices],
-    Regressor = colnames(big_mat)[col_indices],
-    Weight = as.vector(big_mat),
-    stringsAsFactors = FALSE
-  )
-  
-  # 4) Build the ggplot
-  plt <- ggplot2::ggplot(
-    df_long,
-    ggplot2::aes(
-      x    = ReorderFactor(Regressor),
-      y    = ReorderFactor(ContrastName, reverse = TRUE),
-      fill = Weight
-    )
-  ) +
-    ggplot2::geom_tile(...)
-  
-  # Decide on color scale
-  scale_mode <- match.arg(scale_mode)
-  wmin <- min(df_long$Weight, na.rm = TRUE)
-  wmax <- max(df_long$Weight, na.rm = TRUE)
-  
-  # If user set absolute_limits=TRUE, we might forcibly use [-1,1] or [0,1]
-  # but let's allow scale_mode to override as well.
-  if (scale_mode == "diverging") {
-    # Diverging scale, centered on 0
-    lim_low  <- if (absolute_limits) -1 else wmin
-    lim_high <- if (absolute_limits)  1 else wmax
-    midpt <- 0
-    
-    plt <- plt + ggplot2::scale_fill_gradient2(
-      limits   = c(lim_low, lim_high),
-      midpoint = midpt,
-      low      = "blue",
-      mid      = "white",
-      high     = "red"
-    )
-    
-  } else if (scale_mode == "one_sided") {
-    # One-sided scale for 0..1 or 0..something
-    lim_low  <- if (absolute_limits) 0 else wmin
-    lim_high <- if (absolute_limits) 1 else wmax
-    
-    plt <- plt + ggplot2::scale_fill_gradient(
-      limits = c(lim_low, lim_high),
-      low    = "white",
-      high   = "red"
-    )
-    
-  } else {
-    # scale_mode == "auto"
-    # If we detect any negative weight, do diverging; otherwise do one-sided
-    if (wmin < 0) {
-      # diverging
-      lim_low  <- if (absolute_limits) -1 else wmin
-      lim_high <- if (absolute_limits)  1 else wmax
-      plt <- plt + ggplot2::scale_fill_gradient2(
-        limits   = c(lim_low, lim_high),
-        midpoint = 0,
-        low      = "blue",
-        mid      = "white",
-        high     = "red"
-      )
-    } else {
-      # one-sided
-      lim_low  <- if (absolute_limits) 0 else wmin
-      lim_high <- if (absolute_limits) 1 else wmax
-      plt <- plt + ggplot2::scale_fill_gradient(
-        limits = c(lim_low, lim_high),
-        low    = "white",
-        high   = "red"
-      )
-    }
-  }
-  
-  # 5) Theming
-  plt <- plt +
-    ggplot2::theme_minimal(base_size = 14) +
-    ggplot2::labs(
-      x    = "Regressor",
-      y    = "Contrast",
-      fill = "Weight"
-    ) +
-    ggplot2::theme(
-      panel.grid  = ggplot2::element_blank(),
-      axis.ticks  = ggplot2::element_blank()
-    )
-  
-  if (rotate_x_text) {
-    plt <- plt + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
-  }
-  
-  # 6) Optionally fix the coordinate ratio to keep tiles square
-  if (coord_fixed) {
-    plt <- plt +
-      ggplot2::scale_x_discrete(expand = c(0, 0)) +
-      ggplot2::scale_y_discrete(expand = c(0, 0)) +
-      ggplot2::coord_fixed()
-  }
-  
-  plt
-}
 
 #' A small utility to preserve factor order in ggplot
 #' 

@@ -169,13 +169,13 @@ test_that("cell_condition_tags handles degenerate inputs", {
 test_that("add_basis expands tags correctly", {
   expect_equal(fmridesign:::add_basis("cond.A", 1), "cond.A")
   expect_equal(fmridesign:::add_basis("cond.A", 3), c("cond.A_b01", "cond.A_b02", "cond.A_b03"))
-  expect_equal(fmridesign:::add_basis(c("t1", "t2"), 2), c("t1_b01", "t2_b01", "t1_b02", "t2_b02"))
+  expect_equal(fmridesign:::add_basis(c("t1", "t2"), 2), c("t1_b01", "t1_b02", "t2_b01", "t2_b02"))
 })
 
 test_that("make_column_names composes final names", {
   expect_equal(fmridesign:::make_column_names("term1", "cond.A", 1), "term1_cond.A")
   expect_equal(fmridesign:::make_column_names("term1", "cond.A", 3), c("term1_cond.A_b01", "term1_cond.A_b02", "term1_cond.A_b03"))
-  expect_equal(fmridesign:::make_column_names("term1", c("c1", "c2"), 2), c("term1_c1_b01", "term1_c2_b01", "term1_c1_b02", "term1_c2_b02"))
+  expect_equal(fmridesign:::make_column_names("term1", c("c1", "c2"), 2), c("term1_c1_b01", "term1_c1_b02", "term1_c2_b01", "term1_c2_b02"))
   expect_error(fmridesign:::make_column_names("term__bad", "cond.A", 1)) # Double underscore guard
 })
 

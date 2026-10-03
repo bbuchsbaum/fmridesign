@@ -96,6 +96,11 @@ Where:
 \item \code{condition_tag}: Represents the specific factor level or continuous regressor within the term (e.g., \code{condition.A}, \code{poly_RT_01}, \code{condition.A_task.go}).
 \item \verb{_b##}: Optional suffix added for HRFs with multiple basis functions (e.g., \verb{_b01}, \verb{_b02}).
 }
+
+Within a multi-basis term, columns are ordered condition-major: all basis
+functions of the first condition, then all of the second, and so on
+(\verb{cond.A_b01, cond.A_b02, cond.B_b01, cond.B_b02, ...}). The order returned by
+\code{conditions(term, expand_basis = TRUE)} is the same.
 }
 
 \subsection{Term Naming and Clash Resolution}{

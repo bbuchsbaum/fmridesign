@@ -7,7 +7,10 @@
 unit_contrast(A, name, where = NULL)
 }
 \arguments{
-\item{A}{A formula representing the contrast expression.}
+\item{A}{A formula selecting the cells to average. A logical expression
+(e.g. \code{~ cond == "A"}) selects the matching cells; a bare factor name
+(e.g. \code{~ cond}) selects every cell. For a multi-basis HRF the weights are
+repeated on every basis function of the selected cells.}
 
 \item{name}{A character string specifying the name of the contrast.}
 

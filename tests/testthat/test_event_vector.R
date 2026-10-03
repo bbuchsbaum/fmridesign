@@ -175,9 +175,8 @@ test_that("feature and basis suffixes combine in convolve", {
   sf <- sampling_frame(blocklens = 10, TR = 1)
   cmat <- convolve(term, hrf = HRF_SPMG3, sampling_frame = sf)
   expect_equal(colnames(cmat),
-               c("term_f01_b01", "term_f02_b01",
-                 "term_f01_b02", "term_f02_b02",
-                 "term_f01_b03", "term_f02_b03"))
+               c("term_f01_b01", "term_f01_b02", "term_f01_b03",
+                 "term_f02_b01", "term_f02_b02", "term_f02_b03"))
 })
 
 
@@ -623,9 +622,10 @@ test_that("conditions.event_term - basic factor term", {
   
   # Check expand_basis=TRUE
   conds_basis <- conditions(term_facA, expand_basis = TRUE)
-  expected_basis <- c("FacA.L1_b01", "FacA.L2_b01", 
-                      "FacA.L1_b02", "FacA.L2_b02", 
-                      "FacA.L1_b03", "FacA.L2_b03")
+  # Condition-major: all bases of L1, then all bases of L2 (matches the
+  # column layout of the convolved design matrix; see issue #23)
+  expected_basis <- c("FacA.L1_b01", "FacA.L1_b02", "FacA.L1_b03",
+                      "FacA.L2_b01", "FacA.L2_b02", "FacA.L2_b03")
   expect_equal(conds_basis, expected_basis)
 })
 
@@ -647,7 +647,7 @@ test_that("conditions.event_term supports display style", {
 
   expect_equal(
     conditions(term_facA, style = "display", expand_basis = TRUE),
-    c("L1_b01", "L2_b01", "L1_b02", "L2_b02", "L1_b03", "L2_b03")
+    c("L1_b01", "L1_b02", "L1_b03", "L2_b01", "L2_b02", "L2_b03")
   )
 })
 
@@ -674,7 +674,7 @@ test_that("conditions.event_term - factor interaction", {
   
   # Expand basis
   conds_basis <- conditions(term_facAB, expand_basis = TRUE)
-  expected_basis <- as.vector(outer(expected, c("_b01", "_b02", "_b03"), paste0))
+  expected_basis <- as.vector(t(outer(expected, c("_b01", "_b02", "_b03"), paste0)))
   expect_equal(conds_basis, expected_basis)
 })
 
@@ -688,7 +688,7 @@ test_that("conditions.event_term - factor x continuous interaction", {
   # Expand basis
   conds_basis <- conditions(term_facA_P2, expand_basis = TRUE)
   # Expect 0-padding for basis indices
-  expected_basis <- as.vector(outer(expected, c("_b01", "_b02", "_b03"), paste0))
+  expected_basis <- as.vector(t(outer(expected, c("_b01", "_b02", "_b03"), paste0)))
   expect_equal(conds_basis, expected_basis)
 })
 
@@ -700,8 +700,8 @@ test_that("conditions.event_term - continuous only (shortcut and non-shortcut)",
   # Expand basis
   conds_P2_basis <- conditions(term_P2, expand_basis = TRUE)
   # Expect 0-padding for basis indices
-  expected_basis <- as.vector(outer(c("01", "02"), 
-                                    c("_b01", "_b02", "_b03"), paste0))
+  expected_basis <- as.vector(t(outer(c("01", "02"), 
+                                    c("_b01", "_b02", "_b03"), paste0)))
   expect_equal(conds_P2_basis, expected_basis)
   
   # Test shortcut case (Scale -> 1 column)
@@ -732,13 +732,13 @@ test_that("conditions.event_term - drop.empty works", {
   
   # Test with expansion
   conds_all_basis <- conditions(term_sparse, drop.empty = FALSE, expand_basis = TRUE)
-  expect_equal(conds_all_basis, as.vector(outer(c("FacSparse.L1", "FacSparse.L2"), 
-                                               c("_b01", "_b02", "_b03"), paste0)))
+  expect_equal(conds_all_basis, as.vector(t(outer(c("FacSparse.L1", "FacSparse.L2"), 
+                                               c("_b01", "_b02", "_b03"), paste0))))
                                                
   # drop.empty=TRUE should also have NO effect here
   conds_drop_basis <- conditions(term_sparse, drop.empty = TRUE, expand_basis = TRUE)
-  expect_equal(conds_drop_basis, as.vector(outer(c("FacSparse.L1", "FacSparse.L2"), 
-                                                c("_b01", "_b02", "_b03"), paste0)))
+  expect_equal(conds_drop_basis, as.vector(t(outer(c("FacSparse.L1", "FacSparse.L2"), 
+                                                c("_b01", "_b02", "_b03"), paste0))))
 })
 
 test_that("design_matrix.event_term output matches new conditions format", {
