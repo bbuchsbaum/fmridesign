@@ -1,5 +1,13 @@
 # fmridesign (development version)
 
+## New features
+
+- Added `check_estimability()` for full-design rank, exact condition numbers,
+  named weak directions, and contrast-specific estimability and variance
+  factors. Event models include run intercepts by default and report event
+  coverage per run; an explicit baseline/nuisance design can also be supplied.
+  `check_collinearity()` now documents the limitations of pairwise checks (#32).
+
 ## CRAN compliance
 
 - Design-column convolution no longer reaches into fmrihrf's unexported
@@ -67,6 +75,9 @@
 
 ## Bug fixes
 
+- `contrast_set()` now combines individual specifications with nested contrast
+  sets, including those returned by `one_against_all_contrast()`. It preserves
+  leaf names and order, and reports invalid entries by argument path (#33).
 - `hrf(..., summate = FALSE)` is honoured again for sustained events. The
   shared-HRF fast path ignored `summate` and always produced the
   `summate = TRUE` design.

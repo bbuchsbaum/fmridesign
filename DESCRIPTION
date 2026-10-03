@@ -59,6 +59,7 @@ Collate:
     'design_generics.R'
     'design_map.R'
     'design_metadata.R'
+    'estimability.R'
     'utils-internal.R'
     'event-classes.R'
     'event_model_helpers.R'

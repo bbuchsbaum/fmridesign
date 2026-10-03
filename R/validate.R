@@ -186,6 +186,12 @@ validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
 #' Check design matrix for multicollinearity
 #'
 #' Convenience helper to quickly flag highly correlated regressors.
+#' This is a pairwise check only: constant columns (including intercepts) are
+#' excluded, and `ok = TRUE` does not establish full rank, estimability or good
+#' contrast precision. Dependencies involving several columns, such as task
+#' regressors summing to an intercept in a no-rest design, can pass this check.
+#' Use [check_estimability()] on the full design, including baseline/nuisance
+#' regressors, to inspect those dependencies.
 #'
 #' @param X A numeric design matrix (or an `event_model`).
 #' @param threshold Absolute correlation above which a pair is flagged. Default 0.9.
@@ -242,4 +248,3 @@ check_collinearity <- function(X, threshold = 0.9) {
     return(invisible(list(ok = FALSE, pairs = pairs)))
   }
 }
-

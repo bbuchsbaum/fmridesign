@@ -7,17 +7,23 @@
 contrast_set(...)
 }
 \arguments{
-\item{...}{A variable-length list of contrast_spec objects.}
+\item{...}{Individual \code{contrast_spec} objects or nested \code{contrast_set} objects.}
 }
 \value{
 A list of contrast_spec objects with class "contrast_set".
 }
 \description{
-Construct a list of contrast_spec objects.
+Construct a list of contrast_spec objects. Nested \code{contrast_set} arguments,
+including results from \code{\link[=one_against_all_contrast]{one_against_all_contrast()}} or \code{\link[=pairwise_contrasts]{pairwise_contrasts()}},
+are recursively flattened in argument order. Individual specifications and
+their list names are preserved; names on enclosing sets are not used as
+prefixes. Empty sets contribute no specifications. Ordinary lists are not
+flattened; splice those explicitly with \code{do.call(contrast_set, specs)}.
 }
 \examples{
 c1 <- contrast(~ A - B, name="A_B")
 c2 <- contrast(~ B - C, name="B_C")
 contrast_set(c1,c2)
+contrast_set(c1, one_against_all_contrast(c("A", "B", "C"), "condition"))
 
 }

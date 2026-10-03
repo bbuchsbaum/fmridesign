@@ -503,9 +503,14 @@ one_against_all_contrast <- function(levels, facname, where=NULL) {
 #' Create a Set of Contrasts
 #'
 #' @description
-#' Construct a list of contrast_spec objects.
+#' Construct a list of contrast_spec objects. Nested `contrast_set` arguments,
+#' including results from [one_against_all_contrast()] or [pairwise_contrasts()],
+#' are recursively flattened in argument order. Individual specifications and
+#' their list names are preserved; names on enclosing sets are not used as
+#' prefixes. Empty sets contribute no specifications. Ordinary lists are not
+#' flattened; splice those explicitly with `do.call(contrast_set, specs)`.
 #'
-#' @param ... A variable-length list of contrast_spec objects.
+#' @param ... Individual `contrast_spec` objects or nested `contrast_set` objects.
 #'
 #' @return A list of contrast_spec objects with class "contrast_set".
 #'
@@ -513,13 +518,31 @@ one_against_all_contrast <- function(levels, facname, where=NULL) {
 #' c1 <- contrast(~ A - B, name="A_B")
 #' c2 <- contrast(~ B - C, name="B_C")
 #' contrast_set(c1,c2)
+#' contrast_set(c1, one_against_all_contrast(c("A", "B", "C"), "condition"))
 #'
 #' @export
 #' @import assertthat
 #' @importFrom purrr map_lgl
 contrast_set <- function(...) {
-  ret <- list(...)
-  assertthat::assert_that(all(purrr::map_lgl(ret, inherits, "contrast_spec")))
+  flatten <- function(items, path = NULL) {
+    out <- list()
+    for (i in seq_along(items)) {
+      item <- items[[i]]
+      location <- if (is.null(path)) paste("argument", i) else paste0(path, "[[", i, "]]")
+      if (inherits(item, "contrast_spec")) {
+        # Keep the leaf's list name without descending into its formulas/fields.
+        out <- c(out, items[i])
+      } else if (inherits(item, "contrast_set") && is.list(item)) {
+        out <- c(out, flatten(unclass(item), location))
+      } else {
+        stop("contrast_set(): ", location, " must be a contrast_spec or contrast_set.",
+             if (is.list(item)) " For a plain list of specifications, use do.call(contrast_set, specs).",
+             call. = FALSE)
+      }
+    }
+    out
+  }
+  ret <- flatten(list(...))
   class(ret) <- c("contrast_set", "list")
   ret
 }
