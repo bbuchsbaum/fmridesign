@@ -6,6 +6,7 @@
 \alias{design_matrix.baseline_term}
 \alias{design_matrix}
 \alias{design_matrix.event_model}
+\alias{design_matrix.convolved_term}
 \alias{design_matrix.event_term}
 \title{Extract or construct a design matrix}
 \usage{
@@ -16,6 +17,8 @@
 design_matrix(x, ...)
 
 \method{design_matrix}{event_model}(x, blockid = NULL, ...)
+
+\method{design_matrix}{convolved_term}(x, blockid = NULL, ...)
 
 \method{design_matrix}{event_term}(x, drop.empty = TRUE, ...)
 }

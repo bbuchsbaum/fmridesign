@@ -600,24 +600,51 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
   return(final_out)
 }
 
+# conditions() always returns the full grid of factor levels. For names,
+# drop.empty = TRUE keeps only the cells that have events, i.e. those that
+# get a design-matrix column; the event-level design matrix of the term
+# (before convolution) has one column per non-empty cell, named with the
+# canonical condition name.
+.present_cells <- function(x) {
+  full <- conditions(x, drop.empty = FALSE, expand_basis = FALSE, style = "canonical")
+  present <- colnames(design_matrix(x, drop.empty = TRUE))
+  if (length(present) == 0L || !all(present %in% full)) {
+    # names do not line up (unexpected); keep the full grid rather than guess
+    return(rep(TRUE, length(full)))
+  }
+  full %in% present
+}
+
+.term_names <- function(x, style, drop.empty, expand_basis) {
+  out <- as.vector(conditions(x, drop.empty = FALSE, expand_basis = FALSE, style = style))
+  keep <- if (isTRUE(drop.empty)) .present_cells(x) else rep(TRUE, length(out))
+  out <- out[keep]
+  if (isTRUE(expand_basis)) {
+    hrfspec <- attr(x, "hrfspec")
+    nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
+    out <- add_basis(out, nb)
+  }
+  out
+}
+
 #' @method shortnames event_term
 #' @export
-shortnames.event_term <- function(x, drop.empty = TRUE, ...) {
-  conditions(x, drop.empty = drop.empty, style = "display", ...)
+shortnames.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) {
+  .term_names(x, "display", drop.empty, expand_basis)
 }
 
 #' @method longnames event_term
 #' @export
 longnames.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) {
-  conditions(x, drop.empty = drop.empty, expand_basis = expand_basis, style = "canonical", ...)
+  .term_names(x, "canonical", drop.empty, expand_basis)
 }
 
 #' @method condition_map event_term
 #' @export
 condition_map.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE, ...) {
   tibble::tibble(
-    display = conditions(x, drop.empty = drop.empty, expand_basis = expand_basis, style = "display", ...),
-    canonical = conditions(x, drop.empty = drop.empty, expand_basis = expand_basis, style = "canonical", ...)
+    display = .term_names(x, "display", drop.empty, expand_basis),
+    canonical = .term_names(x, "canonical", drop.empty, expand_basis)
   )
 }
 
@@ -778,6 +805,75 @@ durations.event_term <- function(x, ...) {
 #' @export
 durations.convolved_term <- function(x, ...) {
   durations(x$evterm, ...)
+}
+
+## ============================================================================
+## Section 8b: Names and accessors for convolved terms and bare events
+## ============================================================================
+
+#' @export
+#' @rdname longnames
+longnames.convolved_term <- function(x, ...) {
+  longnames(x$evterm, ...)
+}
+
+#' @export
+#' @rdname shortnames
+shortnames.convolved_term <- function(x, ...) {
+  shortnames(x$evterm, ...)
+}
+
+#' @export
+#' @rdname conditions
+conditions.convolved_term <- function(x, ...) {
+  conditions(x$evterm, ...)
+}
+
+#' @export
+#' @rdname event_table
+event_table.convolved_term <- function(x, ...) {
+  event_table(x$evterm, ...)
+}
+
+#' @rdname fmrihrf-generics
+#' @export
+nbasis.convolved_term <- function(x, ...) {
+  hrfspec <- x$hrfspec %||% attr(x, "hrfspec")
+  if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
+    fmrihrf::nbasis(hrfspec$hrf)
+  } else {
+    1L
+  }
+}
+
+#' @export
+#' @rdname design_matrix
+design_matrix.convolved_term <- function(x, blockid = NULL, ...) {
+  if (is.null(blockid)) {
+    x$design_matrix
+  } else {
+    keep <- fmrihrf::blockids(x$sampling_frame) %in% blockid
+    x$design_matrix[keep, , drop = FALSE]
+  }
+}
+
+# A bare `event` (from event_factor(), event_variable(), ...) is named exactly
+# as the single-variable event_term built from it would be.
+.event_as_term <- function(x) {
+  event_term(stats::setNames(list(x), x$varname), onsets = x$onsets,
+             blockids = x$blockids, durations = x$durations)
+}
+
+#' @export
+#' @rdname longnames
+longnames.event_seq <- function(x, ...) {
+  longnames(.event_as_term(x), ...)
+}
+
+#' @export
+#' @rdname shortnames
+shortnames.event_seq <- function(x, ...) {
+  shortnames(.event_as_term(x), ...)
 }
 
 
@@ -1123,9 +1219,9 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
 #' converts once for API compatibility.
 #'
 #' Hot-path notes:
-#' - Shared-HRF C++ evaluation skips per-column `Reg` construction /
-#'   `prep_reg_inputs` when a single HRF is used (the common case). Output is
-#'   bit-identical to `fmrihrf::evaluate(regressor(...))`.
+#' - With a single shared HRF (the common case), each live column is
+#'   evaluated directly via `fmrihrf::evaluate(regressor(...))` without
+#'   building intermediate regressor lists or data-frame subsets.
 #' - One global output matrix replaces per-block zero-alloc + `rbind`.
 #' - Per-block all-zero columns are still skipped (trialwise / LSS).
 #' - Per-onset `hrf_list` and NA-bearing blocks fall back to the previous
@@ -1190,18 +1286,13 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   n_cond <- ncol(dmat)
   cmat <- matrix(0, nrow = n_time, ncol = n_cond * nb)
 
-  # Shared-HRF path: one fine-grid HRF matrix for all columns/blocks.
+  # Shared-HRF path: one HRF for all columns/blocks, evaluated per live column.
   # Per-onset HRF lists cannot share a single kernel, so they use the legacy path.
   # Also require design rows to align with event onsets; model.matrix may drop
   # incomplete cases (NA modulators), in which case we keep tibble subsetting
   # semantics and the convolve_design() NA-filter fallback.
   use_shared_hrf <- is.null(hrf_list) && (nrow(dmat) == length(blockids))
-  hrf_span <- NULL
-  hrf_matrix <- NULL
-  if (use_shared_hrf && n_cond > 0L) {
-    hrf_span <- attr(hrf, "span") %||% 40
-    hrf_matrix <- .hrf_fine_matrix(hrf, hrf_span, precision)
-  }
+  hrf_span <- attr(hrf, "span") %||% 40
 
   eval_reg <- function(r, times, prec) {
     if (inherits(r, "per_onset_regressor_set")) {
@@ -1240,9 +1331,9 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
       if (length(keep) > 0L) {
         live <- .eval_design_cols_shared_hrf(
           dmat = dblock_mat, globons = globons_block, durations = durations_block,
-          grid = block_samples, hrf_matrix = hrf_matrix,
+          grid = block_samples, hrf = hrf,
           hrf_span = hrf_span, precision = precision, nb = nb,
-          col_idx = keep
+          col_idx = keep, summate = summate
         )
         if (nb == 1L) {
           cmat[rows, keep] <- live

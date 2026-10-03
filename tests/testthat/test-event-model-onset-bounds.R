@@ -57,6 +57,16 @@ test_that("negative onsets are flagged before the downstream error", {
   )
 })
 
+test_that("a negative onset in the first run is rejected by fmrihrf", {
+  ev <- data.frame(onset = c(-5, 20), run = 1, cond = factor("a"))
+  sf <- fmrihrf::sampling_frame(blocklens = 100, TR = 2)
+  expect_error(
+    suppressWarnings(event_model(onset ~ hrf(cond), data = ev, block = ~run,
+                                 sampling_frame = sf, durations = 0)),
+    "non-negative"
+  )
+})
+
 test_that("no warning is raised when all onsets are within the frame", {
   ev <- data.frame(onset = c(20, 100, 300), run = 1, cond = factor("a"))
   sf <- fmrihrf::sampling_frame(blocklens = 257, TR = 1.77)

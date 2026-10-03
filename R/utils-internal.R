@@ -169,66 +169,25 @@ recycle_or_error <- function(x, target, label) {
 ## Shared-HRF regressor evaluation (hot path)                               ###
 ###############################################################################
 
-#' Build the fine-grid HRF matrix used by fmrihrf's convolution engines.
-#'
-#' Mirrors `fmrihrf`'s internal `.memo_hrf()` using only the public
-#' `fmrihrf::evaluate()` API so the result is bit-identical to what
-#' `evaluate.Reg()` would prepare via `prep_reg_inputs()`.
-#'
-#' @keywords internal
-#' @noRd
-.hrf_fine_matrix <- function(hrf, span, precision) {
-  times <- seq(0, span, by = precision)
-  val <- fmrihrf::evaluate(hrf, times)
-  if (is.null(dim(val))) {
-    matrix(val, ncol = 1L)
-  } else {
-    as.matrix(val)
-  }
-}
-
-#' Resolve fmrihrf:::evaluate_regressor_cpp (cached).
-#'
-#' This is the same C++ entry point `evaluate.Reg()` uses after
-#' `prep_reg_inputs()`. Calling it directly with a shared HRF fine matrix
-#' skips per-column Reg construction and prep overhead while producing
-#' bit-identical output.
-#'
-#' @keywords internal
-#' @noRd
-.eval_regressor_cpp <- local({
-  fun <- NULL
-  function(...) {
-    if (is.null(fun)) {
-      fun <<- utils::getFromNamespace("evaluate_regressor_cpp", "fmrihrf")
-    }
-    fun(...)
-  }
-})
-
-#' Evaluate selected design columns onto a TR grid with a shared HRF matrix.
+#' Evaluate selected design columns onto a TR grid with a shared HRF.
 #'
 #' Returns an `length(grid) x (length(col_idx) * nb)` matrix of convolved
-#' columns (in `col_idx` order). Columns with no in-window nonzero amplitudes
-#' are all-zero, matching `evaluate.Reg` on an empty regressor.
-#'
-#' Onset window filtering matches `fmrihrf:::prep_reg_inputs()` exactly:
-#' `onsets >= grid[1] - span` and `onsets <= grid[length(grid)]`.
+#' columns (in `col_idx` order). Each live column is evaluated through the
+#' public `fmrihrf::regressor()` / `fmrihrf::evaluate()` API, so event
+#' filtering, `summate` handling and the fine-grid HRF kernel are exactly
+#' fmrihrf's. Columns with no nonzero amplitudes in the block are skipped and
+#' stay all-zero, matching `evaluate.Reg` on an empty regressor.
 #'
 #' @keywords internal
 #' @noRd
 .eval_design_cols_shared_hrf <- function(dmat, globons, durations, grid,
-                                         hrf_matrix, hrf_span, precision, nb,
-                                         col_idx) {
+                                         hrf, hrf_span, precision, nb,
+                                         col_idx, summate = TRUE) {
   n_live <- length(col_idx)
   out <- matrix(0, nrow = length(grid), ncol = n_live * nb)
   if (!n_live) {
     return(out)
   }
-
-  onset_min <- grid[1L] - hrf_span
-  onset_max <- grid[length(grid)]
-  eval_cpp <- .eval_regressor_cpp
 
   for (k in seq_len(n_live)) {
     j <- col_idx[[k]]
@@ -237,28 +196,17 @@ recycle_or_error <- function(x, target, label) {
     if (!length(nz)) {
       next
     }
-    ons <- globons[nz]
-    in_window <- ons >= onset_min & ons <= onset_max
-    if (!any(in_window)) {
-      next
-    }
-    nz <- nz[in_window]
-    res <- eval_cpp(
-      grid = grid,
+    reg <- fmrihrf::regressor(
       onsets = globons[nz],
-      durations = durations[nz],
-      amplitudes = amp[nz],
-      hrf_matrix = hrf_matrix,
-      hrf_span = hrf_span,
-      precision = precision,
-      method = "conv"
+      hrf = hrf,
+      duration = durations[nz],
+      amplitude = amp[nz],
+      span = hrf_span,
+      summate = summate
     )
+    res <- fmrihrf::evaluate(reg, grid, precision = precision)
     target <- ((k - 1L) * nb + 1L):((k - 1L) * nb + nb)
-    if (nb == 1L) {
-      out[, target] <- as.numeric(res)
-    } else {
-      out[, target] <- res
-    }
+    out[, target] <- res
   }
   out
 }

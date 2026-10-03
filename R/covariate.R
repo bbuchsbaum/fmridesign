@@ -355,7 +355,7 @@ longnames.covariate_convolved_term <- function(x, ...) {
   longnames(x$evterm, ...)
 }
 
-#' @rdname fmrihrf-reexports
+#' @rdname fmrihrf-generics
 #' @export
 nbasis.covariate_convolved_term <- function(x, ...) {
   1L

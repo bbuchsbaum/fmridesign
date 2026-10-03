@@ -1,4 +1,92 @@
-# fmridesign 0.6.0
+# fmridesign (development version)
+
+## New features
+
+- Added `check_estimability()` for full-design rank, exact condition numbers,
+  named weak directions, and contrast-specific estimability and variance
+  factors. Event models include run intercepts by default and report event
+  coverage per run; an explicit baseline/nuisance design can also be supplied.
+  `check_collinearity()` now documents the limitations of pairwise checks (#32).
+
+## CRAN compliance
+
+- Design-column convolution no longer reaches into fmrihrf's unexported
+  `evaluate_regressor_cpp()`. The shared-HRF fast path now evaluates each live
+  column with the public `fmrihrf::regressor()` / `fmrihrf::evaluate()` API.
+  Results are identical to the previous path on every design built by the
+  test suite; building a design matrix is roughly 1.3-2x slower (tens of
+  milliseconds on a 4-run, 1200-scan design).
+- `boxcar_hrf_gen()` and `weighted_hrf_gen()` call `fmrihrf::hrf_boxcar()` and
+  `fmrihrf::hrf_weighted()` directly instead of looking them up in fmrihrf's
+  namespace.
+- fmridesign no longer registers its own `print()` method for fmrihrf's
+  `sampling_frame` class, which overwrote fmrihrf's method on load ("Registered
+  S3 method overwritten by 'fmridesign'"). Sampling frames now print with
+  fmrihrf's method. `plot(<sampling_frame>)` is unchanged and is documented
+  under `?plot.sampling_frame`.
+
+- `onsets()`, `durations()`, `blockids()` and `nbasis()` are now true
+  re-exports of fmrihrf's generics. fmridesign previously defined its own
+  generics with the same names, so dispatch was split: for example
+  `fmrihrf::onsets(<event_term>)` found no method and
+  `fmridesign::nbasis(HRF_SPMG3)` failed, and which one a bare call reached
+  depended on attach order. Attaching fmridesign no longer masks these four
+  names from fmrihrf.
+
+- fmridesign now supplies every name and accessor method for its own classes,
+  so downstream packages can use plain dispatch on the exported generics
+  instead of defining duplicates or reaching into fmridesign's namespace.
+  New methods: `longnames()` and `shortnames()` for `event_model`,
+  `convolved_term`, `feature_term` and bare events (`event_seq`);
+  `columns()` and `cells()` for `event_model`; `conditions()`,
+  `event_table()`, `nbasis()` and `design_matrix()` for `convolved_term`;
+  and `conditions()` for `baseline_model`. They previously lived in fmrireg.
+  `longnames()` uses fmridesign's canonical `variable.level` form
+  (`condition.A`), which is the design-matrix column name without its
+  `<term>_` prefix (`condition_condition.A`); `?longnames` documents the
+  relationship. Design-matrix column names are unchanged.
+
+- `longnames()`, `shortnames()` and `condition_map()` now honour
+  `drop.empty = TRUE` (the default): an interaction cell with no events is
+  left out, as it is from the design matrix, so the names line up one-to-one
+  with the columns. `drop.empty = FALSE` lists the full grid of factor
+  levels, which is what `conditions()` always returns (documented).
+- `condition_map(<event_model>)` finds each condition's column by its exact
+  name, `<term tag>_<canonical>`, instead of by position. It previously returned `column_name = NA` for every
+  row of a term with an empty cell or a multi-basis HRF.
+- `blockids(<event_model>)` is documented (`?blockids.event_model`): it
+  returns one run id per event. Per-scan ids come from
+  `blockids(x$sampling_frame)`; `blocklens(x)` gives scans per run. Because
+  fmrireg previously overrode this method with per-scan ids, the first call in
+  a session prints a one-time message. The message will be removed in the next
+  release.
+- `correlation_map(<baseline_model>)` gains `within_run = TRUE`: run
+  intercepts are dropped, columns are centred within each run, and
+  run-specific columns are correlated on their own run, with pairs from
+  different runs left out. This reproduces fmrireg's former method exactly;
+  `within_run = FALSE` gives the previous fmridesign behaviour (runs
+  concatenated). Cells are labelled by default when there are at most 12
+  columns, as in fmrireg's method (event models keep the 20-column default).
+  Both methods accept `label_values` as an alias for `annotate`, and the
+  `event_model` method accepts `within_run` too (default `FALSE`).
+- `correlation_map()` now errors on arguments that `geom_tile()` does not
+  accept, instead of passing them on to be dropped with a warning. The
+  deprecated `size` is still accepted.
+
+## Bug fixes
+
+- `contrast_set()` now combines individual specifications with nested contrast
+  sets, including those returned by `one_against_all_contrast()`. It preserves
+  leaf names and order, and reports invalid entries by argument path (#33).
+- `hrf(..., summate = FALSE)` is honoured again for sustained events. The
+  shared-HRF fast path ignored `summate` and always produced the
+  `summate = TRUE` design.
+- An event with a negative onset in the first run now fails with fmrihrf's
+  "`onsets` must be non-negative" error, as the legacy path and
+  `fmrihrf::regressor()` always did; the fast path had silently accepted it.
+  The out-of-frame warning is still raised first.
+
+# fmridesign 0.6.1
 
 ## Plotting overhaul
 
@@ -25,61 +113,8 @@
 - `plot(<sampling_frame>)` no longer draws an empty panel; it adds `"lane"`
   and `"grid"` styles and an `events =` overlay for checking coverage.
 
-## New features
-
-- Added `check_estimability()` for full-design rank, exact condition numbers,
-  named weak directions, and contrast-specific estimability and variance
-  factors. Event models include run intercepts by default and report event
-  coverage per run; an explicit baseline/nuisance design can also be supplied.
-  `check_collinearity()` now documents the limitations of pairwise checks (#32).
-- `baseline_model()` now checks `nuisance_list` inputs during construction for
-  zero-variance columns, duplicate or near-duplicate columns, non-finite values,
-  nuisance rank deficiency, and columns aliased with baseline terms.
-- Added `nuisance_check = c("warn", "error", "drop", "none")` to control whether
-  nuisance problems warn, stop, are dropped with an audit warning, or are skipped.
-- Added `check_nuisance()` and `clean_nuisance()` helpers for inspecting and
-  repairing block-wise nuisance regressors before model construction.
-
-## Performance
-
-- Sped up `event_model()` design-matrix construction by replacing the per-term
-  `tibble::tibble()` / `dplyr::bind_rows()` calls used to assemble column
-  metadata with a lightweight, validated `tibble` constructor. This removes the
-  metadata-building hotspot (~15% faster end-to-end on a representative
-  multi-term, multi-run model) with byte-identical design matrices, column
-  names, `col_indices`/`term_spans`, and metadata values.
-- `convolve.event_term()` now skips columns that are all-zero within a block
-  instead of building and evaluating an empty `fmrihrf` regressor for each. For
-  block-diagonal-ish designs (trialwise/LSS single-trial models, or factor
-  levels present only in some runs) this is a large speedup (~2.2x faster on a
-  representative 360-column trialwise model) while producing bit-identical
-  output. Designs where every column is populated in every block are unaffected
-  (a fast-exit keeps the original path), and blocks containing `NA`/`NaN` fall
-  back to the previous full-column path so filtering semantics are unchanged.
-- Convolution hot path now shares one fine-grid HRF matrix across all columns
-  and blocks and calls `fmrihrf`'s C++ evaluator directly, skipping per-column
-  `Reg` construction / `prep_reg_inputs` overhead. Combined with a single
-  global output matrix (no per-block zero-alloc + `rbind`) and deferred tibble
-  materialization in `build_event_model_design_matrix()`, this is ~2–3.5×
-  faster end-to-end on trialwise/LSS and multi-term workloads while remaining
-  bit-identical to `fmrihrf::evaluate(regressor(...))`. Per-onset `hrf_fun`
-  lists and NA-misaligned designs keep the previous path.
-- Added `bench/` cross-library design-matrix benchmarks against nilearn (the
-  FitLins first-level design-matrix hot path). Run with `bash bench/run_compare.sh`;
-  see `bench/RESULTS.md` and `bench/OPTIMIZATION_NOTES.md`.
-
 ## Bug fixes
 
-- `contrast_set()` now combines individual specifications with nested contrast
-  sets, including those returned by `one_against_all_contrast()`. It preserves
-  leaf names and order, and reports invalid entries by argument path (#33).
-- `covariate()` now expands matrix/data-frame arguments into one non-convolved
-  regressor per column. Named inputs preserve sanitized column names, unnamed
-  matrices use `f01`, `f02`, ... suffixes, and final names follow the standard
-  `<term_tag>_<condition_tag>` grammar (`cov_x` by default, or `motion_x` with
-  `id = "motion"`). Covariate condition accessors and per-column metadata now
-  expose the individual regressor identities instead of a concatenated
-  multi-variable term name (#19).
 - **User-visible correction: multi-basis column names change.** For `hrf()`
   terms with more than one basis function (`"spmg2"`, `"spmg3"`, FIR,
   B-spline, tent, custom `nbasis > 1`) and two or more conditions, design
@@ -95,6 +130,29 @@
   versions for such terms were attached to the wrong columns and should be
   recomputed. Code that indexed multi-basis columns by position assuming
   basis-major order must be updated (#23).
+- `covariate()` now expands matrix/data-frame arguments into one non-convolved
+  regressor per column. Named inputs preserve sanitized column names, unnamed
+  matrices use `f01`, `f02`, ... suffixes, and final names follow the standard
+  `<term_tag>_<condition_tag>` grammar (`cov_x` by default, or `motion_x` with
+  `id = "motion"`). Covariate condition accessors and per-column metadata now
+  expose the individual regressor identities instead of a concatenated
+  multi-variable term name (#19).
+- `column_contrast()` patterns now match the design-matrix column names, as
+  documented (`term_tag_condition_tag[_b##]`, e.g. `"^cond_cond\\.A$"` or
+  `"^cond_cond\\.A_b01$"`). Previously they were matched only against
+  term-level condition names (`cond.A`), so documented patterns selected
+  nothing. Term-level patterns still work: they are tried only when a pattern
+  matches no design-matrix column, and select the same columns. A pattern that
+  selects different columns in the two namespaces is now an error, and a
+  pattern that matches nothing warns with the available column names (#24).
+- `design_matrix(<baseline_term>, blockid = )` now returns each active column
+  once. With `intercept = "global"`, requesting several runs used to return
+  one duplicate `constant_global` column per run (so `blockid = 1:3` gave three
+  identical columns rather than one); the result now always equals the
+  requested rows and non-zero columns of the full term matrix, in the term's
+  column order. A `basis = "constant", intercept = "global"` drift term
+  likewise returned zero columns for any run but the first. Terms without
+  block structure now error on `blockid` instead of returning an empty matrix.
 - `Fcontrasts(<event_model>)` no longer returns an all-zero matrix with an
   "unmatched row names" warning for multi-basis terms. The term-level
   contrast is expanded to `kronecker(C, diag(nbasis))`, testing the condition
@@ -133,6 +191,49 @@
   block structure (it was parsed from the column index, so a 3-run model with 6
   regressors per run reported runs 1 to 6), and labels them with the user's
   column names in `basis_label`.
+
+# fmridesign 0.6.0
+
+## New features
+
+- `baseline_model()` now checks `nuisance_list` inputs during construction for
+  zero-variance columns, duplicate or near-duplicate columns, non-finite values,
+  nuisance rank deficiency, and columns aliased with baseline terms.
+- Added `nuisance_check = c("warn", "error", "drop", "none")` to control whether
+  nuisance problems warn, stop, are dropped with an audit warning, or are skipped.
+- Added `check_nuisance()` and `clean_nuisance()` helpers for inspecting and
+  repairing block-wise nuisance regressors before model construction.
+
+## Performance
+
+- Sped up `event_model()` design-matrix construction by replacing the per-term
+  `tibble::tibble()` / `dplyr::bind_rows()` calls used to assemble column
+  metadata with a lightweight, validated `tibble` constructor. This removes the
+  metadata-building hotspot (~15% faster end-to-end on a representative
+  multi-term, multi-run model) with byte-identical design matrices, column
+  names, `col_indices`/`term_spans`, and metadata values.
+- `convolve.event_term()` now skips columns that are all-zero within a block
+  instead of building and evaluating an empty `fmrihrf` regressor for each. For
+  block-diagonal-ish designs (trialwise/LSS single-trial models, or factor
+  levels present only in some runs) this is a large speedup (~2.2x faster on a
+  representative 360-column trialwise model) while producing bit-identical
+  output. Designs where every column is populated in every block are unaffected
+  (a fast-exit keeps the original path), and blocks containing `NA`/`NaN` fall
+  back to the previous full-column path so filtering semantics are unchanged.
+- Convolution hot path now shares one fine-grid HRF matrix across all columns
+  and blocks and calls `fmrihrf`'s C++ evaluator directly, skipping per-column
+  `Reg` construction / `prep_reg_inputs` overhead. Combined with a single
+  global output matrix (no per-block zero-alloc + `rbind`) and deferred tibble
+  materialization in `build_event_model_design_matrix()`, this is ~2–3.5×
+  faster end-to-end on trialwise/LSS and multi-term workloads while remaining
+  bit-identical to `fmrihrf::evaluate(regressor(...))`. Per-onset `hrf_fun`
+  lists and NA-misaligned designs keep the previous path.
+- Added `bench/` cross-library design-matrix benchmarks against nilearn (the
+  FitLins first-level design-matrix hot path). Run with `bash bench/run_compare.sh`;
+  see `bench/RESULTS.md` and `bench/OPTIMIZATION_NOTES.md`.
+
+## Bug fixes
+
 - `contrast_weights()` now removes rows for factor levels excluded by an
   `hrf(..., subset = )` term from the returned term-local `weights`, keeping
   them consistent with the reconciled full-design `offset_weights` (#17).
@@ -158,3 +259,4 @@
 - Suppressed exact, known false-positive metadata warnings produced when
   decorated HRFs are reconstructed by `fmrihrf` 0.3.0, while continuing to
   surface unrelated warnings.
+

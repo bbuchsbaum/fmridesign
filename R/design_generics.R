@@ -42,6 +42,9 @@ cells <- function(x, drop.empty = TRUE, ...) UseMethod("cells")
 #' 
 #' @param x The object to extract conditions from.
 #' @param drop.empty Logical whether to drop conditions with no events (default: TRUE).
+#'   The `event_term` and `event_model` methods ignore it and always return the
+#'   full grid of factor levels, including cells with no events; [longnames()],
+#'   [shortnames()] and [condition_map()] honour it.
 #' @param expand_basis Logical whether to expand basis functions (default: FALSE).
 #' @param style Naming style. `"canonical"` returns fully qualified internal names,
 #'   while `"display"` returns shorter user-facing labels.
@@ -61,6 +64,12 @@ conditions <- function(x, drop.empty = TRUE, expand_basis = FALSE,
                        style = c("canonical", "display"), ...) UseMethod("conditions")
 
 #' Map Display and Canonical Condition Names
+#'
+#' For an `event_model` the result also has `term` and `column_name`: the
+#' design-matrix column of each condition, found by its canonical name
+#' (columns are `<term tag>_<canonical>`). A condition with no column (an
+#' empty cell when `drop.empty = FALSE`, or a multi-basis term when
+#' `expand_basis = FALSE`) has `column_name = NA`.
 #'
 #' @param x The object to inspect.
 #' @param drop.empty Logical whether to drop empty conditions (default: TRUE).
@@ -331,7 +340,32 @@ is_continuous <- function(x, ...) UseMethod("is_continuous")
 #'
 #' Superseded by `conditions(x, style = "canonical")`.
 #'
+#' Long names are the canonical condition names: each factor level is
+#' written `variable.level`, and the factors of an interaction are joined
+#' with `_` (for example `condition.A_attn.x`). With `expand_basis = TRUE`
+#' a `_bNN` suffix is added for each HRF basis function.
+#'
+#' They are not the design-matrix column names. A term's columns are
+#' `paste0(term_tag, "_", longnames(term, expand_basis = TRUE))`, so the
+#' column for level `A` of `hrf(condition)` is `condition_condition.A`, and
+#' `longnames(term)` returns `condition.A`. Use [columns()] (or
+#' `colnames(design_matrix(x))`) for the column names, and [condition_map()]
+#' for a table that lines the two up.
+#'
+#' With `drop.empty = TRUE` (the default) a cell of an interaction that has
+#' no events is left out, as it is from the design matrix, so the names line
+#' up one-to-one with the term's columns. `drop.empty = FALSE` lists the full
+#' grid of factor levels, which is what [conditions()] always returns.
+#'
+#' Methods exist for `event_term`, `event_model` (all terms in order),
+#' `convolved_term`, `feature_term`, covariate terms, and bare events from
+#' [event_factor()] and friends (`event_seq`), which are named as the
+#' single-variable `event_term` built from them would be.
+#'
 #' @param x The object.
+#' @param drop.empty Logical; leave out cells with no events (default `TRUE`).
+#' @param expand_basis Logical; add a basis suffix for multi-basis HRFs
+#'   (default `FALSE`).
 #' @param ... Additional arguments.
 #' @return Character vector of long (fully qualified) names.
 #' @examples
@@ -356,6 +390,15 @@ is_continuous <- function(x, ...) UseMethod("is_continuous")
 #' # Returns: "category.face_attention.attend"
 #' #          "category.scene_attention.attend"
 #' #          "category.face_attention.ignore"
+#'
+#' # Long names versus design-matrix column names
+#' sf <- fmrihrf::sampling_frame(blocklens = 30, TR = 2)
+#' des <- data.frame(onset = c(0, 10, 20), run = 1,
+#'                   condition = factor(c("A", "B", "A")))
+#' em <- event_model(onset ~ hrf(condition), data = des, block = ~run,
+#'                   sampling_frame = sf)
+#' longnames(em)  # "condition.A" "condition.B"
+#' columns(em)    # "condition_condition.A" "condition_condition.B"
 #' @export
 longnames <- function(x, ...) UseMethod("longnames")
 
@@ -363,7 +406,12 @@ longnames <- function(x, ...) UseMethod("longnames")
 #'
 #' Superseded by `conditions(x, style = "display")`.
 #'
+#' Short names give the factor levels only, joined with `:` for
+#' interactions (for example `A:x`). See [longnames()] for the qualified
+#' names and how they relate to design-matrix columns.
+#'
 #' @param x The object.
+#' @param drop.empty Logical; leave out cells with no events (default `TRUE`).
 #' @param ... Additional arguments.
 #' @return Character vector of short names.
 #' @examples

@@ -28,7 +28,11 @@ condition_map(x, drop.empty = TRUE, expand_basis = FALSE, ...)
 A tibble mapping display names to canonical names.
 }
 \description{
-Map Display and Canonical Condition Names
+For an \code{event_model} the result also has \code{term} and \code{column_name}: the
+design-matrix column of each condition, found by its canonical name
+(columns are \verb{<term tag>_<canonical>}). A condition with no column (an
+empty cell when \code{drop.empty = FALSE}, or a multi-basis term when
+\code{expand_basis = FALSE}) has \code{column_name = NA}.
 }
 \examples{
 term <- event_term(

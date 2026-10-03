@@ -1,7 +1,7 @@
 Package: fmridesign
 Type: Package
 Title: Design Matrix Construction for fMRI Analysis
-Version: 0.6.0
+Version: 0.6.1.9000
 Authors@R: person("Bradley", "Buchsbaum", role = c("aut", "cre", "cph"), email = "brad.buchsbaum@gmail.com")
 Description: Constructs and inspects design matrices for functional magnetic
     resonance imaging (fMRI) analyses. Provides a formula interface for
@@ -41,7 +41,7 @@ Suggests:
     withr,
     plotly
 Remotes:
-    bbuchsbaum/fmrihrf
+    bbuchsbaum/fmrihrf@b9f6a90b05bdf3673ed43414eb06ec6c74200d43
 VignetteBuilder: knitr
 Config/Needs/website: github::bbuchsbaum/albersdown, albersdown
 URL: https://github.com/bbuchsbaum/fmridesign, https://bbuchsbaum.github.io/fmridesign/
@@ -78,6 +78,5 @@ Collate:
     'plot_heatmaps.R'
     'plot_theme.R'
     'residualize.R'
-    'sampling_frame.R'
     'validate.R'
     'zzz.R'

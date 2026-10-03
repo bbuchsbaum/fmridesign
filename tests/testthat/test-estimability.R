@@ -170,7 +170,7 @@ test_that("declared t and multicolumn contrasts are evaluated in the full design
 
 test_that("coverage clips and unions event intervals per run without double counting", {
   sf <- fmrihrf::sampling_frame(c(10, 15), TR = 2)
-  ev <- data.frame(onset = c(-2, 4, 18, 0), duration = c(8, 8, 8, 30),
+  ev <- data.frame(onset = c(0, 4, 18, 0), duration = c(6, 8, 8, 30),
                    run = c(1, 1, 1, 2), cond = factor(c("A", "B", "A", "B")))
   model <- suppressWarnings(event_model(onset ~ hrf(cond) + hrf(cond, id = "copy"),
     ev, block = ~run, sampling_frame = sf, durations = ev$duration))
@@ -183,7 +183,7 @@ test_that("coverage clips and unions event intervals per run without double coun
   expect_equal(check_estimability(subsetted)$coverage$covered, c(14, 0))
   overridden <- suppressWarnings(event_model(onset ~ hrf(cond, durations = 2),
     ev, block = ~run, sampling_frame = sf, durations = ev$duration))
-  expect_equal(check_estimability(overridden)$coverage$covered, c(4, 2))
+  expect_equal(check_estimability(overridden)$coverage$covered, c(6, 2))
   impulses <- suppressWarnings(event_model(onset ~ hrf(cond), ev, block = ~run,
                                            sampling_frame = sf, durations = 0))
   expect_equal(check_estimability(impulses)$coverage$fraction, c(0, 0))

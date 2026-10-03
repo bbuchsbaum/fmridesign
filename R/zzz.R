@@ -1,5 +1,6 @@
 #' @keywords internal
 #' @noRd
+# nocov start
 .onLoad <- function(libname, pkgname) {
   # Register built-in parametric basis classes so make_term_tag() and
   # design metadata can look up prefixes/modulation from a single source.
@@ -19,3 +20,4 @@
                  description = "Identity basis: variables become column names")
   invisible()
 }
+# nocov end
