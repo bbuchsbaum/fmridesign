@@ -17,6 +17,12 @@ offending pairs and their correlations). Invisibly returns the same list.
 }
 \description{
 Convenience helper to quickly flag highly correlated regressors.
+This is a pairwise check only: constant columns (including intercepts) are
+excluded, and \code{ok = TRUE} does not establish full rank, estimability or good
+contrast precision. Dependencies involving several columns, such as task
+regressors summing to an intercept in a no-rest design, can pass this check.
+Use \code{\link[=check_estimability]{check_estimability()}} on the full design, including baseline/nuisance
+regressors, to inspect those dependencies.
 }
 \examples{
 # Create a simple event model
