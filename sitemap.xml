@@ -1,5 +1,6 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/404.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/CONTRIBUTING.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/LICENSE-text.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/articles/a_01_introduction.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/articles/a_03_baseline_model.html</loc></url>
@@ -26,6 +27,7 @@
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/boxcar_hrf_gen.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/cells.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/check_collinearity.html</loc></url>
+<url><loc>https://bbuchsbaum.github.io/fmridesign/reference/check_estimability.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/check_nuisance.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/clean_nuisance.html</loc></url>
 <url><loc>https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.html</loc></url>

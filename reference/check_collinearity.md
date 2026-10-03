@@ -1,6 +1,14 @@
 # Check design matrix for multicollinearity
 
-Convenience helper to quickly flag highly correlated regressors.
+Convenience helper to quickly flag highly correlated regressors. This is
+a pairwise check only: constant columns (including intercepts) are
+excluded, and `ok = TRUE` does not establish full rank, estimability or
+good contrast precision. Dependencies involving several columns, such as
+task regressors summing to an intercept in a no-rest design, can pass
+this check. Use
+[`check_estimability()`](https://bbuchsbaum.github.io/fmridesign/reference/check_estimability.md)
+on the full design, including baseline/nuisance regressors, to inspect
+those dependencies.
 
 ## Usage
 

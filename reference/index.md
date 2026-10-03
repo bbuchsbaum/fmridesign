@@ -53,6 +53,10 @@
 - [`check_collinearity()`](https://bbuchsbaum.github.io/fmridesign/reference/check_collinearity.md)
   : Check design matrix for multicollinearity
 
+- [`check_estimability()`](https://bbuchsbaum.github.io/fmridesign/reference/check_estimability.md)
+  [`print(`*`<estimability_check>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/check_estimability.md)
+  : Check full-design estimability and contrast precision
+
 - [`check_nuisance()`](https://bbuchsbaum.github.io/fmridesign/reference/check_nuisance.md)
   : Check nuisance regressors for rank and column problems
 
