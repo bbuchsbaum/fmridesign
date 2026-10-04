@@ -8,17 +8,32 @@ baseline(
   degree = 1,
   basis = c("constant", "poly", "bs", "ns"),
   name = NULL,
-  intercept = c("runwise", "global", "none")
+  intercept = c("runwise", "global", "none"),
+  df = NULL,
+  knots = NULL
 )
 }
 \arguments{
-\item{degree}{Number of basis terms per image block (ignored for "constant").}
+\item{degree}{Polynomial degree for "poly" and "bs". For "ns", the legacy
+number of basis columns, used only when both \code{df} and \code{knots} are NULL.
+Ignored for "constant". Existing calls retain their original behavior.}
 
 \item{basis}{Type of basis ("constant", "poly", "bs", or "ns").}
 
 \item{name}{Optional name for the term.}
 
 \item{intercept}{Type of intercept to include ("runwise", "global", or "none").}
+
+\item{df}{Optional number of spline columns per run, excluding the separate
+intercept. Only for "bs" and "ns"; mutually exclusive with \code{knots}.
+For "bs", must be at least \code{degree}. For six cubic B-spline columns,
+specify \verb{basis = "bs", degree = 3, df = 6}.}
+
+\item{knots}{Optional numeric vector of interior spline knots, in run-local
+scan coordinates (1 through the run length), shared across runs. Knots must
+lie strictly inside every run. Use \code{df} for automatically selected quantile
+knots that adapt to each run's length. Only for "bs" and "ns".
+\code{numeric(0)} explicitly requests no interior knots.}
 }
 \value{
 A baselinespec list instance.

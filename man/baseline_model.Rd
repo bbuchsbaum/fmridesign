@@ -11,13 +11,17 @@ baseline_model(
   intercept = c("runwise", "global", "none"),
   nuisance_list = NULL,
   nuisance_check = c("warn", "error", "drop", "none"),
-  na_action = c("drop", "zero", "median")
+  na_action = c("drop", "zero", "median"),
+  df = NULL,
+  knots = NULL
 )
 }
 \arguments{
 \item{basis}{Character; type of basis function ("constant", "poly", "bs", or "ns").}
 
-\item{degree}{Integer; degree of the spline/polynomial function.}
+\item{degree}{Polynomial degree for "poly" and "bs". For "ns", the legacy
+number of basis columns, used only when both \code{df} and \code{knots} are NULL.
+Ignored for "constant". Existing calls retain their original behavior.}
 
 \item{sframe}{A sampling_frame object.}
 
@@ -42,6 +46,17 @@ displacement) so the regressor is retained. \code{NaN} and \code{Inf} are never
 repaired and remain subject to the non-finite drop. Repair is applied even
 when \code{nuisance_check = "none"}, preventing \code{NA}s from leaking into the
 design matrix.}
+
+\item{df}{Optional number of spline columns per run, excluding the separate
+intercept. Only for "bs" and "ns"; mutually exclusive with \code{knots}.
+For "bs", must be at least \code{degree}. For six cubic B-spline columns,
+specify \verb{basis = "bs", degree = 3, df = 6}.}
+
+\item{knots}{Optional numeric vector of interior spline knots, in run-local
+scan coordinates (1 through the run length), shared across runs. Knots must
+lie strictly inside every run. Use \code{df} for automatically selected quantile
+knots that adapt to each run's length. Only for "bs" and "ns".
+\code{numeric(0)} explicitly requests no interior knots.}
 }
 \value{
 An object of class "baseline_model".
@@ -56,4 +71,6 @@ bmod <- baseline_model(basis = "bs", degree = 3, sframe = sframe)
 bmod_global <- baseline_model(basis = "bs", degree = 3, sframe = sframe, intercept = "global")
 bmod_nointercept <- baseline_model(basis = "bs", degree = 3, sframe = sframe, intercept = "none")
 stopifnot(ncol(design_matrix(bmod)) == 8)
+cubic <- baseline_model(basis = "bs", degree = 3, df = 6, sframe = sframe)
+stopifnot(ncol(design_matrix(cubic)) == 14)
 }

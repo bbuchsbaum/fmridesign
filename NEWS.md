@@ -2,6 +2,11 @@
 
 ## New features
 
+- `baseline_model()` and `baseline()` accept separate spline `df` and `knots`
+  controls. Six cubic B-spline columns can now be requested with
+  `basis = "bs", degree = 3, df = 6`, without changing legacy degree semantics
+  (#46).
+
 - Added `check_estimability()` for full-design rank, exact condition numbers,
   named weak directions, and contrast-specific estimability and variance
   factors. Event models include run intercepts by default and report event

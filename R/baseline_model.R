@@ -623,7 +623,18 @@ make_nuisance_term <- function(nuisance_list,
 #' This model may include a drift term, a block intercept term, and nuisance regressors.
 #'
 #' @param basis Character; type of basis function ("constant", "poly", "bs", or "ns").
-#' @param degree Integer; degree of the spline/polynomial function.
+#' @param degree Polynomial degree for "poly" and "bs". For "ns", the legacy
+#'   number of basis columns, used only when both `df` and `knots` are NULL.
+#'   Ignored for "constant". Existing calls retain their original behavior.
+#' @param df Optional number of spline columns per run, excluding the separate
+#'   intercept. Only for "bs" and "ns"; mutually exclusive with `knots`.
+#'   For "bs", must be at least `degree`. For six cubic B-spline columns,
+#'   specify `basis = "bs", degree = 3, df = 6`.
+#' @param knots Optional numeric vector of interior spline knots, in run-local
+#'   scan coordinates (1 through the run length), shared across runs. Knots must
+#'   lie strictly inside every run. Use `df` for automatically selected quantile
+#'   knots that adapt to each run's length. Only for "bs" and "ns".
+#'   `numeric(0)` explicitly requests no interior knots.
 #' @param sframe A sampling_frame object.
 #' @param intercept Character; whether to include an intercept ("runwise", "global", or "none").
 #'   Ignored when \code{basis == "constant"} because the drift term already
@@ -652,24 +663,27 @@ make_nuisance_term <- function(nuisance_list,
 #' bmod_global <- baseline_model(basis = "bs", degree = 3, sframe = sframe, intercept = "global")
 #' bmod_nointercept <- baseline_model(basis = "bs", degree = 3, sframe = sframe, intercept = "none")
 #' stopifnot(ncol(design_matrix(bmod)) == 8)
+#' cubic <- baseline_model(basis = "bs", degree = 3, df = 6, sframe = sframe)
+#' stopifnot(ncol(design_matrix(cubic)) == 14)
 #' @export
 #' @importFrom purrr compact
 baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1, sframe,
                            intercept = c("runwise", "global", "none"), nuisance_list = NULL,
                            nuisance_check = c("warn", "error", "drop", "none"),
-                           na_action = c("drop", "zero", "median")) {
+                           na_action = c("drop", "zero", "median"), df = NULL, knots = NULL) {
 
   basis <- match.arg(basis)
   intercept <- match.arg(intercept)
   nuisance_check <- match.arg(nuisance_check)
   na_action <- match.arg(na_action)
 
-  if (basis %in% c("bs", "ns")) {
+  if (basis == "bs" || (basis == "ns" && is.null(df) && is.null(knots))) {
     assert_that(degree > 2, msg ="'bs' and 'ns' bases must have degree >= 3")
   }
 
   # Construct the drift term specification
-  drift_spec <- baseline(degree = degree, basis = basis, intercept = intercept)
+  drift_spec <- baseline(degree = degree, basis = basis, intercept = intercept,
+                         df = df, knots = knots)
   drift_term <- construct(drift_spec, sframe)
   block_term <- if (intercept != "none" && basis != "constant") {
     construct_block_term("constant", sframe, intercept)
@@ -728,7 +742,7 @@ baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1
 #'
 #' Generates a baselinespec for modeling low-frequency drift in fMRI time series.
 #'
-#' @param degree Number of basis terms per image block (ignored for "constant").
+#' @inheritParams baseline_model
 #' @param basis Type of basis ("constant", "poly", "bs", or "ns").
 #' @param name Optional name for the term.
 #' @param intercept Type of intercept to include ("runwise", "global", or "none").
@@ -738,11 +752,32 @@ baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1
 #' baseline(degree = 3, basis = "bs")
 #' @export
 baseline <- function(degree = 1, basis = c("constant", "poly", "bs", "ns"), name = NULL,
-                     intercept = c("runwise", "global", "none")) {
+                     intercept = c("runwise", "global", "none"), df = NULL, knots = NULL) {
   
   basis <- match.arg(basis)
   intercept <- match.arg(intercept)
   
+  if (!is.null(df) || !is.null(knots)) {
+    if (!basis %in% c("bs", "ns")) {
+      stop("'df' and 'knots' are only supported for spline bases", call. = FALSE)
+    }
+    if (!is.null(df) && !is.null(knots)) {
+      stop("Supply only one of 'df' and 'knots'", call. = FALSE)
+    }
+    if (!is.null(df)) {
+      if (!is.numeric(df) || length(df) != 1L || !is.finite(df) ||
+          df < 1 || df != floor(df)) {
+        stop("'df' must be a positive integer", call. = FALSE)
+      }
+      if (basis == "bs" && df < degree) {
+        stop("'df' must be at least 'degree' for a B-spline basis", call. = FALSE)
+      }
+    }
+    if (!is.null(knots) && (!is.numeric(knots) || any(!is.finite(knots)))) {
+      stop("'knots' must be a finite numeric vector", call. = FALSE)
+    }
+  }
+
   if (basis == "constant") {
     degree <- 1
   }
@@ -759,6 +794,8 @@ baseline <- function(degree = 1, basis = c("constant", "poly", "bs", "ns"), name
   
   ret <- list(
     degree = degree,
+    df = df,
+    knots = knots,
     basis = basis,
     fun = bfun,
     intercept = intercept,
@@ -908,7 +945,18 @@ construct.baselinespec <- function(x, model_spec, ...) {
   
   # Compute baseline covariates for each block, passing correct argument name
   ret_list <- lapply(bl, function(block_len) {
-    if (x$basis == "ns") {
+    if (x$basis %in% c("bs", "ns") &&
+        (!is.null(x$df) || !is.null(x$knots))) {
+      if (!is.null(x$knots) && any(x$knots <= 1 | x$knots >= block_len)) {
+        stop("'knots' must lie strictly inside every run (1, run length)",
+             call. = FALSE)
+      }
+      args <- list(x = seq_len(block_len), intercept = FALSE)
+      if (!is.null(x$df)) args$df <- x$df
+      if (!is.null(x$knots)) args$knots <- x$knots
+      if (x$basis == "bs") args$degree <- x$degree
+      do.call(x$fun, args)
+    } else if (x$basis == "ns") {
       x$fun(seq(1, block_len), df = x$degree)
     } else if (x$basis %in% c("poly", "bs")) {
       x$fun(seq(1, block_len), degree = x$degree)
