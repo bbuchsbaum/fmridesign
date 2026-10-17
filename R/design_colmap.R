@@ -255,6 +255,9 @@ design_colmap.baseline_model <- function(x, ...) {
       r <- suppressWarnings(as.integer(sub("^.*_block_([0-9]+)$", "\\1", nm)))
       basis_ix[idx] <- k
       run_by_col[idx] <- r
+      # A drift column without a run suffix (the global constant
+      # "base_constant") is shared by all runs
+      is_block_diag[idx] <- !is.na(r)
       if (any(is.finite(k))) basis_total_by_col[idx] <- max(k, na.rm = TRUE)
       basis_label[idx] <- ifelse(is.na(k), NA_character_, sprintf("component_%02d", k))
     } else if (identical(kind, "block")) {
