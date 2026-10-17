@@ -391,8 +391,12 @@ test_that("block_hrf correctly blocks an HRF object", {
   # Max logic might differ slightly depending on implementation details, check if shape is reasonable
   # expect_equal(blocked_hrf_max(t), eval_res_max)
   expect_false(identical(blocked_hrf_sum(t), blocked_hrf_max(t)))
-  expect_equal(blocked_hrf_norm(t), eval_res_norm)
-  expect_equal(max(abs(blocked_hrf_norm(t))), 1) # Check normalization worked
+  # normalize = TRUE rescales the summed block response by a constant: fmrihrf
+  # 0.4.0 scaled by the peak over the query grid, later versions by the peak on
+  # a fixed reference grid. Either way the shape matches evaluate(normalize =
+  # TRUE) and the peak (resolved on a fine grid) is 1.
+  expect_equal(blocked_hrf_norm(t) / max(abs(blocked_hrf_norm(t))), eval_res_norm)
+  expect_equal(max(abs(blocked_hrf_norm(seq(0, 35, by = 0.01)))), 1, tolerance = 1e-6)
 
   # Test width_block > width_no_block (as in gen_hrf test)
   result_block <- blocked_hrf_sum(t)
@@ -409,9 +413,16 @@ test_that("block_hrf correctly blocks an HRF object", {
   expect_false(identical(blocked_hl(t), blocked_hrf_sum(t)))
   expect_true(max(abs(blocked_hl(t))) < max(abs(blocked_hrf_sum(t)))) # Expect decay to reduce peak
 
-  # Test negligible width
+  # Test negligible width (below `precision`): fmrihrf 0.4.0 returns the
+  # unblocked HRF; later versions integrate every positive width, as evaluate()
+  # does for duration > 0.
   blocked_negligible <- suppressWarnings(fmrihrf::block_hrf(base_hrf, width = 0.01, precision = 0.1))
-  expect_equal(blocked_negligible(t), base_hrf(t))
+  expected_negligible <- if (utils::packageVersion("fmrihrf") <= "0.4.0") {
+    base_hrf(t)
+  } else {
+    fmrihrf::evaluate(base_hrf, t, duration = 0.01, precision = 0.1)
+  }
+  expect_equal(blocked_negligible(t), expected_negligible)
 })
 
 test_that("normalise_hrf correctly normalises an HRF object", {
