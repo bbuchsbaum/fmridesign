@@ -925,6 +925,9 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, b
 
 #' Shared plumbing for the cell-based `contrast_weights()` methods
 #'
+#' `.eval_cell_formula()` evaluates the right-hand side of a spec formula
+#' with the cell table as data and the formula's own environment as the
+#' enclosure, so it can use variables from where the spec was created.
 #' `.contrast_where_cells()` restricts a term's cells to the spec's `where`
 #' subset (and to the optional logical `select`); an error while evaluating
 #' `where` becomes a warning and selects no cells.
@@ -938,9 +941,13 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, b
 #' `.cell_contrast_class()` is the class of the factorial (F-type) results.
 #' @keywords internal
 #' @noRd
+.eval_cell_formula <- function(f, cells) {
+  rlang::eval_tidy(rlang::f_rhs(f), data = cells, env = rlang::f_env(f))
+}
+
 .contrast_where_cells <- function(x, term_cells, select = NULL) {
   keep <- if (!is.null(x$where)) {
-    tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
+    tryCatch(.eval_cell_formula(x$where, term_cells), error = function(e) {
       warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
       rep(FALSE, nrow(term_cells))
     })
@@ -1561,7 +1568,7 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
   display_names <- name_map$display
   
   if (!is.null(x$where)) {
-    keep <- rlang::eval_tidy(rlang::f_rhs(x$where), data=term.cells)
+    keep <- .eval_cell_formula(x$where, term.cells)
     assert_that(sum(keep) > 0)
     term.cells <- term.cells[keep, , drop = FALSE]
     condnames <- condnames[keep]

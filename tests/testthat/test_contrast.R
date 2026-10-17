@@ -450,6 +450,57 @@ test_that("formula contrasts work on continuous terms with several variables", {
 # 
 
 
+test_that("where formulas are evaluated in their own environment", {
+  des <- expand.grid(category = c("face", "scene"), attention = c("attend", "ignored"),
+                     rep = 1:3)
+  des$onset <- seq(2, by = 5, length.out = nrow(des))
+  des$run <- 1
+  des$intensity <- factor(rep(c(1, 2, 3), length.out = nrow(des)))
+  sframe <- fmrihrf::sampling_frame(blocklens = 100, TR = 2)
+  term1 <- terms(event_model(onset ~ hrf(category, attention), data = des,
+                             block = ~run, sampling_frame = sframe))[[1]]
+  term2 <- terms(event_model(onset ~ hrf(intensity, attention), data = des,
+                             block = ~run, sampling_frame = sframe))[[1]]
+
+  # Specs built inside a function refer to its local variables; `x` and
+  # `term_cells` also name internal objects, which must not be picked up.
+  make_specs <- function(lvl) {
+    x <- lvl
+    term_cells <- lvl
+    list(
+      pair = pair_contrast(~ category == "face", ~ category == "scene",
+                           name = "p", where = ~ attention == x),
+      unit = unit_contrast(~ category == "face", name = "u",
+                           where = ~ attention == term_cells),
+      oneway = oneway_contrast(~ category, name = "o", where = ~ attention == lvl),
+      formula = contrast(~ `face:ignored` - `scene:ignored`, name = "f",
+                         where = ~ attention == lvl)
+    )
+  }
+  ref <- list(
+    pair = pair_contrast(~ category == "face", ~ category == "scene",
+                         name = "p", where = ~ attention == "ignored"),
+    unit = unit_contrast(~ category == "face", name = "u",
+                         where = ~ attention == "ignored"),
+    oneway = oneway_contrast(~ category, name = "o", where = ~ attention == "ignored"),
+    formula = contrast(~ `face:ignored` - `scene:ignored`, name = "f",
+                       where = ~ attention == "ignored")
+  )
+  specs <- make_specs("ignored")
+  for (nm in names(ref)) {
+    expect_silent(got <- contrast_weights(specs[[nm]], term1))
+    expect_equal(got$weights, contrast_weights(ref[[nm]], term1)$weights, info = nm)
+  }
+
+  lvls <- c("1", "2")
+  poly_local <- poly_contrast(~ intensity, name = "lin", degree = 1,
+                              where = ~ intensity %in% lvls)
+  poly_ref <- poly_contrast(~ intensity, name = "lin", degree = 1,
+                            where = ~ intensity %in% c("1", "2"))
+  expect_equal(contrast_weights(poly_local, term2)$weights,
+               contrast_weights(poly_ref, term2)$weights)
+})
+
 test_that("pair_contrast respects where clause", {
   simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"))
   simple_des$onset <- seq(1, 50, length.out=nrow(simple_des))
