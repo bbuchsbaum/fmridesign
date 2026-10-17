@@ -1,9 +1,4 @@
-# Generic functions for fmridesign package
-
-This file contains the generic functions used throughout the fmridesign
-package. These generics define the interface for working with event
-models, baseline models, and related design components. Construct an
-event model
+# Construct an fMRI Event Model
 
 This is the main constructor for `event_model` objects. It unifies the
 previous formula and list-based interfaces and uses a more efficient
@@ -12,20 +7,6 @@ internal pipeline.
 ## Usage
 
 ``` r
-event_model(
-  formula_or_list,
-  data = NULL,
-  block = NULL,
-  sampling_frame,
-  durations = 0,
-  drop_empty = TRUE,
-  precision = 0.3,
-  parallel = FALSE,
-  progress = FALSE,
-  strict = FALSE,
-  ...
-)
-
 event_model(
   formula_or_list,
   data = NULL,
@@ -106,15 +87,10 @@ event_model(
 
 ## Value
 
-An `event_model` object describing the task design.
-
 An object of class `c("event_model", "list")` containing the terms,
 design matrix, sampling frame, and other metadata.
 
 ## Details
-
-This function creates an event-based fMRI regression model, represented
-as a data structure.
 
 ### Column Naming
 

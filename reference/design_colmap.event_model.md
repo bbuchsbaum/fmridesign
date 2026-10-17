@@ -46,8 +46,14 @@ A tibble with columns:
 
 - `model_source` (character): "event" or "baseline"
 
-- `basis_name` (character): HRF or baseline basis identifier when
-  available
+- `basis_name` (character): basis identifier. For event columns, the HRF
+  basis family as spelled in `hrf(basis = ...)` (`"spmg1"`, `"spmg2"`,
+  `"spmg3"`, `"gamma"`, `"gaussian"`, `"bspline"`, `"tent"`, `"fir"`,
+  `"fourier"`, `"daguerre"`), also when the HRF is lagged, blocked or
+  normalised; for other HRFs their own name (`attr(hrf, "name")`); `NA`
+  for covariates. For baseline columns, the drift basis (`"poly"`,
+  `"bs"`, `"ns"`, `"constant"`), `"constant"` for intercepts and
+  `"nuisance"` for nuisance regressors (`"baseline"` for other terms).
 
 - `basis_ix` (integer): within-condition basis index (HRF component);
   `NA` if not applicable
@@ -56,7 +62,11 @@ A tibble with columns:
   column's term; `NA` if not applicable
 
 - `basis_label` (character): human-readable label for the basis
-  component when known
+  component when known: `"canonical"`, `"derivative"`, `"dispersion"`
+  for SPMG2/SPMG3, `"lag_00"`, `"lag_01"`, ... for FIR, otherwise
+  `"component_01"`, `"component_02"`, ... (baseline columns:
+  `"intercept"` for intercepts and the user's column name for nuisance
+  regressors)
 
 - `pretty_name` (character): concise, human-friendly label for display
   (e.g., "RT" or "RT_lag_02")
@@ -88,8 +98,8 @@ head(colmap)
 #> # A tibble: 2 × 16
 #>     col name   term_tag term_index condition   run role  model_source basis_name
 #>   <int> <chr>  <chr>         <int> <chr>     <int> <chr> <chr>        <chr>     
-#> 1     1 cond_… cond              1 cond.A       NA task  event        HRF       
-#> 2     2 cond_… cond              1 cond.B       NA task  event        HRF       
+#> 1     1 cond_… cond              1 cond.A       NA task  event        spmg1     
+#> 2     2 cond_… cond              1 cond.B       NA task  event        spmg1     
 #> # ℹ 7 more variables: basis_ix <int>, basis_total <int>, basis_label <chr>,
 #> #   is_block_diagonal <lgl>, modulation_type <chr>, modulation_id <chr>,
 #> #   pretty_name <chr>

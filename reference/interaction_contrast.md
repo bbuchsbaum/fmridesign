@@ -1,6 +1,8 @@
 # Interaction Contrast
 
-Create an interaction contrast specification
+Create an interaction contrast specification. The contrast tests the
+highest-order interaction of all factors named in `A`; for example
+`~ A * B * C` gives the three-way interaction.
 
 ## Usage
 

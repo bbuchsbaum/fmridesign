@@ -20,8 +20,9 @@ validate_contrasts(x, weights = NULL, tol = 1e-08)
 
   Optional contrast weights. May be a numeric vector (t-contrast), a
   numeric matrix (F-contrast with columns as contrast vectors), or a
-  named list mapping names to vectors/matrices. If `NULL` and `x` is an
-  `event_model`, all attached t- and F-contrasts are validated.
+  named list mapping names to vectors/matrices (unnamed entries are
+  named `contrast1`, `contrast2`, ... by position). If `NULL` and `x` is
+  an `event_model`, all attached t- and F-contrasts are validated.
 
 - tol:
 
@@ -32,7 +33,7 @@ validate_contrasts(x, weights = NULL, tol = 1e-08)
 A data.frame with one row per validated contrast column and the
 following columns: `name`, `type` ("t" or "F"), `estimable`,
 `sum_to_zero`, `orthogonal_to_intercept`, `full_rank` (F only), and
-`nonzero_weights`.
+`nonzero_weights`; it has zero rows when no contrast could be validated.
 
 ## Details
 

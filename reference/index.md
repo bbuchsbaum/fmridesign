@@ -166,7 +166,7 @@
   : Create a continuous event set from a matrix.
 
 - [`event_model()`](https://bbuchsbaum.github.io/fmridesign/reference/event_model.md)
-  : Generic functions for fmridesign package
+  : Construct an fMRI Event Model
 
 - [`event_table()`](https://bbuchsbaum.github.io/fmridesign/reference/event_table.md)
   : Extract event table
@@ -196,9 +196,6 @@
   [`nbasis(`*`<convolved_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-generics.md)
   [`nbasis(`*`<feature_term>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-generics.md)
   : Accessor generics shared with fmrihrf
-
-- [`fmrihrf-reexports`](https://bbuchsbaum.github.io/fmridesign/reference/fmrihrf-reexports.md)
-  : fmrihrf reexports
 
 - [`get_all_external_hrf_functions()`](https://bbuchsbaum.github.io/fmridesign/reference/get_all_external_hrf_functions.md)
   : Get All External HRF Function Names

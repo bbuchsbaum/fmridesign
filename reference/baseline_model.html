@@ -81,8 +81,10 @@ This model may include a drift term, a block intercept term, and nuisance regres
 
 <dt id="arg-intercept">intercept<a class="anchor" aria-label="anchor" href="#arg-intercept"></a></dt>
 <dd><p>Character; whether to include an intercept ("runwise", "global", or "none").
-Ignored when <code>basis == "constant"</code> because the drift term already
-provides the constant baseline.</p></dd>
+With <code>basis = "constant"</code> no separate intercept term is added, because
+the drift term is itself the constant baseline: <code>"global"</code> makes it a
+single column shared by all runs, while <code>"runwise"</code> and <code>"none"</code>
+give one constant column per run.</p></dd>
 
 
 <dt id="arg-nuisance-list">nuisance_list<a class="anchor" aria-label="anchor" href="#arg-nuisance-list"></a></dt>

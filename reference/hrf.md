@@ -37,8 +37,9 @@ hrf(
 - basis:
 
   the impulse response function or the name of a pre-supplied function,
-  one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian",
-  "tent", "bs". Can also be an `HRF` object.
+  one of: "spmg1", "spmg2", "spmg3", "gamma", "gaussian", "bspline" (or
+  "bs"), "tent", "fir", "fourier" (the last four are sized by `nbasis`).
+  Can also be an `HRF` object or a plain function of time.
 
 - hrf_fun:
 
@@ -84,7 +85,9 @@ hrf(
 - nbasis:
 
   number of basis functions – only used for hemodynamic response
-  functions (e.g. bspline) that take a variable number of bases.
+  functions (e.g. bspline) that take a variable number of bases. If
+  omitted, such a basis set uses its standard size (12 bins for "fir", 5
+  functions otherwise).
 
 - contrasts:
 

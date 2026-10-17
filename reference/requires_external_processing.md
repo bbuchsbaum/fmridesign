@@ -28,5 +28,5 @@ register_hrfspec_extension(
   requires_external_processing = TRUE
 )
 requires_external_processing("demo_hrfspec")
-#> [1] FALSE
+#> [1] TRUE
 ```

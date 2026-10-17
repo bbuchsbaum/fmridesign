@@ -406,8 +406,8 @@ Here are the main ways to specify the `basis`:
     - `"tent"` (use `nbasis` to set number of tent functions)
 
 2.  **Using Pre-defined `HRF` Objects:** Pass an exported `HRF` object
-    directly. Examples include `HRF_SPMG1`, `HRF_GAUSSIAN`, `HRF_SPMG2`,
-    `HRF_SPMG3`, `HRF_BSPLINE`, `HRF_DAGUERRE`, `HRF_DAGUERRE_BASIS`.
+    directly. Examples include `HRF_SPMG1`, `HRF_SPMG2`, `HRF_SPMG3`,
+    `HRF_GAMMA`, `HRF_GAUSSIAN`, `HRF_BSPLINE` and `HRF_FIR`.
 
 3.  **Using Custom Functions `f(t)`:** Provide your own function
     definition that accepts time `t` as the first argument.
@@ -415,9 +415,9 @@ Here are the main ways to specify the `basis`:
 4.  **Using
     [`gen_hrf()`](https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html)
     Results:** Create a customized HRF using
-    [`gen_hrf()`](https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html),
-    `hrf_blocked()`, `hrf_lagged()`, etc., and pass the resulting `HRF`
-    object.
+    [`gen_hrf()`](https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html)
+    or the decorators `block_hrf()`, `lag_hrf()` and `normalise_hrf()`,
+    and pass the resulting `HRF` object.
 
 **Discovering Available Options:** You can easily explore all available
 HRF types using the `list_available_hrfs()` function:
@@ -437,8 +437,8 @@ list_available_hrfs()
 #> 8   fourier generator              5    FALSE
 #> 9  daguerre generator              3    FALSE
 #> 10      fir generator             12    FALSE
-#> 11      lwu generator       variable    FALSE
-#> 12      gam    object              1    FALSE
+#> 11      lwu generator              1    FALSE
+#> 12      gam    object              1     TRUE
 #> 13       bs generator              5     TRUE
 
 # Get detailed descriptions
@@ -454,8 +454,8 @@ list_available_hrfs(details = TRUE)
 #> 8   fourier generator              5    FALSE   fourier HRF (generator) 
 #> 9  daguerre generator              3    FALSE  daguerre HRF (generator) 
 #> 10      fir generator             12    FALSE       fir HRF (generator) 
-#> 11      lwu generator       variable    FALSE       lwu HRF (generator) 
-#> 12      gam    object              1    FALSE          gam HRF (object) 
+#> 11      lwu generator              1    FALSE       lwu HRF (generator) 
+#> 12      gam    object              1     TRUE   gam HRF (object) (alias)
 #> 13       bs generator              5     TRUE bs HRF (generator) (alias)
 ```
 

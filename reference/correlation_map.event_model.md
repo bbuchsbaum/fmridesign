@@ -160,6 +160,4 @@ correlation_map(emod)
 bmod <- baseline_model(basis = "poly", degree = 2,
                        sframe = fmrihrf::sampling_frame(c(40, 40), TR = 1))
 correlation_map(bmod)
-#> Warning: Removed 2 rows containing missing values or values outside the scale range
-#> (`geom_tile()`).
 ```

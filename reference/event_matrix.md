@@ -37,11 +37,11 @@ event_matrix(mat, name, onsets, blockids = 1, durations = 0, subset = NULL)
   Optional logical vector indicating which events to keep. If provided,
   the vector must match `onsets` in length and contain no `NA` values.
 
-  If `mat` has column names and more than one column, those names are
-  sanitized using `.sanitizeName()` before being stored. The sanitized
-  column names are returned by
-  [`levels()`](https://rdrr.io/r/base/levels.html) for the resulting
-  event object.
+  Column names of `mat` are sanitized using `.sanitizeName()` before
+  being stored. If they are missing or not unique, deterministic feature
+  suffixes (`f01`, `f02`, ...) are generated instead. The resulting
+  names are returned by [`levels()`](https://rdrr.io/r/base/levels.html)
+  for the event object.
 
 ## Value
 

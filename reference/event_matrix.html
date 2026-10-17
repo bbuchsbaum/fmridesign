@@ -83,9 +83,10 @@ specifically for creating continuous event sequences from numeric matrices.</p>
 <dd><p>Optional logical vector indicating which events to keep. If
 provided, the vector must match <code>onsets</code> in length and contain no <code>NA</code>
 values.</p>
-<p>If <code>mat</code> has column names and more than one column, those names are
-sanitized using <code>.sanitizeName()</code> before being stored. The sanitized
-column names are returned by <code><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels()</a></code> for the resulting event object.</p></dd>
+<p>Column names of <code>mat</code> are sanitized using <code>.sanitizeName()</code> before being
+stored. If they are missing or not unique, deterministic feature suffixes
+(<code>f01</code>, <code>f02</code>, ...) are generated instead. The resulting names are
+returned by <code><a href="https://rdrr.io/r/base/levels.html" class="external-link">levels()</a></code> for the event object.</p></dd>
 
 </dl></div>
     <div class="section level2">

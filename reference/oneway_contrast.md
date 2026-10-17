@@ -33,8 +33,9 @@ oneway_contrast(A, name, where = NULL, basis = NULL, basis_weights = NULL)
 - basis_weights:
 
   NULL (default: equal weights), or a numeric vector of weights to apply
-  to the selected basis functions. Must have the same length as `basis`
-  selection and will be normalized to sum to 1. See
+  to the selected basis functions. Must have one weight per selected
+  basis function (all of them when `basis` is NULL or `"all"`) and will
+  be normalized to sum to 1. See
   [`pair_contrast`](https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.md)
   for details on basis weighting.
 

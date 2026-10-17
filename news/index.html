@@ -45,6 +45,27 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="fmridesign-development-version">fmridesign (development version)<a class="anchor" aria-label="anchor" href="#fmridesign-development-version"></a></h2>
 <div class="section level3">
+<h3 id="changes-that-affect-results-development-version">Changes that affect results<a class="anchor" aria-label="anchor" href="#changes-that-affect-results-development-version"></a></h3>
+<ul><li>
+<code>hrf(..., basis = "fir", nbasis = k)</code> with <code>k</code> other than 12 now builds a true FIR basis (<code>k</code> indicator bins over 24 s, as <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/hrf_fir_generator.html" class="external-link">fmrihrf::hrf_fir_generator()</a></code>). It used to build overlapping tent functions, so design matrices for such terms change.</li>
+<li>When <code>nbasis</code> is omitted, <code><a href="../reference/hrf.html">hrf()</a></code>, <code><a href="../reference/trialwise.html">trialwise()</a></code> and <code><a href="../reference/feature.html">feature()</a></code> give basis sets their standard size: 12 bins for <code>"fir"</code> and 5 functions for <code>"bspline"</code>, <code>"tent"</code> and <code>"fourier"</code>. Previously <code>"fir"</code> and <code>"fourier"</code> got a single function and <code>"bspline"</code> failed to evaluate. An explicit <code>nbasis</code>, and the spmg/gamma/gaussian bases, are unaffected.</li>
+<li>Event terms that cross a single-level factor with other variables now get the right columns: <code>hrf(cond, task)</code> with a constant <code>task</code> gives one column per <code>cond</code> level (it gave a single column of ones), and <code>hrf(cond, rt)</code> with a one-level <code>cond</code> is modulated by <code>rt</code> (it was all ones).</li>
+<li>
+<code><a href="../reference/pair_contrast.html">pair_contrast()</a></code>, <code><a href="../reference/oneway_contrast.html">oneway_contrast()</a></code> and <code><a href="../reference/poly_contrast.html">poly_contrast()</a></code> apply <code>basis_weights</code> across all basis functions when <code>basis</code> is <code>NULL</code> or <code>"all"</code>, as documented (e.g. <code>basis_weights = c(1, 0, 0, 0, 0)</code> is equivalent to <code>basis = 1</code>). The weights used to be ignored silently; a length mismatch is now an error.</li>
+<li>
+<code>interaction_contrast(~ A * B * C)</code> tests the full highest-order interaction. It silently used only the first two factors. Two-factor results are unchanged.</li>
+<li>Contrasts on factor-by-modulator terms such as <code>hrf(cond, RT)</code> now work: cell weights go on the modulator columns, repeated per basis or modulator column. <code><a href="../reference/pair_contrast.html">pair_contrast()</a></code>, <code><a href="../reference/unit_contrast.html">unit_contrast()</a></code> and <code><a href="../reference/poly_contrast.html">poly_contrast()</a></code> used to fail with “No conditions were selected”, and <code><a href="../reference/oneway_contrast.html">oneway_contrast()</a></code>, <code><a href="../reference/interaction_contrast.html">interaction_contrast()</a></code> and formula contrasts returned all-zero weights with only a warning.</li>
+<li>
+<code><a href="../reference/contrast_weights.html">contrast_weights()</a></code> and <code><a href="../reference/Fcontrasts.html">Fcontrasts()</a></code> on an <code>event_model</code> no longer give zero weights when the model renames a term to keep names unique (e.g. <code>hrf(Ident(RT1, RT2)) + hrf(RT1, RT2, contrasts = ...)</code>).</li>
+<li>
+<code>where</code> clauses and the condition-selecting formulas of the contrast constructors are evaluated in the formula’s own environment, so they can use variables from the code that created them (e.g. <code>where = ~ cond == lvl</code> inside a function). They used to fail or pick up package-internal objects.</li>
+<li>
+<code><a href="../reference/design_colmap.html">design_colmap()</a></code> and <code><a href="../reference/design_meta.html">design_meta()</a></code> record <code>basis_name</code> as the basis family spelled as in <code>hrf(basis = ...)</code> (<code>"spmg1"</code>, <code>"spmg3"</code>, <code>"fir"</code>, <code>"bspline"</code>, …; a plain function is named after its argument, e.g. <code>"my_fun"</code>, or <code>"custom"</code>), instead of the HRF’s first class (<code>"SPMG3_HRF"</code>, <code>"FIR_HRF"</code>, or just <code>"HRF"</code>). Lagged, blocked and normalised SPMG2, SPMG3 and FIR terms now get proper <code>basis_label</code>s (<code>canonical</code> / <code>derivative</code> / <code>dispersion</code>, <code>lag_00</code>, …) instead of <code>component_01</code>, …, which also changes their pretty names and plot labels. spmg1 terms get the same <code>basis_name</code> with every fmrihrf version.</li>
+<li>Within-run <code><a href="../reference/correlation_map.html">correlation_map()</a></code> draws every cell one cell wide. Baseline models with two columns per run (e.g. <code>basis = "poly", degree = 2</code>) used to show no cells.</li>
+<li>
+<code><a href="../reference/design_colmap.html">design_colmap()</a></code> reports the single global constant drift column (<code>basis = "constant", intercept = "global"</code>) as shared across runs (<code>is_block_diagonal = FALSE</code>).</li>
+</ul></div>
+<div class="section level3">
 <h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
 <ul><li>Added <code><a href="../reference/check_estimability.html">check_estimability()</a></code> for full-design rank, exact condition numbers, named weak directions, and contrast-specific estimability and variance factors. Event models include run intercepts by default and report event coverage per run; an explicit baseline/nuisance design can also be supplied. <code><a href="../reference/check_collinearity.html">check_collinearity()</a></code> now documents the limitations of pairwise checks (<a href="https://github.com/bbuchsbaum/fmridesign/issues/32" class="external-link">#32</a>).</li>
 </ul></div>
@@ -68,6 +89,54 @@
 <li>
 <code>hrf(..., summate = FALSE)</code> is honoured again for sustained events. The shared-HRF fast path ignored <code>summate</code> and always produced the <code>summate = TRUE</code> design.</li>
 <li>An event with a negative onset in the first run now fails with fmrihrf’s “<code>onsets</code> must be non-negative” error, as the legacy path and <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/regressor.html" class="external-link">fmrihrf::regressor()</a></code> always did; the fast path had silently accepted it. The out-of-frame warning is still raised first.</li>
+<li>
+<code><a href="../reference/term_matrices.html">term_matrices()</a></code> returns one entry per term, with <code>NULL</code> for a term without design columns, for both event and baseline models; such a term used to shift every later matrix onto the wrong term name.</li>
+<li>
+<code><a href="../reference/cells.html">cells()</a></code> on multi-basis convolved terms lists only observed cells with correctly aligned counts, labels ten or more basis functions <code>basis01</code>, <code>basis02</code>, … in order, and works for terms with continuous variables.</li>
+<li>
+<code><a href="../reference/split_onsets.html">split_onsets()</a></code> labels each condition’s onsets correctly when a parametric modulator is zero for every event of a condition.</li>
+<li>
+<code><a href="../reference/Fcontrasts.html">Fcontrasts()</a></code> no longer fails for terms crossing a single-level factor, and <code><a href="../reference/conditions.html">conditions()</a></code> no longer errors on a multi-variable term containing a factor without levels.</li>
+<li>
+<code><a href="../reference/condition_basis_list.html">condition_basis_list()</a></code> names its result by condition for terms with a single continuous variable (the name was empty).</li>
+<li>Formula contrasts (<code><a href="../reference/contrast.html">contrast()</a></code>) work on continuous terms with several variables, such as <code>hrf(Ident(RT1, RT2))</code> with <code>~ RT1 - RT2</code>.</li>
+<li>
+<code><a href="../reference/poly_contrast.html">poly_contrast()</a></code> reports a <code>value_map</code> that misses factor levels instead of failing with “subscript out of bounds”.</li>
+<li>
+<code><a href="../reference/validate_contrasts.html">validate_contrasts()</a></code> accepts a list of contrast vectors, names unnamed entries <code>contrast1</code>, <code>contrast2</code>, …, and returns a zero-row data frame when nothing can be validated.</li>
+<li>
+<code><a href="../reference/hrf.html">hrf()</a></code> no longer errors when <code>basis</code> is an HRF object or function and <code>hrf_fun</code> is also given; it warns that <code>hrf_fun</code> takes precedence.</li>
+<li>The basis names <code>"bs"</code> and <code>"tent"</code>, documented in <code><a href="../reference/hrf.html">?hrf</a></code>, are accepted.</li>
+<li>Degree-1 polynomial modulators (<code>hrf(Poly(x, 1))</code>), and polynomial terms whose subset keeps a single event, no longer fail with “Processed event value is not a matrix”. <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code> works on subsetted <code>Poly</code> and <code>BSpline</code> bases.</li>
+<li>
+<code>baseline_model(nuisance_check = "drop")</code> no longer fails when every nuisance column of a run is dropped, and zero-column nuisance matrices are accepted by <code><a href="../reference/baseline_model.html">baseline_model()</a></code> and <code><a href="../reference/check_nuisance.html">check_nuisance()</a></code>.</li>
+<li>
+<code><a href="../reference/construct.html">construct()</a></code> on a <code><a href="../reference/nuisance.html">nuisance()</a></code> specification works (it always failed), and <code><a href="../reference/nuisance.html">nuisance()</a></code> terms no longer trigger tibble’s name-repair warning.</li>
+<li>Runwise intercept columns no longer carry stray <code>assign</code> / <code>contrasts</code> attributes from <code><a href="https://rdrr.io/r/stats/model.matrix.html" class="external-link">model.matrix()</a></code>; their values are unchanged.</li>
+<li>
+<code><a href="../reference/requires_external_processing.html">requires_external_processing()</a></code> accepts a registered class name, and <code><a href="../reference/get_all_external_hrf_functions.html">get_all_external_hrf_functions()</a></code> returns <code>character(0)</code> rather than <code>NULL</code> when nothing is registered.</li>
+<li>
+<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> on baseline models and contrast specifications returns the object invisibly.</li>
+<li>
+<code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> for event models no longer warns “Ignoring unknown parameters: inherit.aes” (ggplot2 &lt; 3.5) or, with <code>label_mode = "compact"</code>, about non-ASCII characters; per-run TRs in its subtitle are no longer padded.</li>
+<li>
+<code><a href="../reference/correlation_map.html">correlation_map()</a></code> no longer errors with <code>annotate = FALSE</code> when there is nothing to correlate, can be drawn with ggplot2 &lt; 3.5.0 when it has more than 10 columns, and says when no two regressors share a run instead of claiming that no regressor varies.</li>
+<li>
+<code><a href="../reference/convolve.html">convolve()</a></code> warnings for terms built directly with <code><a href="../reference/event_term.html">event_term()</a></code> name the term, and <code>event_term(list())</code> fails with a clear message.</li>
+<li>The <code>event_model</code>, <code>event_factor</code>, <code>event_matrix</code> and <code>labels.event</code> help pages no longer contain misplaced text or wrong example output.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="performance-development-version">Performance<a class="anchor" aria-label="anchor" href="#performance-development-version"></a></h3>
+<ul><li>Building event models is 5-40 times faster with the current fmrihrf, whose convolution engine no longer starts OpenMP threads and computes only the samples the scan grid needs. Results are unchanged.</li>
+<li>
+<code><a href="../reference/baseline_model.html">baseline_model()</a></code> and <code><a href="../reference/check_nuisance.html">check_nuisance()</a></code> share their drift construction and block assembly (about 25% faster), and <code><a href="../reference/validate_contrasts.html">validate_contrasts()</a></code> computes the design rank once (about twice as fast with many contrasts).</li>
+</ul></div>
+<div class="section level3">
+<h3 id="packaging-and-internal-changes-development-version">Packaging and internal changes<a class="anchor" aria-label="anchor" href="#packaging-and-internal-changes-development-version"></a></h3>
+<ul><li>
+<code>Remotes:</code> tracks <code>bbuchsbaum/fmrihrf</code> instead of a pre-release commit, so GitHub installs and CI use the same fmrihrf as r-universe. fmridesign still requires only fmrihrf (&gt;= 0.4.0) and is tested against 0.4.0.</li>
+<li>stringr is no longer imported; tidyr and Matrix move to Suggests (only the vignettes and tests use them); ggplot2 (&gt;= 3.4.0) is declared.</li>
+<li>Large internal simplification: the contrast constructors and <code><a href="../reference/contrast_weights.html">contrast_weights()</a></code> methods share validation and packaging helpers, <code><a href="../reference/contrast_weights.html">contrast_weights()</a></code> and <code><a href="../reference/Fcontrasts.html">Fcontrasts()</a></code> on event models share one weight-embedding helper, the scaling bases share one z-score helper, and the plotting code shares its colour, scale and glyph helpers. Dead code (<code>dctbasis()</code>, <code>translate_legacy_pattern()</code>, never-hit caches, duplicate <code>%||%</code> definitions, an fmrihrf &lt;= 0.4.0 warning shim, …) and unused imports are gone.</li>
 </ul></div>
 </div>
     <div class="section level2">

@@ -69,8 +69,9 @@ contrasts) or a design matrix plus custom weights.</p>
 <dt id="arg-weights">weights<a class="anchor" aria-label="anchor" href="#arg-weights"></a></dt>
 <dd><p>Optional contrast weights. May be a numeric vector (t-contrast),
 a numeric matrix (F-contrast with columns as contrast vectors), or a named
-list mapping names to vectors/matrices. If <code>NULL</code> and <code>x</code> is an <code>event_model</code>,
-all attached t- and F-contrasts are validated.</p></dd>
+list mapping names to vectors/matrices (unnamed entries are named
+<code>contrast1</code>, <code>contrast2</code>, ... by position). If <code>NULL</code> and <code>x</code> is an
+<code>event_model</code>, all attached t- and F-contrasts are validated.</p></dd>
 
 
 <dt id="arg-tol">tol<a class="anchor" aria-label="anchor" href="#arg-tol"></a></dt>
@@ -82,7 +83,7 @@ all attached t- and F-contrasts are validated.</p></dd>
     <p>A data.frame with one row per validated contrast column and the
 following columns: <code>name</code>, <code>type</code> ("t" or "F"), <code>estimable</code>,
 <code>sum_to_zero</code>, <code>orthogonal_to_intercept</code>, <code>full_rank</code> (F only), and
-<code>nonzero_weights</code>.</p>
+<code>nonzero_weights</code>; it has zero rows when no contrast could be validated.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

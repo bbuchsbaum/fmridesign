@@ -37,12 +37,6 @@ event_factor(fac, name, onsets, blockids = 1, durations = 0, subset = NULL)
   Optional logical vector indicating which events to keep. If provided,
   the vector must match `onsets` in length and contain no `NA` values.
 
-  Column names are sanitized using `.sanitizeName()` if provided. If
-  column names are missing or not unique, deterministic feature suffixes
-  (`f01`, `f02`, ...) are generated instead. The resulting names are
-  returned by [`levels()`](https://rdrr.io/r/base/levels.html) for the
-  event object.
-
 ## Value
 
 An S3 object of class `event` and `event_seq`.

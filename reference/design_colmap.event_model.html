@@ -85,10 +85,21 @@ and provides a consistent, queryable view of the design.</p>
 <li><p><code>run</code> (integer): block/run id when the column is block-specific; <code>NA</code> if pooled</p></li>
 <li><p><code>role</code> (character): e.g., "task", "drift", "intercept", "nuisance"</p></li>
 <li><p><code>model_source</code> (character): "event" or "baseline"</p></li>
-<li><p><code>basis_name</code> (character): HRF or baseline basis identifier when available</p></li>
+<li><p><code>basis_name</code> (character): basis identifier. For event columns, the HRF
+basis family as spelled in <code>hrf(basis = ...)</code> (<code>"spmg1"</code>, <code>"spmg2"</code>,
+<code>"spmg3"</code>, <code>"gamma"</code>, <code>"gaussian"</code>, <code>"bspline"</code>, <code>"tent"</code>, <code>"fir"</code>,
+<code>"fourier"</code>, <code>"daguerre"</code>), also when the HRF is lagged, blocked or
+normalised; for other HRFs their own name (<code>attr(hrf, "name")</code>);
+<code>NA</code> for covariates. For baseline columns, the drift basis (<code>"poly"</code>,
+<code>"bs"</code>, <code>"ns"</code>, <code>"constant"</code>), <code>"constant"</code> for intercepts and
+<code>"nuisance"</code> for nuisance regressors (<code>"baseline"</code> for other terms).</p></li>
 <li><p><code>basis_ix</code> (integer): within-condition basis index (HRF component); <code>NA</code> if not applicable</p></li>
 <li><p><code>basis_total</code> (integer): total number of basis components for the column's term; <code>NA</code> if not applicable</p></li>
-<li><p><code>basis_label</code> (character): human-readable label for the basis component when known</p></li>
+<li><p><code>basis_label</code> (character): human-readable label for the basis component when known:
+<code>"canonical"</code>, <code>"derivative"</code>, <code>"dispersion"</code> for SPMG2/SPMG3, <code>"lag_00"</code>,
+<code>"lag_01"</code>, ... for FIR, otherwise <code>"component_01"</code>, <code>"component_02"</code>, ...
+(baseline columns: <code>"intercept"</code> for intercepts and the user's column
+name for nuisance regressors)</p></li>
 <li><p><code>pretty_name</code> (character): concise, human-friendly label for display (e.g., "RT" or "RT_lag_02")</p></li>
 <li><p><code>is_block_diagonal</code> (logical): TRUE when the regressor is per-run/block</p></li>
 <li><p><code>modulation_type</code> (character): "amplitude", "parametric", "covariate", or "feature"</p></li>
@@ -112,8 +123,8 @@ and provides a consistent, queryable view of the design.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 2 × 16</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     col name   term_tag term_index condition   run role  model_source basis_name</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1 cond_… cond              1 cond.A       <span style="color: #BB0000;">NA</span> task  event        HRF       </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     2 cond_… cond              1 cond.B       <span style="color: #BB0000;">NA</span> task  event        HRF       </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1 cond_… cond              1 cond.A       <span style="color: #BB0000;">NA</span> task  event        spmg1     </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     2 cond_… cond              1 cond.B       <span style="color: #BB0000;">NA</span> task  event        spmg1     </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 7 more variables: basis_ix &lt;int&gt;, basis_total &lt;int&gt;, basis_label &lt;chr&gt;,</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   is_block_diagonal &lt;lgl&gt;, modulation_type &lt;chr&gt;, modulation_id &lt;chr&gt;,</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   pretty_name &lt;chr&gt;</span></span>

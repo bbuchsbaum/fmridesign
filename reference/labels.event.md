@@ -2,9 +2,9 @@
 
 Returns a character vector of formatted labels for an event object,
 using the `Variable[Level]` style for categorical events,
-`Variable[Index]` for multi-column continuous events, or just `Variable`
-for single continuous events. Useful for getting consistent labels for
-individual event components. This is distinct from
+`Variable[Column]` for multi-column continuous events, or just
+`Variable` for single continuous events. Useful for getting consistent
+labels for individual event components. This is distinct from
 [`levels()`](https://rdrr.io/r/base/levels.html) which returns the raw
 level names or column names. Relies on the internal `.level_vector`
 helper function.
@@ -51,7 +51,7 @@ labels(ev_num) # Should return "Modulator"
 mat <- matrix(1:12, 6, 2)
 colnames(mat) <- c("C1", "C2")
 ev_mat <- event_matrix(mat, "MatrixVar", onsets, blockids = rep(1, length(onsets)))
-labels(ev_mat) # Should return c("MatrixVar[1]", "MatrixVar[2]") 
+labels(ev_mat) # Should return c("MatrixVar[C1]", "MatrixVar[C2]")
 #>              C1              C2 
 #> "MatrixVar[C1]" "MatrixVar[C2]" 
 ```

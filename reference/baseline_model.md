@@ -35,8 +35,10 @@ baseline_model(
 - intercept:
 
   Character; whether to include an intercept ("runwise", "global", or
-  "none"). Ignored when `basis == "constant"` because the drift term
-  already provides the constant baseline.
+  "none"). With `basis = "constant"` no separate intercept term is
+  added, because the drift term is itself the constant baseline:
+  `"global"` makes it a single column shared by all runs, while
+  `"runwise"` and `"none"` give one constant column per run.
 
 - nuisance_list:
 

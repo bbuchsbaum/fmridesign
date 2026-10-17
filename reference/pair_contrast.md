@@ -40,10 +40,11 @@ pair_contrast(A, B, name, where = NULL, basis = NULL, basis_weights = NULL)
 - basis_weights:
 
   NULL (default: equal weights), or a numeric vector of weights to apply
-  to the selected basis functions. Must have the same length as `basis`
-  selection and will be normalized to sum to 1. Use this to emphasize
-  specific temporal components (e.g., `c(.1, .2, .4, .2, .1)` for
-  Gaussian-like weighting emphasizing the peak).
+  to the selected basis functions. Must have one weight per selected
+  basis function (all of them when `basis` is NULL or `"all"`) and will
+  be normalized to sum to 1. Use this to emphasize specific temporal
+  components (e.g., `c(.1, .2, .4, .2, .1)` for Gaussian-like weighting
+  emphasizing the peak).
 
 ## Value
 

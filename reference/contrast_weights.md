@@ -162,5 +162,6 @@ contrast_weights(emod)
 #>        diff
 #> cond.A    1
 #> cond.B   -1
-#>  conditions:  cond_cond.A cond_cond.B
+#>  conditions:  cond_cond.A cond_cond.B 
+#> 
 ```

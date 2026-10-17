@@ -431,16 +431,16 @@ functions)</li>
 </li>
 <li><p><strong>Using Pre-defined <code>HRF</code> Objects:</strong> Pass
 an exported <code>HRF</code> object directly. Examples include
-<code>HRF_SPMG1</code>, <code>HRF_GAUSSIAN</code>,
-<code>HRF_SPMG2</code>, <code>HRF_SPMG3</code>,
-<code>HRF_BSPLINE</code>, <code>HRF_DAGUERRE</code>,
-<code>HRF_DAGUERRE_BASIS</code>.</p></li>
+<code>HRF_SPMG1</code>, <code>HRF_SPMG2</code>, <code>HRF_SPMG3</code>,
+<code>HRF_GAMMA</code>, <code>HRF_GAUSSIAN</code>,
+<code>HRF_BSPLINE</code> and <code>HRF_FIR</code>.</p></li>
 <li><p><strong>Using Custom Functions <code>f(t)</code>:</strong>
 Provide your own function definition that accepts time <code>t</code> as
 the first argument.</p></li>
 <li><p><strong>Using <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html" class="external-link">gen_hrf()</a></code> Results:</strong> Create a
-customized HRF using <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html" class="external-link">gen_hrf()</a></code>, <code>hrf_blocked()</code>,
-<code>hrf_lagged()</code>, etc., and pass the resulting <code>HRF</code>
+customized HRF using <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/gen_hrf.html" class="external-link">gen_hrf()</a></code> or the decorators
+<code>block_hrf()</code>, <code>lag_hrf()</code> and
+<code>normalise_hrf()</code>, and pass the resulting <code>HRF</code>
 object.</p></li>
 </ol>
 <p><strong>Discovering Available Options:</strong> You can easily
@@ -460,8 +460,8 @@ explore all available HRF types using the
 <span><span class="co">#&gt; 8   fourier generator              5    FALSE</span></span>
 <span><span class="co">#&gt; 9  daguerre generator              3    FALSE</span></span>
 <span><span class="co">#&gt; 10      fir generator             12    FALSE</span></span>
-<span><span class="co">#&gt; 11      lwu generator       variable    FALSE</span></span>
-<span><span class="co">#&gt; 12      gam    object              1    FALSE</span></span>
+<span><span class="co">#&gt; 11      lwu generator              1    FALSE</span></span>
+<span><span class="co">#&gt; 12      gam    object              1     TRUE</span></span>
 <span><span class="co">#&gt; 13       bs generator              5     TRUE</span></span>
 <span></span>
 <span><span class="co"># Get detailed descriptions</span></span>
@@ -477,8 +477,8 @@ explore all available HRF types using the
 <span><span class="co">#&gt; 8   fourier generator              5    FALSE   fourier HRF (generator) </span></span>
 <span><span class="co">#&gt; 9  daguerre generator              3    FALSE  daguerre HRF (generator) </span></span>
 <span><span class="co">#&gt; 10      fir generator             12    FALSE       fir HRF (generator) </span></span>
-<span><span class="co">#&gt; 11      lwu generator       variable    FALSE       lwu HRF (generator) </span></span>
-<span><span class="co">#&gt; 12      gam    object              1    FALSE          gam HRF (object) </span></span>
+<span><span class="co">#&gt; 11      lwu generator              1    FALSE       lwu HRF (generator) </span></span>
+<span><span class="co">#&gt; 12      gam    object              1     TRUE   gam HRF (object) (alias)</span></span>
 <span><span class="co">#&gt; 13       bs generator              5     TRUE bs HRF (generator) (alias)</span></span></code></pre></div>
 <p>For more details and examples of different HRF types, refer to the
 documentation for <code><a href="../reference/hrf.html">hrf()</a></code> and the HRF-related vignettes in

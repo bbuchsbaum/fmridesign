@@ -85,8 +85,9 @@ present in the <code>data</code> argument of <code>event_model</code>.</p></dd>
 
 <dt id="arg-basis">basis<a class="anchor" aria-label="anchor" href="#arg-basis"></a></dt>
 <dd><p>the impulse response function or the name of a pre-supplied function,
-one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs".
-Can also be an <code>HRF</code> object.</p></dd>
+one of: "spmg1", "spmg2", "spmg3", "gamma", "gaussian", "bspline" (or "bs"),
+"tent", "fir", "fourier" (the last four are sized by <code>nbasis</code>).
+Can also be an <code>HRF</code> object or a plain function of time.</p></dd>
 
 
 <dt id="arg-hrf-fun">hrf_fun<a class="anchor" aria-label="anchor" href="#arg-hrf-fun"></a></dt>
@@ -122,7 +123,8 @@ Can be used to disambiguate two <code>hrf</code> terms with the same variable(s)
 
 
 <dt id="arg-nbasis">nbasis<a class="anchor" aria-label="anchor" href="#arg-nbasis"></a></dt>
-<dd><p>number of basis functions – only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.</p></dd>
+<dd><p>number of basis functions – only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.
+If omitted, such a basis set uses its standard size (12 bins for "fir", 5 functions otherwise).</p></dd>
 
 
 <dt id="arg-contrasts">contrasts<a class="anchor" aria-label="anchor" href="#arg-contrasts"></a></dt>

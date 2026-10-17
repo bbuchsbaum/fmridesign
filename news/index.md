@@ -2,6 +2,83 @@
 
 ## fmridesign (development version)
 
+### Changes that affect results
+
+- `hrf(..., basis = "fir", nbasis = k)` with `k` other than 12 now
+  builds a true FIR basis (`k` indicator bins over 24 s, as
+  [`fmrihrf::hrf_fir_generator()`](https://bbuchsbaum.github.io/fmrihrf/reference/hrf_fir_generator.html)).
+  It used to build overlapping tent functions, so design matrices for
+  such terms change.
+- When `nbasis` is omitted,
+  [`hrf()`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.md),
+  [`trialwise()`](https://bbuchsbaum.github.io/fmridesign/reference/trialwise.md)
+  and
+  [`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.md)
+  give basis sets their standard size: 12 bins for `"fir"` and 5
+  functions for `"bspline"`, `"tent"` and `"fourier"`. Previously
+  `"fir"` and `"fourier"` got a single function and `"bspline"` failed
+  to evaluate. An explicit `nbasis`, and the spmg/gamma/gaussian bases,
+  are unaffected.
+- Event terms that cross a single-level factor with other variables now
+  get the right columns: `hrf(cond, task)` with a constant `task` gives
+  one column per `cond` level (it gave a single column of ones), and
+  `hrf(cond, rt)` with a one-level `cond` is modulated by `rt` (it was
+  all ones).
+- [`pair_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.md),
+  [`oneway_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/oneway_contrast.md)
+  and
+  [`poly_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/poly_contrast.md)
+  apply `basis_weights` across all basis functions when `basis` is
+  `NULL` or `"all"`, as documented
+  (e.g. `basis_weights = c(1, 0, 0, 0, 0)` is equivalent to
+  `basis = 1`). The weights used to be ignored silently; a length
+  mismatch is now an error.
+- `interaction_contrast(~ A * B * C)` tests the full highest-order
+  interaction. It silently used only the first two factors. Two-factor
+  results are unchanged.
+- Contrasts on factor-by-modulator terms such as `hrf(cond, RT)` now
+  work: cell weights go on the modulator columns, repeated per basis or
+  modulator column.
+  [`pair_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.md),
+  [`unit_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.md)
+  and
+  [`poly_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/poly_contrast.md)
+  used to fail with “No conditions were selected”, and
+  [`oneway_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/oneway_contrast.md),
+  [`interaction_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/interaction_contrast.md)
+  and formula contrasts returned all-zero weights with only a warning.
+- [`contrast_weights()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.md)
+  and
+  [`Fcontrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.md)
+  on an `event_model` no longer give zero weights when the model renames
+  a term to keep names unique (e.g.
+  `hrf(Ident(RT1, RT2)) + hrf(RT1, RT2, contrasts = ...)`).
+- `where` clauses and the condition-selecting formulas of the contrast
+  constructors are evaluated in the formula’s own environment, so they
+  can use variables from the code that created them (e.g.
+  `where = ~ cond == lvl` inside a function). They used to fail or pick
+  up package-internal objects.
+- [`design_colmap()`](https://bbuchsbaum.github.io/fmridesign/reference/design_colmap.md)
+  and
+  [`design_meta()`](https://bbuchsbaum.github.io/fmridesign/reference/design_meta.md)
+  record `basis_name` as the basis family spelled as in
+  `hrf(basis = ...)` (`"spmg1"`, `"spmg3"`, `"fir"`, `"bspline"`, …; a
+  plain function is named after its argument, e.g. `"my_fun"`, or
+  `"custom"`), instead of the HRF’s first class (`"SPMG3_HRF"`,
+  `"FIR_HRF"`, or just `"HRF"`). Lagged, blocked and normalised SPMG2,
+  SPMG3 and FIR terms now get proper `basis_label`s (`canonical` /
+  `derivative` / `dispersion`, `lag_00`, …) instead of `component_01`,
+  …, which also changes their pretty names and plot labels. spmg1 terms
+  get the same `basis_name` with every fmrihrf version.
+- Within-run
+  [`correlation_map()`](https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.md)
+  draws every cell one cell wide. Baseline models with two columns per
+  run (e.g. `basis = "poly", degree = 2`) used to show no cells.
+- [`design_colmap()`](https://bbuchsbaum.github.io/fmridesign/reference/design_colmap.md)
+  reports the single global constant drift column
+  (`basis = "constant", intercept = "global"`) as shared across runs
+  (`is_block_diagonal = FALSE`).
+
 ### New features
 
 - Added
@@ -141,6 +218,120 @@
   [`fmrihrf::regressor()`](https://bbuchsbaum.github.io/fmrihrf/reference/regressor.html)
   always did; the fast path had silently accepted it. The out-of-frame
   warning is still raised first.
+- [`term_matrices()`](https://bbuchsbaum.github.io/fmridesign/reference/term_matrices.md)
+  returns one entry per term, with `NULL` for a term without design
+  columns, for both event and baseline models; such a term used to shift
+  every later matrix onto the wrong term name.
+- [`cells()`](https://bbuchsbaum.github.io/fmridesign/reference/cells.md)
+  on multi-basis convolved terms lists only observed cells with
+  correctly aligned counts, labels ten or more basis functions
+  `basis01`, `basis02`, … in order, and works for terms with continuous
+  variables.
+- [`split_onsets()`](https://bbuchsbaum.github.io/fmridesign/reference/split_onsets.md)
+  labels each condition’s onsets correctly when a parametric modulator
+  is zero for every event of a condition.
+- [`Fcontrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.md)
+  no longer fails for terms crossing a single-level factor, and
+  [`conditions()`](https://bbuchsbaum.github.io/fmridesign/reference/conditions.md)
+  no longer errors on a multi-variable term containing a factor without
+  levels.
+- [`condition_basis_list()`](https://bbuchsbaum.github.io/fmridesign/reference/condition_basis_list.md)
+  names its result by condition for terms with a single continuous
+  variable (the name was empty).
+- Formula contrasts
+  ([`contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast.md))
+  work on continuous terms with several variables, such as
+  `hrf(Ident(RT1, RT2))` with `~ RT1 - RT2`.
+- [`poly_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/poly_contrast.md)
+  reports a `value_map` that misses factor levels instead of failing
+  with “subscript out of bounds”.
+- [`validate_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/validate_contrasts.md)
+  accepts a list of contrast vectors, names unnamed entries `contrast1`,
+  `contrast2`, …, and returns a zero-row data frame when nothing can be
+  validated.
+- [`hrf()`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.md) no
+  longer errors when `basis` is an HRF object or function and `hrf_fun`
+  is also given; it warns that `hrf_fun` takes precedence.
+- The basis names `"bs"` and `"tent"`, documented in
+  [`?hrf`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.md),
+  are accepted.
+- Degree-1 polynomial modulators (`hrf(Poly(x, 1))`), and polynomial
+  terms whose subset keeps a single event, no longer fail with
+  “Processed event value is not a matrix”.
+  [`predict()`](https://rdrr.io/r/stats/predict.html) works on subsetted
+  `Poly` and `BSpline` bases.
+- `baseline_model(nuisance_check = "drop")` no longer fails when every
+  nuisance column of a run is dropped, and zero-column nuisance matrices
+  are accepted by
+  [`baseline_model()`](https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.md)
+  and
+  [`check_nuisance()`](https://bbuchsbaum.github.io/fmridesign/reference/check_nuisance.md).
+- [`construct()`](https://bbuchsbaum.github.io/fmridesign/reference/construct.md)
+  on a
+  [`nuisance()`](https://bbuchsbaum.github.io/fmridesign/reference/nuisance.md)
+  specification works (it always failed), and
+  [`nuisance()`](https://bbuchsbaum.github.io/fmridesign/reference/nuisance.md)
+  terms no longer trigger tibble’s name-repair warning.
+- Runwise intercept columns no longer carry stray `assign` / `contrasts`
+  attributes from
+  [`model.matrix()`](https://rdrr.io/r/stats/model.matrix.html); their
+  values are unchanged.
+- [`requires_external_processing()`](https://bbuchsbaum.github.io/fmridesign/reference/requires_external_processing.md)
+  accepts a registered class name, and
+  [`get_all_external_hrf_functions()`](https://bbuchsbaum.github.io/fmridesign/reference/get_all_external_hrf_functions.md)
+  returns `character(0)` rather than `NULL` when nothing is registered.
+- [`print()`](https://rdrr.io/r/base/print.html) on baseline models and
+  contrast specifications returns the object invisibly.
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) for event
+  models no longer warns “Ignoring unknown parameters: inherit.aes”
+  (ggplot2 \< 3.5) or, with `label_mode = "compact"`, about non-ASCII
+  characters; per-run TRs in its subtitle are no longer padded.
+- [`correlation_map()`](https://bbuchsbaum.github.io/fmridesign/reference/correlation_map.md)
+  no longer errors with `annotate = FALSE` when there is nothing to
+  correlate, can be drawn with ggplot2 \< 3.5.0 when it has more than 10
+  columns, and says when no two regressors share a run instead of
+  claiming that no regressor varies.
+- [`convolve()`](https://bbuchsbaum.github.io/fmridesign/reference/convolve.md)
+  warnings for terms built directly with
+  [`event_term()`](https://bbuchsbaum.github.io/fmridesign/reference/event_term.md)
+  name the term, and `event_term(list())` fails with a clear message.
+- The `event_model`, `event_factor`, `event_matrix` and `labels.event`
+  help pages no longer contain misplaced text or wrong example output.
+
+### Performance
+
+- Building event models is 5-40 times faster with the current fmrihrf,
+  whose convolution engine no longer starts OpenMP threads and computes
+  only the samples the scan grid needs. Results are unchanged.
+- [`baseline_model()`](https://bbuchsbaum.github.io/fmridesign/reference/baseline_model.md)
+  and
+  [`check_nuisance()`](https://bbuchsbaum.github.io/fmridesign/reference/check_nuisance.md)
+  share their drift construction and block assembly (about 25% faster),
+  and
+  [`validate_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/validate_contrasts.md)
+  computes the design rank once (about twice as fast with many
+  contrasts).
+
+### Packaging and internal changes
+
+- `Remotes:` tracks `bbuchsbaum/fmrihrf` instead of a pre-release
+  commit, so GitHub installs and CI use the same fmrihrf as r-universe.
+  fmridesign still requires only fmrihrf (\>= 0.4.0) and is tested
+  against 0.4.0.
+- stringr is no longer imported; tidyr and Matrix move to Suggests (only
+  the vignettes and tests use them); ggplot2 (\>= 3.4.0) is declared.
+- Large internal simplification: the contrast constructors and
+  [`contrast_weights()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.md)
+  methods share validation and packaging helpers,
+  [`contrast_weights()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.md)
+  and
+  [`Fcontrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.md)
+  on event models share one weight-embedding helper, the scaling bases
+  share one z-score helper, and the plotting code shares its colour,
+  scale and glyph helpers. Dead code (`dctbasis()`,
+  `translate_legacy_pattern()`, never-hit caches, duplicate `%||%`
+  definitions, an fmrihrf \<= 0.4.0 warning shim, …) and unused imports
+  are gone.
 
 ## fmridesign 0.6.1
 
