@@ -154,7 +154,7 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
   }
   vars <- vars[nzchar(vars)]
   if (length(vars) == 0L) return(cond)
-  esc <- gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", vars[order(-nchar(vars))])
+  esc <- .regex_escape(vars[order(-nchar(vars))])
   pat <- paste0("(^|_)(", paste(esc, collapse = "|"), ")\\.")
   m <- gregexpr(pat, cond, perl = TRUE)[[1]]
   if (m[1] == -1L) return(cond)

@@ -8,7 +8,7 @@
 #' @keywords internal
 #' @noRd
 .regex_escape <- function(x) {
-  gsub("([.+*?^$(){}|\\[\\]])", "\\\\\\1", x)
+  gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", x)
 }
 
 #' Expand and basis-filter a base contrast weights matrix

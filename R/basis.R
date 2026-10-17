@@ -323,13 +323,7 @@ columns.Poly <- function(x, ...) {
 }
 
 #' @export
-columns.BSpline <- function(x, ...) {
-  # Use degree for padding width
-  indices <- seq_len(x$degree)
-  padded_indices <- zeropad(indices, x$degree) # Enforces min width 
-  # Return only the padded index as the condition tag component
-  continuous_token(padded_indices)
-}
+columns.BSpline <- function(x, ...) columns.Poly(x, ...)
 
 #' @export
 columns.Ident <- function(x, ...) {
