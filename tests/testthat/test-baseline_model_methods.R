@@ -159,6 +159,13 @@ test_that("print.baseline_model produces output without error", {
   expect_output(print(bmod), "Baseline Model")
 })
 
+test_that("print.baseline_model returns the model invisibly", {
+  bmod <- baseline_model(basis = "poly", degree = 2, sframe = make_sframe_2())
+  capture.output(res <- withVisible(print(bmod)))
+  expect_false(res$visible)
+  expect_identical(res$value, bmod)
+})
+
 test_that("print.baseline_model works with nuisance terms", {
   sframe <- make_sframe_2()
   nlist <- list(

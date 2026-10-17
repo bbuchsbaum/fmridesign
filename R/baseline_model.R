@@ -1044,6 +1044,7 @@ print.baseline_model <- function(x, ...) {
   }
 
   cat("================================================\n")
+  invisible(x)
 }
 
 # Identify intercept-like (constant) baseline terms by inspecting their design
