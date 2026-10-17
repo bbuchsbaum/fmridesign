@@ -389,34 +389,14 @@ cells.convolved_term <- function(x, ...) {
 conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
                                   style = c("canonical", "display"), ...) {
   style <- match.arg(style)
-  
-  # --- Caching --- 
-  opts_key <- paste(drop.empty, expand_basis, style, sep="|")
-  cached_val <- attr(x, "..conds")
-  cached_opts <- attr(x, "..conds_opts")
-  
-  # --- RE-ENABLE CACHE --- 
-  if (!is.null(cached_val) && !is.null(cached_opts) && identical(cached_opts, opts_key)) {
-    return(cached_val)
-  }
-  # message("--- conditions.event_term: Cache bypassed/missed, recalculating ---") # Keep commented out
-  # --- END RE-ENABLE ---
-  
-  # --- Shortcut for single continuous event with one column --- 
+  nb <- if (expand_basis) .hrfspec_nbasis(attr(x, "hrfspec")) else 1L
+
+  # --- Shortcut: a single one-column continuous event is its column token
+  # (returned as is, attributes included)
   if (length(x$events) == 1 && is_continuous(x$events[[1]])) {
-    cols <- try(columns(x$events[[1]]), silent=TRUE)
+    cols <- try(columns(x$events[[1]]), silent = TRUE)
     if (!inherits(cols, "try-error") && length(cols) == 1) {
-        base_cond_tags <- cols 
-        if (expand_basis) {
-            hrfspec <- attr(x, "hrfspec")
-            nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
-            final_cond_tags <- add_basis(base_cond_tags, nb)
-        } else {
-            final_cond_tags <- base_cond_tags
-        }
-        attr(x, "..conds") <- final_cond_tags
-        attr(x, "..conds_opts") <- opts_key
-        return(final_cond_tags)
+      return(add_basis(cols, nb))
     }
   }
   
@@ -424,7 +404,6 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
   comp_tokens_list <- lapply(x$events, function(ev) {
       if (is_categorical(ev)) {
           levs <- levels(ev) 
-          # Handle case where factor might have no levels after subsetting? levels() should return character(0)
           if (length(levs) == 0) return(character(0))
           if (identical(style, "canonical")) {
             level_token(ev$varname, levs)
@@ -440,44 +419,31 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
   comp_tokens_list <- Filter(function(tk) length(tk) > 0, comp_tokens_list)
   
   if (length(comp_tokens_list) == 0) { # If ALL components became empty
-       final_out <- character(0)
-       attr(x, "..conds") <- final_out
-       attr(x, "..conds_opts") <- opts_key
-       return(final_out)
+       return(character(0))
   }
   
-  # --- Combine Tokens using expand.grid and make_cond_tag --- 
+  # --- Combine Tokens using expand.grid --- 
   names(comp_tokens_list) <- names(Filter(function(tk) length(tk) > 0, x$events)) # Match names to filtered tokens
   full_grid <- expand.grid(comp_tokens_list, stringsAsFactors = FALSE)
   if (nrow(full_grid) == 0L) {
-    base_cond_tags_all <- character(0)
+    cond_tags <- character(0)
   } else if (ncol(full_grid) == 1L) {
-    base_cond_tags_all <- full_grid[[1L]]
+    cond_tags <- full_grid[[1L]]
   } else {
     sep <- if (identical(style, "canonical")) "_" else ":"
-    base_cond_tags_all <- apply(full_grid, 1, function(row) paste(row, collapse = sep))
+    cond_tags <- apply(full_grid, 1, function(row) paste(row, collapse = sep))
   }
   
-  # --- REMOVED drop.empty LOGIC BLOCK --- 
-  # The logic relying on cells() was flawed for mixed continuous/categorical terms.
-  # Dropping based on actual matrix rank deficiency is handled by design_matrix() / model.matrix().
-  base_cond_tags_final <- base_cond_tags_all
-  
-  # --- Handle expand_basis --- 
-  if (expand_basis) {
-      hrfspec <- attr(x, "hrfspec")
-      nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
-      final_cond_tags <- add_basis(base_cond_tags_final, nb)
-  } else {
-      final_cond_tags <- base_cond_tags_final
-  }
-  
-  # --- Cache and Return --- 
-  final_out <- as.vector(final_cond_tags)
-  attr(x, "..conds") <- final_out
-  attr(x, "..conds_opts") <- opts_key
-  
-  return(final_out)
+  # drop.empty is not applied here: conditions() is the full grid (see
+  # .present_cells() for the cells that actually get a design column).
+  as.vector(add_basis(cond_tags, nb))
+}
+
+#' Number of HRF basis functions declared by an hrfspec (1 when absent).
+#' @keywords internal
+#' @noRd
+.hrfspec_nbasis <- function(hrfspec) {
+  if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
 }
 
 # conditions() always returns the full grid of factor levels. For names,
@@ -500,9 +466,7 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
   keep <- if (isTRUE(drop.empty)) .present_cells(x) else rep(TRUE, length(out))
   out <- out[keep]
   if (isTRUE(expand_basis)) {
-    hrfspec <- attr(x, "hrfspec")
-    nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
-    out <- add_basis(out, nb)
+    out <- add_basis(out, .hrfspec_nbasis(attr(x, "hrfspec")))
   }
   out
 }
@@ -718,12 +682,7 @@ event_table.convolved_term <- function(x, ...) {
 #' @rdname fmrihrf-generics
 #' @export
 nbasis.convolved_term <- function(x, ...) {
-  hrfspec <- x$hrfspec %||% attr(x, "hrfspec")
-  if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
-    fmrihrf::nbasis(hrfspec$hrf)
-  } else {
-    1L
-  }
+  .hrfspec_nbasis(x$hrfspec %||% attr(x, "hrfspec"))
 }
 
 #' @export
