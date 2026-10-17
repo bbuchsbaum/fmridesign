@@ -746,13 +746,12 @@ term_matrices.baseline_model <- function(x, ...) {
 #' @rdname cells
 #' @export
 #' @importFrom dplyr mutate tibble
-#' @importFrom stringr str_pad
 cells.baseline_model <- function(x, drop.empty = TRUE, ...) {
   cells_list <- lapply(x$terms, function(term) {
     conds <- conditions(term)
     ncond <- length(conds)
     if (ncond == 0) return(dplyr::tibble(term = character(0), level = character(0), basis = character(0)))
-    basis_names <- stringr::str_pad(1:ncond, width = ceiling(log10(ncond + 1e-6)), pad = "0")
+    basis_names <- sprintf("%0*d", ceiling(log10(ncond + 1e-6)), seq_len(ncond))
     dplyr::tibble(term = term$varname, level = conds, basis = paste0("basis", basis_names))
   })
   combined_cells <- do.call(rbind, cells_list)

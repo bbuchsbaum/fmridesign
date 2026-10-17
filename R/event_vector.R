@@ -323,7 +323,7 @@ cells.convolved_term <- function(x, ...) {
   evset <- .event_set(x, exclude_basis = exclude_basis)
   
   strlevs <- if (nrow(evset) > 1) {
-    apply(apply(evset, 2, stringr::str_trim), 1, paste, collapse = ":")
+    apply(apply(evset, 2, trimws), 1, paste, collapse = ":")
   } else {
     as.character(evset[1, 1])
   }

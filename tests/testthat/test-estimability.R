@@ -209,7 +209,9 @@ test_that("named contrast alignment is strict even when dimensions already match
 test_that("invalid inputs fail explicitly and sparse designs give the same result", {
   X <- cbind(a = c(1, 0, 2), b = c(0, 1, 0))
   dense <- check_estimability(X)
-  expect_equal(check_estimability(Matrix::Matrix(X, sparse = TRUE)), dense)
+  if (requireNamespace("Matrix", quietly = TRUE)) {
+    expect_equal(check_estimability(Matrix::Matrix(X, sparse = TRUE)), dense)
+  }
   expect_error(check_estimability("x"), "numeric design matrix")
   expect_error(check_estimability(matrix(NA_real_, 2, 2)), "finite")
   expect_error(check_estimability(matrix(0, 0, 2)), "nonempty")
