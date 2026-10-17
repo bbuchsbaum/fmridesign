@@ -17,7 +17,7 @@ A character vector of formatted labels, or \code{character(0)} if not applicable
 \description{
 Returns a character vector of formatted labels for an event object,
 using the \code{Variable[Level]} style for categorical events,
-\code{Variable[Index]} for multi-column continuous events, or just
+\code{Variable[Column]} for multi-column continuous events, or just
 \code{Variable} for single continuous events.
 Useful for getting consistent labels for individual event components.
 This is distinct from \code{levels()} which returns the raw level names or column names.
@@ -36,5 +36,5 @@ labels(ev_num) # Should return "Modulator"
 mat <- matrix(1:12, 6, 2)
 colnames(mat) <- c("C1", "C2")
 ev_mat <- event_matrix(mat, "MatrixVar", onsets, blockids = rep(1, length(onsets)))
-labels(ev_mat) # Should return c("MatrixVar[1]", "MatrixVar[2]") 
+labels(ev_mat) # Should return c("MatrixVar[C1]", "MatrixVar[C2]")
 }

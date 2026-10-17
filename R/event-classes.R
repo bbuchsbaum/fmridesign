@@ -143,11 +143,6 @@ event <- function(value, name, onsets, blockids, durations = 0, subset = NULL) {
 #'   provided, the vector must match `onsets` in length and contain no `NA`
 #'   values.
 #'
-#' Column names are sanitized using `.sanitizeName()` if provided. If
-#' column names are missing or not unique, deterministic feature suffixes
-#' (`f01`, `f02`, ...) are generated instead. The resulting names are
-#' returned by `levels()` for the event object.
-#'
 #' @return An S3 object of class `event` and `event_seq`.
 #'
 #' @examples
@@ -231,9 +226,10 @@ event_variable <- function(vec, name, onsets, blockids = 1, durations = 0, subse
 #'   provided, the vector must match `onsets` in length and contain no `NA`
 #'   values.
 #'
-#' If `mat` has column names and more than one column, those names are
-#' sanitized using `.sanitizeName()` before being stored. The sanitized
-#' column names are returned by `levels()` for the resulting event object.
+#' Column names of `mat` are sanitized using `.sanitizeName()` before being
+#' stored. If they are missing or not unique, deterministic feature suffixes
+#' (`f01`, `f02`, ...) are generated instead. The resulting names are
+#' returned by `levels()` for the event object.
 #'
 #' @return An S3 object of class `event` and `event_seq`.
 #'
@@ -579,7 +575,7 @@ print.event <- function(x, ...) {
 #'
 #' Returns a character vector of formatted labels for an event object,
 #' using the `Variable[Level]` style for categorical events, 
-#' `Variable[Index]` for multi-column continuous events, or just
+#' `Variable[Column]` for multi-column continuous events, or just
 #' `Variable` for single continuous events.
 #' Useful for getting consistent labels for individual event components.
 #' This is distinct from `levels()` which returns the raw level names or column names.
@@ -602,7 +598,7 @@ print.event <- function(x, ...) {
 #' mat <- matrix(1:12, 6, 2)
 #' colnames(mat) <- c("C1", "C2")
 #' ev_mat <- event_matrix(mat, "MatrixVar", onsets, blockids = rep(1, length(onsets)))
-#' labels(ev_mat) # Should return c("MatrixVar[1]", "MatrixVar[2]") 
+#' labels(ev_mat) # Should return c("MatrixVar[C1]", "MatrixVar[C2]")
 #' @export
 labels.event <- function(object, ...) {
   .level_vector(object)
