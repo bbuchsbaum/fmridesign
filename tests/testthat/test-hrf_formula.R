@@ -438,15 +438,27 @@ test_that("make_hrf() resolves basis names to fmridesign's basis sets", {
   expect_equal(fmrihrf::nbasis(bs6), 6L)
   expect_equal(bs6(t), fmrihrf::hrf_bspline(t, span = 24, N = 6, degree = 3))
 
-  # A resized "fir" is a tent (degree-1 B-spline) basis
   fir6 <- fmridesign:::make_hrf("fir", lag = 0, nbasis = 6)
   expect_equal(attr(fir6, "name"), "fir")
   expect_equal(fmrihrf::nbasis(fir6), 6L)
-  expect_equal(fir6(t), fmrihrf::hrf_bspline(t, span = 24, N = 6, degree = 1))
 
   four <- fmridesign:::make_hrf("fourier", lag = 2, nbasis = 4)
   expect_equal(fmrihrf::nbasis(four), 4L)
   expect_equal(four(t), fmrihrf::hrf_fourier(t - 2, span = 24, nbasis = 4))
+})
+
+test_that("basis = 'fir' with a non-default nbasis is a true FIR basis", {
+  # Regression: a resized "fir" used to be a degree-1 B-spline (tent) basis.
+  fir6 <- fmridesign:::make_hrf("fir", lag = 0, nbasis = 6)
+  t <- c(0, 1, 3.9, 4, 10, 23.9, 24, 30)
+  expect_equal(fir6(t), fmrihrf::hrf_fir_generator(nbasis = 6, span = 24)(t))
+  # Every time in [0, 24) lies in exactly one 4-second bin
+  expect_equal(rowSums(fir6(t)), c(1, 1, 1, 1, 1, 1, 0, 0))
+  expect_equal(which(fir6(10)[1, ] == 1), 3L)
+  expect_s3_class(fir6, "FIR_HRF")
+
+  spec <- hrf(cond, basis = "fir", nbasis = 10)
+  expect_equal(spec$hrf(c(1, 3)), fmrihrf::hrf_fir_generator(nbasis = 10, span = 24)(c(1, 3)))
 })
 
 test_that("make_hrf() from HRF object", {

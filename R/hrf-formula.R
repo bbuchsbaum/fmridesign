@@ -23,8 +23,8 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #'
 #' Fixed bases are fmrihrf's constants. "bspline", "fir" and "fourier" are
 #' basis sets sized by `nbasis`; the fmrihrf constant is reused only when it
-#' already has that size. A resized "fir" is a tent (degree-1 B-spline) basis.
-#' This deliberately differs from fmrihrf::getHRF() (names, FIR family).
+#' already has that size. (fmrihrf::getHRF() is not used for the fixed bases
+#' because it renames them, e.g. "SPMG1" to "spmg1".)
 #' @keywords internal
 #' @noRd
 .hrf_from_name <- function(basis, nbasis) {
@@ -50,12 +50,15 @@ make_hrf <- function(basis, lag, nbasis=1) {
   }
 
   span <- attr(base, "span") %||% 24
+  if (basis == "fir") {
+    # FIR: one indicator per span/nbasis-second bin (like HRF_FIR)
+    return(fmrihrf::hrf_fir_generator(nbasis = nbasis, span = span))
+  }
   fn <- switch(basis,
     bspline = {
       degree <- attr(base, "params")$degree %||% 3
       function(t) fmrihrf::hrf_bspline(t, span = span, N = nbasis, degree = degree)
     },
-    fir = function(t) fmrihrf::hrf_bspline(t, span = span, N = nbasis, degree = 1),
     fourier = function(t) fmrihrf::hrf_fourier(t, span = span, nbasis = nbasis)
   )
   fmrihrf::as_hrf(fn, name = basis, nbasis = nbasis, span = span)
