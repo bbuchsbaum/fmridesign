@@ -99,25 +99,32 @@
   list(modulation_type = "amplitude", modulation_id = NA_character_)
 }
 
-#' Human-friendly label for a basis component
+#' Human-friendly labels for basis components
+#'
+#' Vectorised over both arguments (recycled to a common length).
 #'
 #' @param basis_name Class name of the HRF basis (e.g. `"SPMG3"`, `"FIR"`).
 #' @param basis_ix   1-based component index.
-#' @return Character scalar label.
+#' @return Character vector of labels; `NA` where either input is `NA`.
 #' @keywords internal
 #' @noRd
 .basis_label <- function(basis_name, basis_ix) {
-  if (is.na(basis_name) || is.na(basis_ix)) return(NA_character_)
-  if (grepl("SPMG3", basis_name, fixed = TRUE)) {
-    return(c("canonical", "derivative", "dispersion")[pmin(pmax(basis_ix, 1L), 3L)])
+  n <- max(length(basis_name), length(basis_ix))
+  if (n == 0L || length(basis_name) == 0L || length(basis_ix) == 0L) {
+    return(rep(NA_character_, n))
   }
-  if (grepl("SPMG2", basis_name, fixed = TRUE)) {
-    return(c("canonical", "derivative")[pmin(pmax(basis_ix, 1L), 2L)])
-  }
-  if (grepl("FIR", basis_name, fixed = TRUE)) {
-    return(sprintf("lag_%02d", basis_ix - 1L))
-  }
-  sprintf("component_%02d", basis_ix)
+  basis_name <- rep_len(as.character(basis_name), n)
+  basis_ix <- rep_len(as.integer(basis_ix), n)
+  out <- sprintf("component_%02d", basis_ix)
+  # Later assignments win, so SPMG3 takes precedence over SPMG2 over FIR
+  fir <- grepl("FIR", basis_name, fixed = TRUE)
+  out[fir] <- sprintf("lag_%02d", basis_ix[fir] - 1L)
+  spmg2 <- grepl("SPMG2", basis_name, fixed = TRUE)
+  out[spmg2] <- c("canonical", "derivative")[pmin(pmax(basis_ix[spmg2], 1L), 2L)]
+  spmg3 <- grepl("SPMG3", basis_name, fixed = TRUE)
+  out[spmg3] <- c("canonical", "derivative", "dispersion")[pmin(pmax(basis_ix[spmg3], 1L), 3L)]
+  out[is.na(basis_name) | is.na(basis_ix)] <- NA_character_
+  out
 }
 
 #' Build column metadata for a single convolved event term
@@ -153,9 +160,7 @@
     basis_name      = basis_name,
     basis_ix        = if (nb > 1L) basis_per_col else NA_integer_,
     basis_total     = if (nb > 1L) as.integer(nb) else NA_integer_,
-    basis_label     = if (nb > 1L) {
-      vapply(basis_per_col, function(j) .basis_label(basis_name, j), character(1))
-    } else NA_character_,
+    basis_label     = if (nb > 1L) .basis_label(basis_name, basis_per_col) else NA_character_,
     modulation_type = modu$modulation_type,
     modulation_id   = modu$modulation_id %||% NA_character_
   )

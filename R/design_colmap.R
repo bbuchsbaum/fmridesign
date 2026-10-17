@@ -126,11 +126,7 @@ design_colmap.event_model <- function(x, ...) {
   to_strip <- !is.na(term_tag_by_col) & startsWith(base_no_basis, paste0(term_tag_by_col, "_"))
   condition[to_strip] <- substring(base_no_basis[to_strip], nchar(term_tag_by_col[to_strip]) + 2L)
 
-  basis_label <- vapply(seq_len(n_cols), function(i) {
-    bi <- term_index_by_col[i]
-    if (is.na(bi)) return(NA_character_)
-    .basis_label(per_term_basis_name[bi], basis_ix[i])
-  }, character(1))
+  basis_label <- .basis_label(per_term_basis_name[term_index_by_col], basis_ix)
 
   out <- tibble::tibble(
     col = seq_len(n_cols),

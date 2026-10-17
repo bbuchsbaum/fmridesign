@@ -504,11 +504,7 @@ construct.featurespec <- function(x, model_spec, ...) {
     basis_name = basis_name,
     basis_ix = if (nb > 1L) basis_per_col else NA_integer_,
     basis_total = if (nb > 1L) as.integer(nb) else NA_integer_,
-    basis_label = if (nb > 1L) {
-      vapply(basis_per_col, function(j) .basis_label(basis_name, j), character(1))
-    } else {
-      NA_character_
-    },
+    basis_label = if (nb > 1L) .basis_label(basis_name, basis_per_col) else NA_character_,
     modulation_type = "feature",
     modulation_id = term$varname %||% NA_character_
   )
