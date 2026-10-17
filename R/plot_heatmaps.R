@@ -821,6 +821,9 @@ design_map.baseline_model <- function(x,
   if (is.null(subtitle)) {
     subtitle <- if (p < 2L) {
       "Only one regressor: nothing to correlate"
+    } else if (!is.null(hidden) && all(hidden[lower.tri(hidden)]) &&
+               !all(is.na(diag(R)))) {
+      "No two regressors share a run: nothing to correlate within runs"
     } else if (!is.finite(max_r)) {
       "No regressor varies: correlations are undefined"
     } else {

@@ -151,3 +151,19 @@ test_that("correlation_map with more than 10 columns can be drawn", {
   }, error = function(e) e, finally = grDevices::dev.off())
   expect_s3_class(g, "gtable")
 })
+
+test_that("within-run correlation_map says why there is nothing to show", {
+  # One drift column per run: the only pair spans two runs and is not drawn,
+  # but both columns vary.
+  bm <- baseline_model(basis = "poly", degree = 1,
+                       sframe = fmrihrf::sampling_frame(c(40, 40), TR = 2))
+  p <- correlation_map(bm)
+  expect_equal(nrow(p$data), 0L)
+  expect_match(p$labels$subtitle, "No two regressors share a run")
+  expect_match(correlation_map(bm, within_run = FALSE)$labels$subtitle, "^Max abs r")
+  # Run-specific columns that are constant within their run still read as
+  # not varying.
+  bm0 <- baseline_model(basis = "constant",
+                        sframe = fmrihrf::sampling_frame(c(40, 40), TR = 2))
+  expect_match(correlation_map(bm0)$labels$subtitle, "No regressor varies")
+})
