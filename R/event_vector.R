@@ -724,7 +724,18 @@ split_onsets.event_term <- function(x, sframe, global = FALSE, blocksplit = FALS
     })
   }
   
-  names(ret) <- longnames(x)
+  # Name each group by its condition. The groups are the observed factor
+  # cells in canonical order; when every continuous component is a single
+  # column, the full condition grid has one name per factor cell. (Naming by
+  # longnames() would drop cells whose modulator column is all zero and shift
+  # the remaining names.)
+  full <- conditions(x, drop.empty = FALSE, expand_basis = FALSE)
+  meta <- .event_term_condition_metadata(x)
+  names(ret) <- if (length(full) == length(meta$levels)) {
+    full[sort(unique(meta$ids[!is.na(meta$ids)]))]
+  } else {
+    longnames(x)
+  }
   ret
 }
 

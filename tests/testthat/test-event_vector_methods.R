@@ -361,6 +361,19 @@ test_that("split_onsets.event_term() with global=TRUE adjusts onsets", {
   expect_true(is.list(sp_global))
 })
 
+test_that("split_onsets.event_term() keeps names aligned when a modulator column is all zero", {
+  # cond B has acc == 0 for all its events, so its design column is dropped;
+  # the onsets of B must still be labelled B (not shifted onto C).
+  et <- event_term(
+    list(cond = factor(c("A", "B", "C", "A", "B", "C")), acc = c(1, 0, 1, 1, 0, 0.5)),
+    onsets = c(1, 5, 10, 15, 20, 25), blockids = rep(1, 6)
+  )
+  sp <- suppressWarnings(split_onsets(et, sframe))
+  expect_named(sp, c("cond.A_acc", "cond.B_acc", "cond.C_acc"))
+  expect_equal(sp[["cond.B_acc"]], c(5, 20))
+  expect_equal(sp[["cond.C_acc"]], c(10, 25))
+})
+
 test_that("split_onsets.event_term() for continuous-only term", {
   et <- event_term(
     list(RT = c(0.5, 1.2, 0.8)),
