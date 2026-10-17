@@ -374,6 +374,56 @@ test_that("split_onsets.event_term() for continuous-only term", {
   expect_equal(length(sp), 1)
 })
 
+# A bare convolved_term wrapping an event_term (as built by extensions).
+.mk_convolved <- function(evterm, hrf) {
+  structure(list(evterm = evterm, hrfspec = list(hrf = hrf)),
+            class = c("convolved_term", "fmri_term", "list"))
+}
+
+test_that("cells.convolved_term() crosses observed cells with basis labels", {
+  et <- event_term(list(cond = factor(c("A", "B", "A"))),
+                   onsets = c(1, 10, 20), blockids = c(1, 1, 1))
+  cc <- cells(.mk_convolved(et, fmrihrf::HRF_SPMG3))
+  expect_equal(as.character(cc$cond), rep(c("A", "B"), each = 3))
+  expect_equal(as.character(cc$basis), rep(c("basis01", "basis02", "basis03"), 2))
+  expect_equal(unname(attr(cc, "count")), rep(c(2L, 1L), each = 3))
+  expect_equal(attr(cc, "rownames")[1:2], c("A:basis01", "A:basis02"))
+  # exclude_basis drops the basis dimension
+  expect_equal(nrow(cells(.mk_convolved(et, fmrihrf::HRF_SPMG3), exclude_basis = TRUE)), 2L)
+})
+
+test_that("cells.convolved_term() labels 10+ basis functions in order", {
+  et <- event_term(list(cond = factor(c("A", "B", "A"))),
+                   onsets = c(1, 10, 20), blockids = c(1, 1, 1))
+  cc <- cells(.mk_convolved(et, fmrihrf::getHRF("fir", nbasis = 10)))
+  expect_equal(as.character(cc$basis[1:10]), sprintf("basis%02d", 1:10))
+  expect_equal(levels(cc$basis), sprintf("basis%02d", 1:10))
+})
+
+test_that("cells.convolved_term() counts align when some cells are empty", {
+  # Cell y:v has no events; it must not appear (nor shift the counts).
+  et <- event_term(list(a = factor(c("x", "y", "x")), b = factor(c("u", "u", "v"))),
+                   onsets = c(1, 10, 20), blockids = c(1, 1, 1))
+  cc <- cells(.mk_convolved(et, fmrihrf::HRF_SPMG2))
+  expect_equal(nrow(cc), 6L)
+  expect_equal(paste(cc$a, cc$b), rep(c("x u", "y u", "x v"), each = 2))
+  expect_equal(length(attr(cc, "count")), nrow(cc))
+})
+
+test_that("cells.convolved_term() works for terms with continuous variables", {
+  et_rt <- event_term(list(rt = c(1, 2, 3)), onsets = c(1, 10, 20), blockids = c(1, 1, 1))
+  cc <- cells(.mk_convolved(et_rt, fmrihrf::HRF_SPMG3))
+  expect_equal(nrow(cc), 3L)
+  expect_equal(as.character(cc$basis), c("basis01", "basis02", "basis03"))
+
+  et_mix <- event_term(list(cond = factor(c("A", "B", "A")), rt = c(1, 2, 3)),
+                       onsets = c(1, 10, 20), blockids = c(1, 1, 1))
+  cc2 <- cells(.mk_convolved(et_mix, fmrihrf::HRF_SPMG2))
+  expect_equal(names(cc2), c("cond", "basis"))
+  expect_equal(nrow(cc2), 4L)
+  expect_equal(unname(attr(cc2, "count")), rep(c(2L, 1L), each = 2))
+})
+
 # ── onsets/blockids/durations accessors for convolved_term ───────────────
 
 test_that("onsets, blockids, durations accessors work for convolved_term", {

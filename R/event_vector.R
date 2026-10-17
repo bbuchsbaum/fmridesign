@@ -293,21 +293,20 @@ cells.event_term <- function(x, drop.empty = TRUE, ...) {
   }
 }
 
+# Observed cells of the wrapped event_term, crossed with the HRF basis labels
+# (basis varying fastest, matching the condition-major design columns).
 #' @noRd
 .event_set <- function(x, exclude_basis = FALSE) {
-  if (fmrihrf::nbasis(x) > 1 & !exclude_basis) {
-    ncond <- fmrihrf::nbasis(x)
-    # Construct a zero-padded string for basis labels.
-    zstr <- paste0(rep("0", ceiling(log10(ncond + 1e-6))), collapse = "")
-    
-          evlist <- c(list(factor(paste("basis", zstr, 1:fmrihrf::nbasis(x), sep = ""))), cells(x$evterm))
-    names(evlist) <- c("basis", parent_terms(x$evterm))
-    evlist <- lapply(evlist, levels)
-    ret <- expand.grid(evlist, stringsAsFactors = TRUE)
-    ret[c(2:length(ret), 1)]
-  } else {
-    cells(x$evterm)
+  base <- cells(x$evterm)
+  nb <- fmrihrf::nbasis(x)
+  if (nb <= 1 || exclude_basis) {
+    return(base)
   }
+  basis_labels <- paste0("basis", zeropad(seq_len(nb), nb))
+  rows <- rep(seq_len(nrow(base)), each = nb)
+  cols <- lapply(base, function(col) col[rows])
+  cols$basis <- factor(rep(basis_labels, times = nrow(base)), levels = basis_labels)
+  as.data.frame(cols, stringsAsFactors = FALSE, optional = TRUE)
 }
 
 #' @export
