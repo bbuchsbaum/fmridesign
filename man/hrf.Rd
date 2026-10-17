@@ -27,8 +27,9 @@ hrf(
 present in the \code{data} argument of \code{event_model}.}
 
 \item{basis}{the impulse response function or the name of a pre-supplied function,
-one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs".
-Can also be an \code{HRF} object.}
+one of: "spmg1", "spmg2", "spmg3", "gamma", "gaussian", "bspline" (or "bs"),
+"tent", "fir", "fourier" (the last four are sized by \code{nbasis}).
+Can also be an \code{HRF} object or a plain function of time.}
 
 \item{hrf_fun}{optional per-onset HRF generator. Can be:
 \itemize{

@@ -479,6 +479,18 @@ test_that("basis sets use their standard size when nbasis is omitted", {
   expect_identical(fmridesign:::make_hrf("spmg1", lag = 0), fmrihrf::HRF_SPMG1)
 })
 
+test_that("hrf() accepts the documented basis names 'bs' and 'tent'", {
+  # Regression: both were documented but rejected as unknown names.
+  t <- seq(0, 30, by = 0.5)
+  expect_identical(hrf(cond, basis = "bs")$hrf, fmrihrf::HRF_BSPLINE)
+  expect_equal(hrf(cond, basis = "bs", nbasis = 6)$hrf(t),
+               hrf(cond, basis = "bspline", nbasis = 6)$hrf(t))
+  tent4 <- hrf(cond, basis = "tent", nbasis = 4)$hrf
+  expect_equal(nbasis(tent4), 4L)
+  expect_equal(tent4(t), fmrihrf::hrf_tent_generator(nbasis = 4, span = 24)(t))
+  expect_equal(nbasis(hrf(cond, basis = "tent")), 5L)
+})
+
 test_that("make_hrf() from HRF object", {
   hrf_obj <- fmridesign:::make_hrf(fmrihrf::HRF_SPMG1, lag = 0)
   expect_true(inherits(hrf_obj, "HRF"))

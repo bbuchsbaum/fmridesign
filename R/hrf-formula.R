@@ -21,8 +21,8 @@ make_hrf <- function(basis, lag, nbasis = NULL) {
 
 #' Resolve a basis name to an HRF object
 #'
-#' Fixed bases are fmrihrf's constants. "bspline", "fir" and "fourier" are
-#' basis sets sized by `nbasis` (`NULL`: their standard size, 5 or 12 for
+#' Fixed bases are fmrihrf's constants. "bspline" (alias "bs"), "tent", "fir"
+#' and "fourier" are basis sets sized by `nbasis` (`NULL`: their standard size, 5 or 12 for
 #' "fir"); the fmrihrf constant is reused when it already has that size.
 #' (fmrihrf::getHRF() is not used for the fixed bases because it renames
 #' them, e.g. "SPMG1" to "spmg1".)
@@ -38,14 +38,15 @@ make_hrf <- function(basis, lag, nbasis = NULL) {
     "bspline" = fmrihrf::HRF_BSPLINE,
     "fir" = fmrihrf::HRF_FIR
   )
-  known <- c(names(hrf_map), "fourier")
+  known <- c(names(hrf_map), "bs", "tent", "fourier")
   if (!basis %in% known) {
     stop("Unknown HRF basis name: ", basis, ". Available options: ",
          paste(known, collapse = ", "))
   }
+  if (basis == "bs") basis <- "bspline"
 
   base <- hrf_map[[basis]]
-  if (!basis %in% c("bspline", "fir", "fourier")) {
+  if (!basis %in% c("bspline", "tent", "fir", "fourier")) {
     return(base)
   }
   nbasis <- nbasis %||% if (is.null(base)) 5L else fmrihrf::nbasis(base)
@@ -57,6 +58,9 @@ make_hrf <- function(basis, lag, nbasis = NULL) {
   if (basis == "fir") {
     # FIR: one indicator per span/nbasis-second bin (like HRF_FIR)
     return(fmrihrf::hrf_fir_generator(nbasis = nbasis, span = span))
+  }
+  if (basis == "tent") {
+    return(fmrihrf::hrf_tent_generator(nbasis = nbasis, span = span))
   }
   fn <- switch(basis,
     bspline = {
@@ -77,8 +81,9 @@ make_hrf <- function(basis, lag, nbasis = NULL) {
 #' @param ... One or more variable names (bare or character) or expressions involving variables
 #'            present in the `data` argument of `event_model`.
 #' @param basis the impulse response function or the name of a pre-supplied function,
-#'        one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs".
-#'        Can also be an `HRF` object.
+#'        one of: "spmg1", "spmg2", "spmg3", "gamma", "gaussian", "bspline" (or "bs"),
+#'        "tent", "fir", "fourier" (the last four are sized by `nbasis`).
+#'        Can also be an `HRF` object or a plain function of time.
 #' @param hrf_fun optional per-onset HRF generator. Can be:
 #'        \itemize{
 #'          \item A function that takes a data frame of event data (with columns `onset`, `duration`,
