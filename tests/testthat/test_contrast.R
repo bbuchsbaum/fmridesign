@@ -370,6 +370,29 @@ test_that("can form formula contrast with two factor terms and one continuous co
   
 })
 
+test_that("formula contrasts work on continuous terms with several variables", {
+  set.seed(11)
+  des <- data.frame(onset = seq(2, by = 6, length.out = 12), run = 1,
+                    RT1 = rnorm(12), RT2 = rnorm(12))
+  sframe <- fmrihrf::sampling_frame(blocklens = 100, TR = 2)
+  emod_id <- suppressMessages(event_model(
+    onset ~ hrf(Ident(RT1, RT2), contrasts = contrast_set(contrast(~ RT1 - RT2, name = "d"))) +
+      hrf(RT1, prefix = "m"),
+    data = des, block = ~run, sampling_frame = sframe
+  ))
+  d <- contrast_weights(emod_id)[[1]]
+  expect_equal(d$weights[, 1], c(RT1 = 1, RT2 = -1))
+  expect_equal(d$offset_weights[, 1],
+               setNames(c(1, -1, 0), colnames(design_matrix(emod_id))))
+
+  emod_x <- event_model(
+    onset ~ hrf(RT1) + hrf(RT1, RT2, contrasts = contrast_set(contrast(~ `RT1:RT2`, name = "x"))),
+    data = des, block = ~run, sampling_frame = sframe
+  )
+  x <- contrast_weights(emod_x)[[1]]
+  expect_equal(unname(x$offset_weights[, 1]), c(0, 1))
+})
+
 
 
 # 

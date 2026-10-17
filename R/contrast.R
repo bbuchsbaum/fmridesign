@@ -1503,14 +1503,10 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
     display_names <- display_names[keep]
   }
   
-  if (is_continuous(term)) {
-    ## hack to handle contrasts with continuous terms
-    facs <- !sapply(term$events, is_continuous)
-    term.cells[,!facs] <- 1
-  } 
-
+  # One row per condition name. (A continuous term has a single cell but may
+  # have several conditions, e.g. hrf(Ident(RT1, RT2)).)
   # Display names are primary; canonical names remain available as stable aliases.
-  weights <- matrix(0, NROW(term.cells), 1)
+  weights <- matrix(0, length(condnames), 1)
   eval_env <- .build_formula_contrast_env(display_names, condnames, rlang::f_env(x$A))
   
   # Evaluate the contrast formula
