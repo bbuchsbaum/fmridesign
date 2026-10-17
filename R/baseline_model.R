@@ -954,9 +954,9 @@ matrix_term <- function(varname, mat) {
 
 #' @export
 construct.nuisancespec <- function(x, model_spec, ...) {
-  expr <- rlang::parse_expr(as.character(x$varname))
-  mat <- rlang::eval_tidy(expr, data = model_spec$aux_data, env = parent.frame())
-  matrix_term(x$name, mat)
+  # x$name is the expression captured by nuisance()
+  mat <- rlang::eval_tidy(x$name, data = model_spec$aux_data, env = parent.frame())
+  matrix_term(rlang::as_label(x$name), mat)
 }
 
 #' @export

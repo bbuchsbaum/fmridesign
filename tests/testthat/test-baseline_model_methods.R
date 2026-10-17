@@ -255,6 +255,18 @@ test_that("nuisance() creates a nuisancespec object", {
   expect_true(!is.null(ns$name))
 })
 
+test_that("construct() evaluates a nuisance() spec", {
+  X <- matrix(rnorm(20), 10, 2)
+  term <- construct(nuisance(X), list(aux_data = list(X = X * 2)))
+  expect_s3_class(term, "baseline_term")
+  expect_equal(term$varname, "X")
+  expect_equal(unname(as.matrix(design_matrix(term))), X * 2)
+
+  # Without aux_data the expression is evaluated in the calling environment
+  term2 <- construct(nuisance(X[, 1, drop = FALSE]), list())
+  expect_equal(unname(as.matrix(design_matrix(term2))), X[, 1, drop = FALSE])
+})
+
 # =========================================================================
 # Section 10: block() function
 # =========================================================================
