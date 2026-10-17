@@ -604,6 +604,30 @@ test_that("event_model() keeps all cells when a crossed factor has one level", {
                paste0("cond_task_cond.", c("A", "B", "C"), "_task.go"))
 })
 
+test_that("Fcontrasts.event_term() treats a single-level factor as constant", {
+  ons <- c(1, 10, 20, 30)
+  et <- event_term(list(cond = factor(c("A", "B", "C", "A")), task = factor(rep("go", 4))),
+                   onsets = ons, blockids = rep(1, 4))
+  fc <- Fcontrasts(et)
+  expect_named(fc, "cond")
+  expect_equal(rownames(fc$cond), c("cond.A_task.go", "cond.B_task.go", "cond.C_task.go"))
+  ref <- Fcontrasts(event_term(list(cond = factor(c("A", "B", "C", "A"))),
+                               onsets = ons, blockids = rep(1, 4)))
+  expect_equal(unname(fc$cond), unname(ref$cond))
+})
+
+test_that("Fcontrasts.event_model() skips constant factors instead of failing", {
+  des <- data.frame(onset = c(1, 10, 20, 30), run = 1,
+                    cond = factor(c("A", "B", "C", "A")), task = factor("go"))
+  sf <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
+  em <- event_model(onset ~ hrf(cond, task) + hrf(task), data = des, block = ~run,
+                    sampling_frame = sf)
+  fc <- Fcontrasts(em)
+  expect_named(fc, "cond_task#cond")
+  expect_equal(nrow(fc[[1]]), ncol(design_matrix(em)))
+  expect_equal(unname(colSums(abs(fc[[1]][4, , drop = FALSE]))), c(0, 0))
+})
+
 test_that("design_matrix.event_term() for numeric term returns value matrix", {
   vals <- c(0.5, 1.2, 0.8, 1.5)
   et <- event_term(

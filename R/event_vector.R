@@ -1256,9 +1256,13 @@ Fcontrasts.event_term <- function(x, max_inter = 4L, ...) {
   evs_cat <- Filter(.is_cat, x$events)
   if (!length(evs_cat)) stop("No categorical variables found in term '", x$varname, "' for Fcontrasts.", call.=FALSE)
 
-  C <- lapply(evs_cat, function(ev) .Cvec(length(levels(ev))))
-  D <- lapply(evs_cat, function(ev) .Dmat(length(levels(ev))))
-  names(C) <- names(D) <- names(evs_cat)
+  # A single-level factor is constant: it enters every contrast through its
+  # 1 x 1 margin and has no effect of its own.
+  nlev <- vapply(evs_cat, function(ev) length(levels(ev)), integer(1))
+  testable <- which(nlev != 1L)
+  if (!length(testable)) stop("Need at least 2 levels for contrasts.")
+  C <- lapply(nlev, .Cvec)
+  D <- lapply(nlev, function(n) if (n == 1L) NULL else .Dmat(n))
 
   # --- Row names: Cartesian product of levels (Kronecker order) -----------
   cat_levels_list <- lapply(evs_cat, levels)
@@ -1280,11 +1284,11 @@ Fcontrasts.event_term <- function(x, max_inter = 4L, ...) {
       mat_list[ix] <- D[ix]
       Reduce(kronecker, rev(mat_list))
   }
-  final_contrasts_list <- stats::setNames(lapply(seq_along(D), .effect), names(evs_cat))
+  final_contrasts_list <- stats::setNames(lapply(testable, .effect), names(evs_cat)[testable])
 
-  if (length(D) > 1 && length(D) <= max_inter) {
-      inter <- unlist(lapply(2:length(D), function(k) {
-          combn(length(D), k, simplify = FALSE, FUN = function(ix) {
+  if (length(testable) > 1 && length(testable) <= max_inter) {
+      inter <- unlist(lapply(2:length(testable), function(k) {
+          combn(testable, k, simplify = FALSE, FUN = function(ix) {
               M <- .effect(ix)
               attr(M, "name") <- paste(names(evs_cat)[ix], collapse=":")
               M

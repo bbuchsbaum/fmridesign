@@ -556,8 +556,9 @@ Fcontrasts.event_model <- function(x, ...) {
     term_i <- terms(x)[[i]]
     term_indices_vec <- tind[[ names(terms(x))[i] ]]
     
-    # Terms without a categorical variable (e.g. hrf(rt), covariates) have no
-    # omnibus condition F-test; skip them rather than failing the whole model.
+    # Terms without a categorical variable (e.g. hrf(rt), covariates), or
+    # whose factors have a single level, have no omnibus condition F-test;
+    # skip them rather than failing the whole model.
     if (!.has_categorical_event(term_i)) return(NULL)
 
     # Calculate Fcontrasts relative to the term itself
@@ -654,7 +655,8 @@ Fcontrasts.event_model <- function(x, ...) {
   list(out = out, keep = keep)
 }
 
-#' Does a term contain at least one categorical event variable?
+#' Does a term contain a categorical event variable with an effect to test
+#' (i.e. at least two levels)?
 #' @keywords internal
 #' @noRd
 .has_categorical_event <- function(term) {
@@ -662,7 +664,9 @@ Fcontrasts.event_model <- function(x, ...) {
     return(FALSE)
   }
   evs <- term$events
-  length(evs) > 0L && any(!vapply(evs, is_continuous, logical(1)))
+  length(evs) > 0L && any(vapply(evs, function(ev) {
+    !is_continuous(ev) && length(levels(ev)) >= 2L
+  }, logical(1)))
 }
 
 #' Expand a term-level F-contrast across the basis functions of its HRF
