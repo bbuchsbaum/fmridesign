@@ -71,6 +71,16 @@ test_that("baseline_model with intercept='none' omits block term", {
   expect_equal(ncol(design_matrix(bmod)), 4)
 })
 
+test_that("baseline design-matrix columns carry no stray attributes", {
+  sframe <- make_sframe_2()
+  bmod <- baseline_model(basis = "poly", degree = 2, sframe = sframe,
+                         nuisance_list = list(cbind(a = rnorm(40)), cbind(a = rnorm(40))))
+  dm <- design_matrix(bmod)
+  for (nm in names(dm)) expect_null(attributes(dm[[nm]]), info = nm)
+  expect_equal(as.matrix(dm[, c("constant_1", "constant_2")]),
+               cbind(constant_1 = rep(1:0, each = 40), constant_2 = rep(0:1, each = 40)))
+})
+
 test_that("baseline_model with intercept='global' creates global intercept", {
   sframe <- make_sframe_2()
   bmod <- baseline_model(basis = "poly", degree = 2, sframe = sframe, intercept = "global")
@@ -116,6 +126,20 @@ test_that("term_matrices returns a list of matrices for baseline_model", {
   }
 })
 
+test_that("term_matrices skips empty terms without shifting the others", {
+  bmod <- baseline_model(basis = "poly", degree = 2, sframe = make_sframe_2())
+  # Insert a term without columns between drift and block
+  empty <- bmod$terms$block
+  empty$design_matrix <- empty$design_matrix[, 0]
+  bmod$terms <- list(drift = bmod$terms$drift, empty = empty,
+                     block = bmod$terms$block)
+
+  tmats <- term_matrices(bmod)
+  expect_named(tmats, c("drift", "block"))
+  expect_identical(tmats$drift, design_matrix(bmod$terms$drift))
+  expect_identical(tmats$block, design_matrix(bmod$terms$block))
+})
+
 # =========================================================================
 # Section 4: term_names() method
 # =========================================================================
@@ -157,6 +181,13 @@ test_that("print.baseline_model produces output without error", {
   bmod <- baseline_model(basis = "poly", degree = 2, sframe = sframe)
 
   expect_output(print(bmod), "Baseline Model")
+})
+
+test_that("print.baseline_model returns the model invisibly", {
+  bmod <- baseline_model(basis = "poly", degree = 2, sframe = make_sframe_2())
+  capture.output(res <- withVisible(print(bmod)))
+  expect_false(res$visible)
+  expect_identical(res$value, bmod)
 })
 
 test_that("print.baseline_model works with nuisance terms", {
@@ -222,6 +253,18 @@ test_that("nuisance() creates a nuisancespec object", {
 
   expect_s3_class(ns, "nuisancespec")
   expect_true(!is.null(ns$name))
+})
+
+test_that("construct() evaluates a nuisance() spec", {
+  X <- matrix(rnorm(20), 10, 2)
+  term <- construct(nuisance(X), list(aux_data = list(X = X * 2)))
+  expect_s3_class(term, "baseline_term")
+  expect_equal(term$varname, "X")
+  expect_equal(unname(as.matrix(design_matrix(term))), X * 2)
+
+  # Without aux_data the expression is evaluated in the calling environment
+  term2 <- construct(nuisance(X[, 1, drop = FALSE]), list())
+  expect_equal(unname(as.matrix(design_matrix(term2))), X[, 1, drop = FALSE])
 })
 
 # =========================================================================

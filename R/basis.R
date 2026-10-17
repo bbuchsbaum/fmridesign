@@ -1,20 +1,18 @@
-#' @noRd 
-#' @keywords internal
-dctbasis <- function(n, p=n, const=FALSE) {
-  m <- 1:n
-  ret <- do.call(cbind, lapply(2:p, function(k) {
-    (2/n)^(1/2) * cos(((2*m-1)*k*pi)/(2*n))
-  }))
-  
-  if (const) {
-    ret <- cbind((1/n)^.5, ret)
-  }
-  
-  ret
-}
-
 .basis_arg_label <- function(expr) {
   deparse1(expr)
+}
+
+# Guard a scale estimate (sd, MAD) against zero or NA.
+.safe_scale <- function(s) {
+  if (is.na(s) || s == 0) 1e-6 else s
+}
+
+# (x - center) / scale as a named one-column matrix; NAs become 0. Shared by
+# the scaling bases and their predict() methods.
+.zscore_column <- function(x, center, scale, name) {
+  z <- (x - center) / scale
+  z[is.na(z)] <- 0
+  matrix(z, ncol = 1, dimnames = list(NULL, name))
 }
 
 
@@ -139,34 +137,6 @@ Poly <- function(x, degree) {
   ret
 }
 
-# Poly <- function(x, degree) {
-#   mc <- match.call()
-#   
-#   # If x is already numeric, do the polynomial expansion now (old behavior)
-#   if (is.numeric(x)) {
-#     pres <- stats::poly(x, degree)
-#   } else {
-#     # If x is not numeric (likely a symbol like `modulator`),
-#     # defer actual polynomial expansion until sub_basis.Poly() or similar.
-#     pres <- NULL
-#   }
-#   
-#   n <- paste0("poly_", as.character(mc[["x"]]), "_", degree)
-#   
-#   ret <- list(
-#     x       = x,       # might be a numeric vector or a symbol
-#     y       = pres,    # either the poly(...) matrix OR NULL
-#     fun     = "poly",
-#     argname = as.character(mc[["x"]]),
-#     name    = n,
-#     degree  = degree,
-#     call    = mc       # store original call for lazy eval
-#   )
-#   
-#   class(ret) <- c("Poly", "ParametricBasis")
-#   ret
-# }
-
 #' Standardized basis
 #'
 #' Standardize a numeric vector by centering and scaling, handling NAs appropriately.
@@ -191,15 +161,10 @@ Standardized <- function(x) {
   # Remove NAs for computing mean and sd
   x_clean <- x[!is.na(x)]
   x_mean <- mean(x_clean)
-  x_sd <- stats::sd(x_clean)
-  if (is.na(x_sd) || x_sd == 0) x_sd <- 1e-6
-  
-  # Standardize, replacing NAs with 0
-  standardized <- (x - x_mean) / x_sd
-  standardized[is.na(standardized)] <- 0
+  x_sd <- .safe_scale(stats::sd(x_clean))
   
   n <- paste0("std", "_", argname)
-  ret <- list(x=x, y=matrix(standardized, ncol=1, dimnames=list(NULL, n)),
+  ret <- list(x=x, y=.zscore_column(x, x_mean, x_sd, n),
               mean=x_mean, sd=x_sd,
               fun="standardized", 
               argname=argname, 
@@ -211,13 +176,7 @@ Standardized <- function(x) {
 #' @export
 #' @rdname predict
 predict.Standardized <- function(object, newdata, ...) {
-  # Standardize new data using stored mean and sd
-  sd_val <- object$sd
-  if (is.na(sd_val) || sd_val == 0) sd_val <- 1e-6
-  standardized <- (newdata - object$mean) / sd_val
-  # Replace NAs with 0 to match training behavior
-  standardized[is.na(standardized)] <- 0
-  matrix(standardized, ncol=1, dimnames=list(NULL, object$name))
+  .zscore_column(newdata, object$mean, .safe_scale(object$sd), object$name)
 }
 
 #' @export
@@ -283,7 +242,7 @@ predict.Poly <- function(object,newdata,...) {
 #' @export
 sub_basis.Poly <- function(x, subset) {
   ret <- list(x=x$x[subset],
-       y=x$y[subset,],
+       y=x$y[subset, , drop = FALSE],
        fun=x$fun,
        argname=x$argname,
        degree=x$degree)
@@ -404,14 +363,11 @@ Scale <- function(x) {
   mc <- match.call()
   varname <- .basis_arg_label(mc[["x"]])
   mu <- mean(x, na.rm = TRUE)
-  sd_ <- stats::sd(x, na.rm = TRUE)
-  if (is.na(sd_) || sd_ == 0) sd_ <- 1e-6 # Add guard for sd_ == 0 or NA
-  z  <- (x - mu)/sd_
-  z[is.na(z)] <- 0
+  sd_ <- .safe_scale(stats::sd(x, na.rm = TRUE))
   
   final_name <- paste0("z_", varname)
   ret <- list(x = x,
-              y = matrix(z, ncol = 1, dimnames=list(NULL, final_name)),
+              y = .zscore_column(x, mu, sd_, final_name),
               mean = mu,
               sd   = sd_,
               fun  = "scale",
@@ -424,30 +380,15 @@ Scale <- function(x) {
 #' @export
 #' @rdname predict
 predict.Scale <- function(object, newdata, ...) {
-  z <- (newdata - object$mean)/object$sd
-  z[is.na(z)] <- 0
-  matrix(z, ncol = 1, dimnames=list(NULL, object$name))
+  .zscore_column(newdata, object$mean, object$sd, object$name)
 }
 
 #' @export
 #' @rdname sub_basis
 sub_basis.Scale <- function(x, subset) {
-  ret <- x
-  ret$x <- x$x[subset]
-  # Perform subsetting
-  subsetted_y <- x$y[subset, , drop = FALSE]
-  # Ensure the result is a matrix, specifically N x 1 if it was originally
-  if (!is.matrix(subsetted_y)) {
-    # This case indicates an unexpected dimension drop.
-    # Reform it into an N x 1 matrix.
-    # The number of rows should be length(ret$x) if subsetting was consistent.
-    # warning("Dimension dropped unexpectedly during Standardized/Scale basis subsetting. Re-casting to matrix.", call.=FALSE)
-    ret$y <- matrix(subsetted_y, ncol = 1, dimnames = list(NULL, colnames(x$y)))
-  } else {
-    ret$y <- subsetted_y
-  }
-  class(ret) <- class(x)
-  ret
+  x$x <- x$x[subset]
+  x$y <- x$y[subset, , drop = FALSE]
+  x
 }
 
 #' @method levels Scale
@@ -486,11 +427,9 @@ ScaleWithin <- function(x, g) {
   
   # pre-compute means/sds per group (ignoring NAs)
   stats <- tapply(seq_along(x), g, function(idx) {
-    mu <- mean(x[idx], na.rm = TRUE)
-    sd_ <- stats::sd(x[idx], na.rm = TRUE)
-    # Handle groups with sd=0 or only one non-NA value
-    if (is.na(sd_) || sd_ == 0) sd_ <- 1e-6 # Use small value instead of 0 or NA
-    c(mean = mu, sd = sd_)
+    # Groups with sd = 0 or a single non-NA value get a small sd
+    c(mean = mean(x[idx], na.rm = TRUE),
+      sd = .safe_scale(stats::sd(x[idx], na.rm = TRUE)))
   })
   mus <- sapply(stats, `[[`, "mean")
   sds <- sapply(stats, `[[`, "sd")
@@ -571,14 +510,11 @@ RobustScale <- function(x) {
   mc <- match.call()
   varname <- .basis_arg_label(mc[["x"]])
   med <- stats::median(x, na.rm = TRUE)
-  mad_ <- stats::mad(x, na.rm = TRUE)  # Default constant=1.4826
-  if (is.na(mad_) || mad_ == 0) mad_ <- 1e-6 # Handle zero MAD
-  z <- (x - med)/mad_
-  z[is.na(z)] <- 0
+  mad_ <- .safe_scale(stats::mad(x, na.rm = TRUE))  # Default constant=1.4826
   
   final_name <- paste0("robz_", varname)
   ret <- list(x = x,
-              y = matrix(z,  ncol = 1, dimnames=list(NULL, final_name)),
+              y = .zscore_column(x, med, mad_, final_name),
               median = med,
               mad    = mad_,
               fun = "robust_scale",
@@ -591,9 +527,7 @@ RobustScale <- function(x) {
 #' @export
 #' @rdname predict
 predict.RobustScale <- function(object, newdata, ...) {
-  z <- (newdata - object$median)/object$mad
-  z[is.na(z)] <- 0
-  matrix(z, ncol = 1, dimnames=list(NULL, object$name))
+  .zscore_column(newdata, object$median, object$mad, object$name)
 }
 
 #' @export

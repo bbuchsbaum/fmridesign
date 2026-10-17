@@ -1,114 +1,76 @@
-#' @importFrom rlang enquos enexpr syms is_formula is_quosure is_call as_label %||% quo_get_expr is_symbol
+#' @importFrom rlang %||%
 #' @importFrom assertthat assert_that
-#' @importFrom stats setNames
-
-
-# fmrihrf <= 0.4.0 re-validates inherited HRF metadata against the decorated
-# closure's formal arguments. The decorated closure already captures those
-# parameters, so the resulting warning is a false positive. Muffle only the
-# exact warning for the metadata names supplied by the caller; all other
-# warnings continue to propagate.
-.without_fmrihrf_metadata_warning <- function(expr, metadata_names) {
-  metadata_names <- metadata_names[nzchar(metadata_names)]
-  if (length(metadata_names) == 0L) {
-    return(expr)
-  }
-
-  prefix <- paste0(
-    "Parameters ", paste(metadata_names, collapse = ", "),
-    " are not arguments to function "
-  )
-  suffix <- " and will be ignored"
-
-  withCallingHandlers(
-    expr,
-    warning = function(cnd) {
-      msg <- conditionMessage(cnd)
-      if (startsWith(msg, prefix) && endsWith(msg, suffix)) {
-        invokeRestart("muffleWarning")
-      }
-    }
-  )
-}
 
 
 #' @keywords internal
 #' @noRd
-make_hrf <- function(basis, lag, nbasis=1) {
+make_hrf <- function(basis, lag, nbasis = NULL) {
   if (!is.numeric(lag) || length(lag) > 1) {
     stop("hrf: 'lag' must be a numeric scalar")
   }
-  
+
   if (is.character(basis)) {
-    # Map character names to HRF constants
-    hrf_map <- list(
-      "spmg1" = fmrihrf::HRF_SPMG1,
-      "spmg2" = fmrihrf::HRF_SPMG2,
-      "spmg3" = fmrihrf::HRF_SPMG3,
-      "gamma" = fmrihrf::HRF_GAMMA,
-      "gaussian" = fmrihrf::HRF_GAUSSIAN,
-      "bspline" = fmrihrf::HRF_BSPLINE,
-      "fir" = fmrihrf::HRF_FIR
-    )
-    
-    if (basis %in% names(hrf_map)) {
-      base_hrf_obj <- hrf_map[[basis]]
-      # Check if nbasis needs to be customized for bases that support it
-      if (basis == "bspline" && nbasis != fmrihrf::nbasis(base_hrf_obj)) {
-        # Create custom bspline HRF function with specified nbasis
-        span <- attr(base_hrf_obj, "span")
-        if (is.null(span)) span <- 24
-        degree <- attr(base_hrf_obj, "params")$degree
-        if (is.null(degree)) degree <- 3
-        custom_bspline_fn <- function(t) {
-          fmrihrf::hrf_bspline(t, span = span, N = nbasis, degree = degree)
-        }
-        base_hrf_obj <- fmrihrf::as_hrf(custom_bspline_fn, name = "bspline", nbasis = nbasis, span = span)
-      } else if (basis == "fir" && nbasis != fmrihrf::nbasis(base_hrf_obj)) {
-        # Create custom FIR HRF with specified nbasis using bspline degree=1 (tent basis)
-        span <- attr(base_hrf_obj, "span")
-        if (is.null(span)) span <- 24
-        custom_fir_fn <- function(t) {
-          fmrihrf::hrf_bspline(t, span = span, N = nbasis, degree = 1)
-        }
-        base_hrf_obj <- fmrihrf::as_hrf(custom_fir_fn, name = "fir", nbasis = nbasis, span = span)
-      }
-    } else if (basis == "fourier") {
-      # Create Fourier HRF with specified nbasis
-      span <- 24  # Default span for Fourier
-      custom_fourier_fn <- function(t) {
-        fmrihrf::hrf_fourier(t, span = span, nbasis = nbasis)
-      }
-      base_hrf_obj <- fmrihrf::as_hrf(custom_fourier_fn, name = "fourier", nbasis = nbasis, span = span)
-    } else {
-      # For unknown basis names, just use the default (this will likely fail, but matches old behavior)
-      stop("Unknown HRF basis name: ", basis, ". Available options: ", paste(c(names(hrf_map), "fourier"), collapse = ", "))
-    }
-    # Apply lag using gen_hrf
-    final_hrf <- .without_fmrihrf_metadata_warning(
-      fmrihrf::gen_hrf(base_hrf_obj, lag = lag),
-      names(attr(base_hrf_obj, "params"))
-    )
-
-  } else if (inherits(basis, "HRF")) {
-    # If it's already an HRF object, apply lag using gen_hrf
-    final_hrf <- .without_fmrihrf_metadata_warning(
-      fmrihrf::gen_hrf(basis, lag = lag),
-      names(attr(basis, "params"))
-    )
-    
-  } else if (is.function(basis)) {
-    # If it's a raw function, gen_hrf will handle conversion via as_hrf and apply lag
-    final_hrf <- fmrihrf::gen_hrf(basis, lag = lag)
-
-  } else {
+    basis <- .hrf_from_name(basis, nbasis)
+  } else if (!inherits(basis, "HRF") && !is.function(basis)) {
     stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
   }
-  
-  return(final_hrf)
+
+  # gen_hrf() wraps a plain function with as_hrf() and applies the lag
+  fmrihrf::gen_hrf(basis, lag = lag)
 }
 
-#### TODO character variables need an "as.factor"
+#' Resolve a basis name to an HRF object
+#'
+#' Fixed bases are fmrihrf's constants. "bspline" (alias "bs"), "tent", "fir"
+#' and "fourier" are basis sets sized by `nbasis` (`NULL`: their standard size, 5 or 12 for
+#' "fir"); the fmrihrf constant is reused when it already has that size.
+#' (fmrihrf::getHRF() is not used for the fixed bases because it renames
+#' them, e.g. "SPMG1" to "spmg1".)
+#' @keywords internal
+#' @noRd
+.hrf_from_name <- function(basis, nbasis) {
+  hrf_map <- list(
+    "spmg1" = fmrihrf::HRF_SPMG1,
+    "spmg2" = fmrihrf::HRF_SPMG2,
+    "spmg3" = fmrihrf::HRF_SPMG3,
+    "gamma" = fmrihrf::HRF_GAMMA,
+    "gaussian" = fmrihrf::HRF_GAUSSIAN,
+    "bspline" = fmrihrf::HRF_BSPLINE,
+    "fir" = fmrihrf::HRF_FIR
+  )
+  known <- c(names(hrf_map), "bs", "tent", "fourier")
+  if (!basis %in% known) {
+    stop("Unknown HRF basis name: ", basis, ". Available options: ",
+         paste(known, collapse = ", "))
+  }
+  if (basis == "bs") basis <- "bspline"
+
+  base <- hrf_map[[basis]]
+  if (!basis %in% c("bspline", "tent", "fir", "fourier")) {
+    return(base)
+  }
+  nbasis <- nbasis %||% if (is.null(base)) 5L else fmrihrf::nbasis(base)
+  if (!is.null(base) && nbasis == fmrihrf::nbasis(base)) {
+    return(base)
+  }
+
+  span <- attr(base, "span") %||% 24
+  if (basis == "fir") {
+    # FIR: one indicator per span/nbasis-second bin (like HRF_FIR)
+    return(fmrihrf::hrf_fir_generator(nbasis = nbasis, span = span))
+  }
+  if (basis == "tent") {
+    return(fmrihrf::hrf_tent_generator(nbasis = nbasis, span = span))
+  }
+  fn <- switch(basis,
+    bspline = {
+      degree <- attr(base, "params")$degree %||% 3
+      function(t) fmrihrf::hrf_bspline(t, span = span, N = nbasis, degree = degree)
+    },
+    fourier = function(t) fmrihrf::hrf_fourier(t, span = span, nbasis = nbasis)
+  )
+  fmrihrf::as_hrf(fn, name = basis, nbasis = nbasis, span = span)
+}
 
 #' hemodynamic regressor specification function for model formulas.
 #'
@@ -119,8 +81,9 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #' @param ... One or more variable names (bare or character) or expressions involving variables
 #'            present in the `data` argument of `event_model`.
 #' @param basis the impulse response function or the name of a pre-supplied function,
-#'        one of: "gamma", "spmg1", "spmg2", "spmg3", "bspline", "gaussian", "tent", "bs".
-#'        Can also be an `HRF` object.
+#'        one of: "spmg1", "spmg2", "spmg3", "gamma", "gaussian", "bspline" (or "bs"),
+#'        "tent", "fir", "fourier" (the last four are sized by `nbasis`).
+#'        Can also be an `HRF` object or a plain function of time.
 #' @param hrf_fun optional per-onset HRF generator. Can be:
 #'        \itemize{
 #'          \item A function that takes a data frame of event data (with columns `onset`, `duration`,
@@ -139,6 +102,7 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #' @param subset an expression indicating the subset of 'onsets' to keep.
 #' @param precision sampling precision in seconds.
 #' @param nbasis number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.
+#'        If omitted, such a basis set uses its standard size (12 bins for "fir", 5 functions otherwise).
 #' @param contrasts one or more \code{contrast_spec} objects created with the \code{contrast}, `pair_contrast` etc. functions.
 #'                  Must be NULL, a single contrast spec, or a *named* list of contrast specs.
 #' @param id a unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.
@@ -167,7 +131,6 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #'                       hrf_fun = weighted_hrf_gen("sub_times", "sub_weights"))
 #'
 #' @export
-#' @importFrom rlang enquos enexpr syms is_formula is_quosure is_call as_label %||%
 #' @return an \code{hrfspec} instance
 hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.3,
                 nbasis=1, contrasts=NULL, id=NULL, name=NULL, lag=0, summate=TRUE, normalize=FALSE) {
@@ -207,39 +170,20 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
   if (!is.null(contrasts)) {
     # Accept a single contrast_spec directly (even though it inherits from list)
     if (inherits(contrasts, "contrast_spec")) {
-      cs <- contrasts
-      cname <- cs$name %||% "contrast1"
-      contrasts <- list(cs)
-      names(contrasts) <- cname
-    } else if (inherits(contrasts, "contrast_set")) {
-      # Named list of contrast_spec objects; ensure names exist
-      if (is.null(names(contrasts)) || any(names(contrasts) == "")) {
-        cnames <- vapply(contrasts, function(cs) cs$name %||% "", character(1))
-        # Fill blanks with defaults
-        blanks <- which(cnames == "")
-        if (length(blanks) > 0) {
-          cnames[blanks] <- paste0("contrast", blanks)
-        }
-        if (any(duplicated(cnames))) {
-          stop("If `contrasts=` is a list, it must be a named list with unique names.", call. = FALSE)
-        }
-        names(contrasts) <- cnames
-      }
+      contrasts <- stats::setNames(list(contrasts), contrasts$name %||% "contrast1")
     } else if (is.list(contrasts)) {
-      # Bare list provided; validate elements are contrast_spec
-      is_spec <- vapply(contrasts, function(x) inherits(x, "contrast_spec"), logical(1))
-      if (!all(is_spec)) {
+      # A contrast_set is already a list of contrast_specs; a bare list is checked
+      if (!inherits(contrasts, "contrast_set") &&
+          !all(vapply(contrasts, inherits, logical(1), "contrast_spec"))) {
         stop("If `contrasts=` is a list, all elements must be contrast_spec objects.\n",
              "  Hint: Use functions like contrast(), pair_contrast(), contrast_set() to define contrasts.", 
              call. = FALSE)
       }
-      # Ensure names
+      # Ensure names, falling back to each spec's name and then "contrast<i>"
       if (is.null(names(contrasts)) || any(names(contrasts) == "")) {
         cnames <- vapply(contrasts, function(cs) cs$name %||% "", character(1))
         blanks <- which(cnames == "")
-        if (length(blanks) > 0) {
-          cnames[blanks] <- paste0("contrast", blanks)
-        }
+        cnames[blanks] <- paste0("contrast", blanks)
         if (any(duplicated(cnames))) {
           stop("If `contrasts=` is a list, it must be a named list with unique names.", call. = FALSE)
         }
@@ -255,30 +199,26 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
   # -----------------------------
 
   # --- Handle hrf_fun parameter ---
-  hrf_fun_captured <- NULL
   if (!is.null(hrf_fun)) {
-    if (rlang::is_formula(hrf_fun)) {
-      hrf_fun_captured <- hrf_fun
-    } else if (is.function(hrf_fun)) {
-      hrf_fun_captured <- hrf_fun
-    } else {
+    if (!rlang::is_formula(hrf_fun) && !is.function(hrf_fun)) {
       stop("`hrf_fun` must be a function or formula (e.g., ~hrf_column)", call. = FALSE)
     }
 
     # Warn if both basis (non-default) and hrf_fun specified
-    if (!missing(basis) && basis != "spmg1") {
+    if (!missing(basis) && !identical(basis, "spmg1")) {
       warning("Both `basis` and `hrf_fun` specified; `hrf_fun` takes precedence.", call. = FALSE)
     }
   }
   # -----------------------------
 
-  basis_obj <- make_hrf(basis, lag, nbasis=nbasis)
+  # An omitted nbasis lets basis sets ("fir", "bspline", ...) use their own size
+  basis_obj <- make_hrf(basis, lag, nbasis = if (missing(nbasis)) NULL else nbasis)
 
   # Call the internal constructor, passing quosures directly
   ret <- hrfspec(
     vars = vars, # Pass list of quosures captured by enquos
     basis = basis_obj,
-    hrf_fun = hrf_fun_captured,  # NEW: per-onset HRF generator
+    hrf_fun = hrf_fun,  # per-onset HRF generator (function or formula)
     onsets = onsets,
     durations = durations,
     prefix = prefix,
@@ -304,7 +244,6 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
 #' @param basis An `HRF` object.
 #' @param ... Other arguments passed from `hrf()` (onsets, durations, prefix, subset, etc.)
 #' @return An `hrfspec` instance (list with class `hrfspec`).
-#' @importFrom rlang as_label is_symbol is_call quo_get_expr
 #' @noRd
 #' @keywords internal
 hrfspec <- function(vars, label=NULL, basis=fmrihrf::HRF_SPMG1, ...) {
@@ -336,7 +275,7 @@ hrfspec <- function(vars, label=NULL, basis=fmrihrf::HRF_SPMG1, ...) {
     vars = vars,
     varnames = varnames,
     hrf = basis,
-    hrf_fun = other_args$hrf_fun,  # NEW: per-onset HRF generator (function or formula)
+    hrf_fun = other_args$hrf_fun,  # per-onset HRF generator (function or formula)
     onsets = other_args$onsets,
     durations = other_args$durations,
     prefix = other_args$prefix,
@@ -400,7 +339,6 @@ contrasts.hrfspec <- function(x, ...) {
 
 #' @export
 construct.hrfspec <- function(x, model_spec, ...) {
-  ons <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   et <- construct_event_term(x, model_spec)
 
   # Set the term_tag attribute on the event_term before returning
@@ -412,7 +350,7 @@ construct.hrfspec <- function(x, model_spec, ...) {
   # Just return the event_term with hrfspec attached
   # The hrfspec is already attached in construct_event_term
 
-  # NEW: Propagate hrf_fun for per-onset HRF generation during convolution
+  # Propagate hrf_fun for per-onset HRF generation during convolution
   if (!is.null(x$hrf_fun)) {
     attr(et, "hrf_fun") <- x$hrf_fun
   }
@@ -426,23 +364,6 @@ construct.hrfspec <- function(x, model_spec, ...) {
 
   # Return the event_term directly, not a convolved_term
   et
-}
-
-#' evaluate.hrfspec
-#'
-#' This function evaluates a hemodynamic response function (HRF) specified by an hrfspec object for a given set of time points (grid) and other parameters.
-#' It is a wrapper function that calls the evaluate.HRF function with the HRF function contained in the hrfspec object.
-#'
-#' @param x The hrfspec object containing the HRF function.
-#' @param grid A vector of time points.
-#' @param amplitude The scaling value for the event (default: 1).
-#' @param duration The duration of the event (default: 0).
-#' @param precision The temporal resolution used for computing summed responses when duration > 0 (default: 0.1).
-#' @param ... Additional arguments to be passed to the evaluate.HRF function.
-#' @return A vector of HRF values at the specified time points.
-#' @noRd
-evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1, ...) {
-  fmrihrf::evaluate(x$hrf, grid, amplitude, duration, precision)
 }
 
 #' trialwise
@@ -505,7 +426,7 @@ trialwise <- function(basis   = "spmg1",
   term <- hrf(!!trial_expr,  # Use !! to inject the expression
               basis = basis,
               lag   = lag,
-              nbasis = nbasis,
+              nbasis = if (missing(nbasis)) NULL else nbasis,
               durations = durations,
               normalize = normalize,
               id     = label) # Use id argument for naming
@@ -558,13 +479,9 @@ trialwise <- function(basis   = "spmg1",
 #' @seealso [weighted_hrf_gen()] for weighted impulse HRFs
 #' @export
 boxcar_hrf_gen <- function(normalize = TRUE, min_duration = 0.1) {
-  hrf_boxcar_fn <- fmrihrf::hrf_boxcar
   function(d) {
     lapply(d$duration, function(dur) {
-      .without_fmrihrf_metadata_warning(
-        hrf_boxcar_fn(width = max(dur, min_duration), normalize = normalize),
-        c("width", "amplitude", "normalize")
-      )
+      fmrihrf::hrf_boxcar(width = max(dur, min_duration), normalize = normalize)
     })
   }
 }
@@ -605,10 +522,7 @@ duration_hrf_gen <- function(base = fmrihrf::HRF_SPMG1, min_duration = 0) {
     lapply(d$duration, function(dur) {
       dur <- max(dur, min_duration)
       if (dur == 0) return(base)
-      .without_fmrihrf_metadata_warning(
-        fmrihrf::block_hrf(base, width = dur, normalize = TRUE),
-        names(attr(base, "params"))
-      )
+      fmrihrf::block_hrf(base, width = dur, normalize = TRUE)
     })
   }
 }
@@ -650,23 +564,18 @@ duration_hrf_gen <- function(base = fmrihrf::HRF_SPMG1, min_duration = 0) {
 #' @export
 weighted_hrf_gen <- function(times_col = "sub_times", weights_col = "sub_weights",
                               relative = FALSE, method = "constant", normalize = FALSE) {
-  hrf_weighted_fn <- fmrihrf::hrf_weighted
   function(d) {
-    if (!times_col %in% names(d)) {
-      stop(sprintf("weighted_hrf_gen: column '%s' not found in event data", times_col), call. = FALSE)
-    }
-    if (!weights_col %in% names(d)) {
-      stop(sprintf("weighted_hrf_gen: column '%s' not found in event data", weights_col), call. = FALSE)
+    for (col in c(times_col, weights_col)) {
+      if (!col %in% names(d)) {
+        stop(sprintf("weighted_hrf_gen: column '%s' not found in event data", col), call. = FALSE)
+      }
     }
 
     Map(function(times, weights, onset) {
       # Convert absolute times to relative if needed
       rel_times <- if (relative) times else times - onset
-      .without_fmrihrf_metadata_warning(
-        hrf_weighted_fn(times = rel_times, weights = weights,
-                        method = method, normalize = normalize),
-        c("times", "weights", "width", "method", "normalize")
-      )
+      fmrihrf::hrf_weighted(times = rel_times, weights = weights,
+                            method = method, normalize = normalize)
     }, d[[times_col]], d[[weights_col]], d$onset)
   }
 }

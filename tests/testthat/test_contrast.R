@@ -370,6 +370,64 @@ test_that("can form formula contrast with two factor terms and one continuous co
   
 })
 
+test_that("cell-based contrasts map onto factor-by-modulator columns", {
+  set.seed(5)
+  des <- data.frame(onset = seq(2, by = 6, length.out = 12), run = 1,
+                    cond = factor(rep(c("A", "B", "C"), 4)), RT = rnorm(12))
+  sframe <- fmrihrf::sampling_frame(blocklens = 100, TR = 2)
+  cset <- contrast_set(
+    pair_contrast(~ cond == "A", ~ cond == "B", name = "ab"),
+    unit_contrast(~ cond == "C", name = "c"),
+    oneway_contrast(~ cond, name = "main"),
+    poly_contrast(~ cond, name = "lin", degree = 1,
+                  value_map = list(A = 1, B = 2, C = 3)),
+    contrast(~ A - C, name = "ac")
+  )
+  ref <- event_model(onset ~ hrf(cond, contrasts = cset), data = des,
+                     block = ~run, sampling_frame = sframe)
+  pm <- event_model(onset ~ hrf(cond, RT, contrasts = cset), data = des,
+                    block = ~run, sampling_frame = sframe)
+  expect_silent(cw_pm <- contrast_weights(pm))
+  cw_ref <- contrast_weights(ref)
+  expect_equal(unname(cw_pm[[grep("#ab$", names(cw_pm))]]$offset_weights[, 1]), c(1, -1, 0))
+  expect_equal(unname(cw_pm[[grep("#ac$", names(cw_pm))]]$offset_weights[, 1]), c(1, 0, -1))
+  # Same cell weights as for the unmodulated term, on the modulator columns
+  for (i in seq_along(cw_ref)) {
+    expect_equal(unname(cw_pm[[i]]$offset_weights), unname(cw_ref[[i]]$offset_weights),
+                 info = names(cw_ref)[i])
+  }
+  expect_equal(rownames(cw_pm[[1]]$weights), conditions(terms(pm)[[1]]))
+
+  # Multi-basis: replicated on every basis column of the modulated regressors
+  pm2 <- event_model(onset ~ hrf(cond, RT, basis = "spmg2", contrasts = cset),
+                     data = des, block = ~run, sampling_frame = sframe)
+  ab2 <- contrast_weights(pm2)[[1]]
+  expect_equal(unname(ab2$offset_weights[, 1]), c(1, 1, -1, -1, 0, 0))
+})
+
+test_that("formula contrasts work on continuous terms with several variables", {
+  set.seed(11)
+  des <- data.frame(onset = seq(2, by = 6, length.out = 12), run = 1,
+                    RT1 = rnorm(12), RT2 = rnorm(12))
+  sframe <- fmrihrf::sampling_frame(blocklens = 100, TR = 2)
+  emod_id <- suppressMessages(event_model(
+    onset ~ hrf(Ident(RT1, RT2), contrasts = contrast_set(contrast(~ RT1 - RT2, name = "d"))) +
+      hrf(RT1, prefix = "m"),
+    data = des, block = ~run, sampling_frame = sframe
+  ))
+  d <- contrast_weights(emod_id)[[1]]
+  expect_equal(d$weights[, 1], c(RT1 = 1, RT2 = -1))
+  expect_equal(d$offset_weights[, 1],
+               setNames(c(1, -1, 0), colnames(design_matrix(emod_id))))
+
+  emod_x <- event_model(
+    onset ~ hrf(RT1) + hrf(RT1, RT2, contrasts = contrast_set(contrast(~ `RT1:RT2`, name = "x"))),
+    data = des, block = ~run, sampling_frame = sframe
+  )
+  x <- contrast_weights(emod_x)[[1]]
+  expect_equal(unname(x$offset_weights[, 1]), c(0, 1))
+})
+
 
 
 # 
@@ -555,6 +613,27 @@ test_that("oneway_contrast with basis filtering - multiple basis", {
   # Should have basis 1, 2, and 3 conditions
   expect_true(all(grepl("_b0[123]$", cw$condnames)))
   expect_equal(length(cw$condnames), 9)  # 3 conditions × 3 basis functions
+})
+
+test_that("poly_contrast reports a value_map that misses factor levels", {
+  des <- data.frame(
+    onset = seq(2, 58, by = 4),
+    intensity = factor(rep(c("low", "medium", "high"), 5),
+                       levels = c("low", "medium", "high")),
+    run = 1
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = 50, TR = 2)
+  espec <- event_model(onset ~ hrf(intensity), data = des, block = ~run,
+                       sampling_frame = sframe)
+  term1 <- terms(espec)[[1]]
+  for (vm in list(list(low = 1, high = 3), list(low = 1))) {
+    con <- poly_contrast(~ intensity, name = "lin", degree = 1, value_map = vm)
+    expect_error(contrast_weights(con, term1),
+                 "value_map does not cover all factor levels")
+  }
+  ok <- poly_contrast(~ intensity, name = "lin", degree = 1,
+                      value_map = list(low = 1, medium = 2, high = 4))
+  expect_equal(ncol(contrast_weights(ok, term1)$weights), 1L)
 })
 
 test_that("poly_contrast with basis filtering", {
@@ -895,6 +974,65 @@ test_that("basis_weights with basis = NULL (all bases)", {
   # Should have all 5 bases (2 conditions × 5 bases = 10)
   expect_equal(length(cw$condnames), 10)  # 2 conditions × 5 bases
   expect_true(any(grepl("_b05$", cw$condnames)))
+})
+
+test_that("basis_weights apply to every basis function when basis is NULL or 'all'", {
+  des <- data.frame(
+    onset = rep(seq(2, 58, by = 4), 2),
+    condition = rep(c("A", "B"), 15),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                       data = des, block = ~run, sampling_frame = sframe)
+  term1 <- terms(espec)[[1]]
+  bw <- c(0.1, 0.2, 0.3, 0.25, 0.15)
+
+  cw <- contrast_weights(
+    pair_contrast(~ condition == "A", ~ condition == "B",
+                  basis_weights = bw, name = "A_vs_B_weighted"),
+    term1
+  )
+  rn <- rownames(cw$weights)
+  expect_equal(unname(cw$weights[grepl("condition\\.A_b", rn), 1]), bw)
+  expect_equal(unname(cw$weights[grepl("condition\\.B_b", rn), 1]), -bw)
+  expect_equal(sum(cw$weights), 0)
+
+  # Same as basis = "all" and as selecting all five bases explicitly
+  cw_all <- contrast_weights(
+    pair_contrast(~ condition == "A", ~ condition == "B", basis = "all",
+                  basis_weights = bw, name = "A_vs_B_weighted"),
+    term1
+  )
+  cw_sel <- contrast_weights(
+    pair_contrast(~ condition == "A", ~ condition == "B", basis = 1:5,
+                  basis_weights = bw, name = "A_vs_B_weighted"),
+    term1
+  )
+  expect_equal(cw_all$weights, cw$weights)
+  expect_equal(cw_sel$weights, cw$weights)
+
+  # Documented: c(1, 0, 0, 0, 0) isolates the first basis, like basis = 1
+  cw_first <- contrast_weights(
+    pair_contrast(~ condition == "A", ~ condition == "B",
+                  basis_weights = c(1, 0, 0, 0, 0), name = "first"),
+    term1
+  )
+  cw_b1 <- contrast_weights(
+    pair_contrast(~ condition == "A", ~ condition == "B", basis = 1, name = "first"),
+    term1
+  )
+  expect_equal(cw_first$weights, cw_b1$weights)
+
+  # One weight per basis function is required
+  expect_error(
+    contrast_weights(
+      pair_contrast(~ condition == "A", ~ condition == "B",
+                    basis_weights = c(0.5, 0.5), name = "bad"),
+      term1
+    ),
+    "basis_weights length \\(2\\) must match number of selected basis functions \\(5\\)"
+  )
 })
 
 test_that("basis_weights preserves sum-to-zero property", {

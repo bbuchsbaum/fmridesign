@@ -310,6 +310,35 @@ test_that("contrast_weights.interaction_contrast_spec with 2x2 design", {
   expect_equal(ncol(cw$weights), 1)
 })
 
+test_that("interaction_contrast uses every factor named in the formula", {
+  des <- expand.grid(cat = c("face", "scene", "house"), att = c("attend", "ignore"),
+                     side = c("left", "right"), rep = 1:2)
+  des$onset <- seq(2, by = 4, length.out = nrow(des))
+  des$run <- 1
+  sframe <- fmrihrf::sampling_frame(blocklens = 120, TR = 2)
+  emod <- event_model(onset ~ hrf(cat, att, side), data = des, block = ~run,
+                      sampling_frame = sframe)
+  term1 <- terms(emod)[[1]]
+  cells1 <- as.data.frame(cells(term1))
+  X <- model.matrix(~ cat * att * side, data = cells1,
+                    contrasts.arg = list(cat = "contr.helmert", att = "contr.helmert",
+                                         side = "contr.helmert"))
+  ord <- attr(terms(~ cat * att * side), "order")[attr(X, "assign")[-1]]
+
+  # Three-way: (3-1)*(2-1)*(2-1) = 2 columns spanning the cat:att:side space
+  w3 <- contrast_weights(interaction_contrast(~ cat * att * side, name = "i3"), term1)$weights
+  expect_equal(ncol(w3), 2L)
+  X3 <- X[, -1][, ord == 3, drop = FALSE]
+  expect_equal(qr(cbind(w3, X3))$rank, 2L)
+  expect_equal(max(abs(crossprod(w3, X[, -1][, ord < 3, drop = FALSE]))), 0)
+
+  # Two factors named: the two-way interaction (pooled over `side`), unchanged
+  w2 <- contrast_weights(interaction_contrast(~ cat * att, name = "i2"), term1)$weights
+  expect_equal(ncol(w2), 2L)
+  expect_equal(qr(cbind(w2, X[, -1][, grepl("^cat[0-9]+:att[0-9]+$", colnames(X)[-1]),
+                                    drop = FALSE]))$rank, 2L)
+})
+
 test_that("event_model contrast keys use col_indices term tags for interactions", {
   des <- data.frame(
     onset = rep(seq(6, 110, length.out = 12), 2),

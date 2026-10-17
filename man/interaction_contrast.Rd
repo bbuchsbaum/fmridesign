@@ -18,7 +18,9 @@ An interaction_contrast_spec object containing the specification for
 generating interaction contrast weights
 }
 \description{
-Create an interaction contrast specification
+Create an interaction contrast specification. The contrast tests the
+highest-order interaction of all factors named in \code{A}; for example
+\code{~ A * B * C} gives the three-way interaction.
 }
 \examples{
 # Create an interaction contrast for factors A and B
