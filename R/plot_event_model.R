@@ -128,8 +128,14 @@ plot.event_model <- function(x,
   disp <- ci$full_label
   row_disp <- row_key
   if (label_mode == "compact") {
-    row_disp <- unname(make.unique(base::abbreviate(row_key, minlength = abbrev_min), sep = "_"))
-    disp <- unname(make.unique(base::abbreviate(disp, minlength = abbrev_min), sep = "_"))
+    # Labels carry typographic glyphs (the factorial cross, a middle dot);
+    # abbreviate() keeps them intact but warns about non-ASCII input.
+    abbrev <- function(s) {
+      s <- suppressWarnings(base::abbreviate(s, minlength = abbrev_min))
+      unname(make.unique(s, sep = "_"))
+    }
+    row_disp <- abbrev(row_key)
+    disp <- abbrev(disp)
   }
   row_levels <- unique(row_key)
   row_lab_map <- stats::setNames(row_disp[match(row_levels, row_key)], row_levels)
