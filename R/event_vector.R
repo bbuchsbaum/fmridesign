@@ -183,31 +183,15 @@ event_table.event_term <- function(x, ...) x$event_table
 
   # Default metadata for intercept-only / continuous-only terms
   if (length(categorical_events) == 0L) {
-    levels_out <- "condition"
-    ids_out <- if (n_events > 0L) rep.int(1L, n_events) else integer(0)
-    return(list(levels = levels_out, ids = as.integer(ids_out)))
+    return(list(levels = "condition", ids = rep.int(1L, n_events)))
   }
 
-  # Prepare level tokens for each categorical event component
+  # Canonical condition levels: crossed level tokens (first factor fastest)
   level_tokens <- lapply(categorical_events, function(ev) {
-    levs <- levels(ev)
-    level_token(ev$varname, levs)
+    level_token(ev$varname, levels(ev))
   })
-
-  # Generate canonical ordering of condition levels via expand.grid
-  cond_grid <- if (length(level_tokens) == 1L) {
-    data.frame(level_tokens[[1L]], stringsAsFactors = FALSE)
-  } else {
-    do.call(expand.grid, c(level_tokens, list(stringsAsFactors = FALSE)))
-  }
-
-  if (nrow(cond_grid) == 0L) {
-    cond_levels <- character(0)
-  } else if (is.null(dim(cond_grid))) {
-    cond_levels <- make_cond_tag(cond_grid)
-  } else {
-    cond_levels <- apply(cond_grid, 1, make_cond_tag)
-  }
+  cond_grid <- expand.grid(level_tokens, stringsAsFactors = FALSE)
+  cond_levels <- do.call(paste, c(unname(as.list(cond_grid)), sep = "_"))
 
   if (n_events == 0L) {
     return(list(levels = cond_levels, ids = integer(0)))
@@ -215,35 +199,17 @@ event_table.event_term <- function(x, ...) x$event_table
 
   # Map each event instance to the corresponding condition token combination
   per_event_tokens <- lapply(seq_along(categorical_events), function(idx) {
-    ev <- categorical_events[[idx]]
-    tok <- level_tokens[[idx]]
-    labels <- elements(ev, what = "labels")
-    if (length(labels) == 0L) {
-      rep(NA_character_, n_events)
-    } else {
-      ids <- as.integer(labels)
-      vals <- tok[ids]
-      vals[is.na(ids)] <- NA_character_
-      vals
-    }
+    ids <- as.integer(elements(categorical_events[[idx]], what = "labels"))
+    level_tokens[[idx]][ids]
+  })
+  tokens_matrix <- do.call(cbind, per_event_tokens)
+
+  event_labels <- apply(tokens_matrix, 1, function(row) {
+    row <- row[!is.na(row)]
+    if (length(row) == 0L) NA_character_ else make_cond_tag(row)
   })
 
-  tokens_matrix <- do.call(cbind, per_event_tokens)
-  if (!is.null(tokens_matrix) && !is.matrix(tokens_matrix)) {
-    tokens_matrix <- matrix(tokens_matrix, ncol = 1L)
-  }
-
-  event_labels <- if (is.null(tokens_matrix) || nrow(tokens_matrix) == 0L) {
-    character(0)
-  } else {
-    apply(tokens_matrix, 1, function(row) {
-      row <- row[!is.na(row)]
-      if (length(row) == 0L) NA_character_ else make_cond_tag(row)
-    })
-  }
-
-  ids_out <- match(event_labels, cond_levels)
-  list(levels = cond_levels, ids = as.integer(ids_out))
+  list(levels = cond_levels, ids = match(event_labels, cond_levels))
 }
 
 #' @keywords internal
@@ -1284,9 +1250,8 @@ Fcontrasts.event_term <- function(x, max_inter = 4L, ...) {
   D <- lapply(evs_cat, function(ev) .Dmat(length(levels(ev))))
   names(C) <- names(D) <- names(evs_cat)
 
-  # --- Get expected row names in Kronecker order ---------------------------
+  # --- Row names: Cartesian product of levels (Kronecker order) -----------
   cat_levels_list <- lapply(evs_cat, levels)
-  # --- build Cartesian product of levels (Kronecker order) ------------------ 
   lvl_grid        <- do.call(expand.grid, cat_levels_list)
   cat_cond_names  <- apply(lvl_grid, 1, paste, collapse = ":")
   expected_rows   <- nrow(lvl_grid)
@@ -1295,59 +1260,35 @@ Fcontrasts.event_term <- function(x, max_inter = 4L, ...) {
   if (!inherits(cond_tags, "try-error") && length(cond_tags) == expected_rows) {
     cat_cond_names <- cond_tags
   }
-  # ---------------------------------------------------------------------- 
 
-  ## --- Compute main effects matrices (without rownames yet) ---------------
+  ## --- Effect matrices (without rownames yet) -----------------------------
   # Row order must match expand.grid()/conditions(), where the FIRST factor
   # varies fastest. kronecker(A, B) makes its second argument vary fastest, so
   # the factor list is reversed before reducing.
-  main <- Map(function(i) {
+  .effect <- function(ix) {
       mat_list <- C
-      mat_list[[i]] <- D[[i]] 
+      mat_list[ix] <- D[ix]
       Reduce(kronecker, rev(mat_list))
-  }, seq_along(D)) |> 
-    stats::setNames(names(evs_cat))
+  }
+  final_contrasts_list <- stats::setNames(lapply(seq_along(D), .effect), names(evs_cat))
 
-  ## --- Compute interaction effects matrices (without rownames yet) -------
-  final_contrasts_list <- if (length(D) > 1 && length(D) <= max_inter) {
+  if (length(D) > 1 && length(D) <= max_inter) {
       inter <- unlist(lapply(2:length(D), function(k) {
           combn(length(D), k, simplify = FALSE, FUN = function(ix) {
-              mat_list <- C
-              mat_list[ix] <- D[ix] 
-              M <- Reduce(kronecker, rev(mat_list))
+              M <- .effect(ix)
               attr(M, "name") <- paste(names(evs_cat)[ix], collapse=":")
               M
           })
       }), recursive = FALSE)
       names(inter) <- vapply(inter, attr, "", "name")
-      c(main, inter)
-  } else {
-      main
+      final_contrasts_list <- c(final_contrasts_list, inter)
   }
   
-  ## --- Assign correct categorical rownames to all matrices -------
-  final_contrasts_named <- lapply(seq_along(final_contrasts_list), function(i) {
-       M <- final_contrasts_list[[i]]
-       mat_name <- names(final_contrasts_list)[i]
-       if (!is.matrix(M)) { 
-            warning(paste("Skipping rownames for invalid matrix in Fcontrasts list element:", mat_name))
-            return(M)
-       }
-       # Compare nrow(M) to expected rows from CATEGORICAL grid/interaction
-       if (nrow(M) == expected_rows) {
-            # Use dimnames[[1]] <- assignment (should be correct now)
-            dimnames(M)[[1]] <- cat_cond_names
-       } else {
-           # This warning should be less likely now, but keep for safety
-           warning(paste("Dimension mismatch for contrast '", mat_name, "': expected ", 
-                         expected_rows, " rows (from categorical interaction), but matrix has ", nrow(M), ". Rownames not assigned."))
-       }
-       M # Return matrix (modified in place)
+  ## --- Assign categorical rownames (every matrix has prod(nlevels) rows) ---
+  lapply(final_contrasts_list, function(M) {
+       dimnames(M)[[1]] <- cat_cond_names
+       M
   })
-  
-  names(final_contrasts_named) <- names(final_contrasts_list)
-  
-  final_contrasts_named
 }
 
 #' Retrieve contrast definitions for an event term
