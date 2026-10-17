@@ -571,8 +571,10 @@ make_nuisance_term <- function(nuisance_list,
 #' @param degree Integer; degree of the spline/polynomial function.
 #' @param sframe A sampling_frame object.
 #' @param intercept Character; whether to include an intercept ("runwise", "global", or "none").
-#'   Ignored when \code{basis == "constant"} because the drift term already
-#'   provides the constant baseline.
+#'   With \code{basis = "constant"} no separate intercept term is added, because
+#'   the drift term is itself the constant baseline: \code{"global"} makes it a
+#'   single column shared by all runs, while \code{"runwise"} and \code{"none"}
+#'   give one constant column per run.
 #' @param nuisance_list Optional list of nuisance matrices or data frames (one per fMRI block).
 #' @param nuisance_check Character; how to handle nuisance diagnostics. `"warn"`
 #'   warns on construction-time problems, `"error"` stops, `"drop"` removes
