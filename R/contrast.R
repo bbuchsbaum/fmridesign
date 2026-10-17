@@ -1,6 +1,41 @@
 # Internal constants
 .CONTRAST_TOLERANCE <- 1e-8
 
+#' Argument checks shared by the contrast constructors
+#'
+#' `basis` and `basis_weights` only get light checks here; their ranges and
+#' lengths are validated against the term in `.filter_basis()` and
+#' `.apply_basis_filter()`.
+#' @keywords internal
+#' @noRd
+.check_formula_arg <- function(x, arg) {
+  assert_that(rlang::is_formula(x), msg = paste(arg, "must be a formula"))
+}
+
+.check_name_arg <- function(name) {
+  assert_that(is.character(name) && length(name) == 1,
+              msg = "name must be a single character string")
+}
+
+.check_where_arg <- function(where) {
+  if (!is.null(where)) .check_formula_arg(where, "where")
+}
+
+.check_basis_args <- function(basis, basis_weights) {
+  if (!is.null(basis) && !identical(basis, "all") &&
+      (!is.numeric(basis) || any(basis < 1) || anyNA(basis))) {
+    stop("basis must be NULL, 'all', or a positive integer vector", call. = FALSE)
+  }
+  if (!is.null(basis_weights)) {
+    if (!is.numeric(basis_weights) || anyNA(basis_weights)) {
+      stop("basis_weights must be a numeric vector without NAs", call. = FALSE)
+    }
+    if (any(basis_weights < 0)) {
+      stop("basis_weights must be non-negative", call. = FALSE)
+    }
+  }
+}
+
 #' Get condition names for a term
 #' Wraps conditions() with standard arguments for internal use.
 #' @param term An event_term object.
@@ -305,23 +340,11 @@
 #'
 #' @export
 contrast <- function(form, name, where=NULL) {
-  # Input validation
-  assert_that(rlang::is_formula(form),
-              msg = "form must be a formula")
-  assert_that(is.character(name) && length(name) == 1,
-              msg = "name must be a single character string")
-  if (!is.null(where)) {
-    assert_that(rlang::is_formula(where),
-                msg = "where must be a formula")
-  }
-  ret <- list(A=form,
-              B=NULL,
-              where=where,
-              name=name)
-  
-  class(ret) <- c("contrast_formula_spec", "contrast_spec", "list")
-  ret
-  
+  .check_formula_arg(form, "form")
+  .check_name_arg(name)
+  .check_where_arg(where)
+  structure(list(A = form, B = NULL, where = where, name = name),
+            class = c("contrast_formula_spec", "contrast_spec", "list"))
 }
 
 #' Build name maps for formula contrasts
@@ -409,25 +432,11 @@ contrast <- function(form, name, where=NULL) {
 #'
 #' @export
 unit_contrast <- function(A, name, where=NULL) {
-  # Input validation
-  assert_that(rlang::is_formula(A),
-              msg = "A must be a formula") 
-  assert_that(is.character(name) && length(name) == 1,
-              msg = "name must be a single character string")
-  
-  if (!is.null(where)) {
-    assert_that(rlang::is_formula(where),
-                msg = "where must be a formula")
-  }
-  
-  structure(
-    list(A=A,
-         B=NULL,
-         where=where,
-         name=name),
-    class=c("unit_contrast_spec", "contrast_spec", "list")
-  )
-  
+  .check_formula_arg(A, "A")
+  .check_name_arg(name)
+  .check_where_arg(where)
+  structure(list(A = A, B = NULL, where = where, name = name),
+            class = c("unit_contrast_spec", "contrast_spec", "list"))
 }
 
 #' One Against All Contrast
@@ -447,10 +456,7 @@ unit_contrast <- function(A, name, where=NULL) {
 #'
 #' @export
 one_against_all_contrast <- function(levels, facname, where=NULL) {
-  if (!is.null(where)) {
-    assert_that(rlang::is_formula(where))
-  }
-  
+  .check_where_arg(where)
   ret <- lapply(1:length(levels), function(i) {
     lev1 <- levels[i]
     levother <- levels[-i]
@@ -533,10 +539,7 @@ contrast_set <- function(...) {
 #' @importFrom utils combn
 pairwise_contrasts <- function(levels, facname, where=NULL, name_prefix = "con") {
   assert_that(is.character(facname), length(facname) == 1, msg = "'facname' must be a single string.")
-  if (!is.null(where)) {
-    assert_that(rlang::is_formula(where))
-  }
-  
+  .check_where_arg(where)
   if (length(levels) < 2) {
     stop("pairwise_contrasts requires at least two levels.")
   }
@@ -584,9 +587,7 @@ pairwise_contrasts <- function(levels, facname, where=NULL, name_prefix = "con")
 #' @export
 sliding_window_contrasts <- function(levels, facname, window_size = 2, where = NULL, name_prefix = "win") {
   assertthat::assert_that(is.character(facname), length(facname) == 1, msg = "'facname' must be a single string.")
-  if (!is.null(where)) {
-    assertthat::assert_that(rlang::is_formula(where))
-  }
+  .check_where_arg(where)
   assertthat::assert_that(is.numeric(window_size) && length(window_size) == 1 && window_size >= 1,
                           msg = "'window_size' must be a positive integer.")
   window_size <- as.integer(window_size)
@@ -694,47 +695,14 @@ sliding_window_contrasts <- function(levels, facname, window_size = 2, where = N
 #'
 #' @export
 pair_contrast <- function(A, B, name, where = NULL, basis = NULL, basis_weights = NULL) {
-  # Input validation
-  assert_that(rlang::is_formula(A),
-              msg = "A must be a formula")
-  assert_that(rlang::is_formula(B),
-              msg = "B must be a formula")
-  assert_that(is.character(name) && length(name) == 1,
-              msg = "name must be a single character string")
-
-  if (!is.null(where)) {
-    assert_that(rlang::is_formula(where),
-                msg = "where must be a formula")
-  }
-
-  # Validate basis argument (detailed validation happens in .filter_basis)
-  if (!is.null(basis) && !identical(basis, "all")) {
-    if (!is.numeric(basis) || any(basis < 1) || anyNA(basis)) {
-      stop("basis must be NULL, 'all', or a positive integer vector", call. = FALSE)
-    }
-  }
-
-  # Validate basis_weights argument
-  if (!is.null(basis_weights)) {
-    if (!is.numeric(basis_weights) || anyNA(basis_weights)) {
-      stop("basis_weights must be a numeric vector without NAs", call. = FALSE)
-    }
-    if (any(basis_weights < 0)) {
-      stop("basis_weights must be non-negative", call. = FALSE)
-    }
-    # Length validation will happen when we know the actual number of selected bases
-    # Just store the weights for now
-  }
-
-  ret <- list(A=A,
-              B=B,
-              where=where,
-              basis=basis,
-              basis_weights=basis_weights,
-              name=name)
-
-  class(ret) <- c("pair_contrast_spec", "contrast_spec", "list")
-  ret
+  .check_formula_arg(A, "A")
+  .check_formula_arg(B, "B")
+  .check_name_arg(name)
+  .check_where_arg(where)
+  .check_basis_args(basis, basis_weights)
+  structure(list(A = A, B = B, where = where, basis = basis,
+                 basis_weights = basis_weights, name = name),
+            class = c("pair_contrast_spec", "contrast_spec", "list"))
 }
 
 
@@ -768,43 +736,13 @@ pair_contrast <- function(A, B, name, where = NULL, basis = NULL, basis_weights 
 #'          \code{\link{pair_contrast}} for pairwise comparisons
 #' @export
 oneway_contrast <- function(A, name, where = NULL, basis = NULL, basis_weights = NULL) {
-  # Input validation
-  assert_that(rlang::is_formula(A),
-              msg = "A must be a formula")
-  assert_that(is.character(name) && length(name) == 1,
-              msg = "name must be a single character string")
-
-  if (!is.null(where)) {
-    assert_that(rlang::is_formula(where),
-                msg = "where must be a formula")
-  }
-
-  # Validate basis argument
-  if (!is.null(basis) && !identical(basis, "all")) {
-    if (!is.numeric(basis) || any(basis < 1) || anyNA(basis)) {
-      stop("basis must be NULL, 'all', or a positive integer vector", call. = FALSE)
-    }
-  }
-
-  # Validate basis_weights argument
-  if (!is.null(basis_weights)) {
-    if (!is.numeric(basis_weights) || anyNA(basis_weights)) {
-      stop("basis_weights must be a numeric vector without NAs", call. = FALSE)
-    }
-    if (any(basis_weights < 0)) {
-      stop("basis_weights must be non-negative", call. = FALSE)
-    }
-  }
-
-  structure(
-    list(A=A,
-         B=NULL,
-         where=where,
-         basis=basis,
-         basis_weights=basis_weights,
-         name=name),
-    class=c("oneway_contrast_spec", "contrast_spec", "list")
-  )
+  .check_formula_arg(A, "A")
+  .check_name_arg(name)
+  .check_where_arg(where)
+  .check_basis_args(basis, basis_weights)
+  structure(list(A = A, B = NULL, where = where, basis = basis,
+                 basis_weights = basis_weights, name = name),
+            class = c("oneway_contrast_spec", "contrast_spec", "list"))
 }
 
 #' Interaction Contrast
@@ -829,26 +767,11 @@ oneway_contrast <- function(A, name, where = NULL, basis = NULL, basis_weights =
 #'          \code{\link{pair_contrast}} for pairwise comparisons
 #' @export
 interaction_contrast <- function(A, name, where = NULL) {
-  # Input validation
-  assert_that(rlang::is_formula(A),
-              msg = "A must be a formula") 
-  assert_that(is.character(name) && length(name) == 1,
-              msg = "name must be a single character string")
-  
-  if (!is.null(where)) {
-    assert_that(rlang::is_formula(where),
-                msg = "where must be a formula")
-  }
-  
-  
-  
-  structure(
-    list(A=A,
-         B=NULL,
-         where=where,
-         name=name),
-    class=c("interaction_contrast_spec", "contrast_spec", "list")
-  )
+  .check_formula_arg(A, "A")
+  .check_name_arg(name)
+  .check_where_arg(where)
+  structure(list(A = A, B = NULL, where = where, name = name),
+            class = c("interaction_contrast_spec", "contrast_spec", "list"))
 }
 
 #' Column Contrast Specification
@@ -951,21 +874,14 @@ column_contrast <- function(pattern_A, pattern_B = NULL, name, where = NULL) {
     assert_that(is.character(pattern_B) && length(pattern_B) == 1,
                 msg = "pattern_B must be a single character string")
   }
-  assert_that(is.character(name) && length(name) == 1,
-              msg = "name must be a single character string")
+  .check_name_arg(name)
   if (!is.null(where)) {
       warning("'where' argument is currently ignored for column_contrast.")
   }
-
-  ret <- list(
-    pattern_A = pattern_A,
-    pattern_B = pattern_B,
-    where = where, # Store it even if unused for now
-    name = name
-  )
-
-  class(ret) <- c("column_contrast_spec", "contrast_spec", "list")
-  ret
+  structure(list(pattern_A = pattern_A, pattern_B = pattern_B,
+                 where = where, # stored even though unused
+                 name = name),
+            class = c("column_contrast_spec", "contrast_spec", "list"))
 }
 
 #' Polynomial Contrast
@@ -1013,52 +929,20 @@ column_contrast <- function(pattern_A, pattern_B = NULL, name, where = NULL) {
 #'
 #' @export
 poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, basis = NULL, basis_weights = NULL) {
-  # Input validation
-  assert_that(rlang::is_formula(A),
-              msg = "A must be a formula")
-  assert_that(is.character(name) && length(name) == 1,
-              msg = "name must be a single character string")
+  .check_formula_arg(A, "A")
+  .check_name_arg(name)
   assert_that(is.numeric(degree) && length(degree) == 1 && degree >= 1,
               msg = "degree must be a positive integer")
-
-  if (!is.null(where)) {
-    assert_that(rlang::is_formula(where),
-                msg = "where must be a formula")
-  }
+  .check_where_arg(where)
   if (!is.null(value_map)) {
     assert_that(is.list(value_map),
                 msg = "value_map must be a list")
   }
-
-  # Validate basis argument
-  if (!is.null(basis) && !identical(basis, "all")) {
-    if (!is.numeric(basis) || any(basis < 1) || anyNA(basis)) {
-      stop("basis must be NULL, 'all', or a positive integer vector", call. = FALSE)
-    }
-  }
-
-  # Validate basis_weights argument
-  if (!is.null(basis_weights)) {
-    if (!is.numeric(basis_weights) || anyNA(basis_weights)) {
-      stop("basis_weights must be a numeric vector without NAs", call. = FALSE)
-    }
-    if (any(basis_weights < 0)) {
-      stop("basis_weights must be non-negative", call. = FALSE)
-    }
-  }
-
-  ret <- list(
-    A=A,
-    B=NULL,
-    where=where,
-    degree=degree,
-    value_map=value_map,
-    basis=basis,
-    basis_weights=basis_weights,
-    name=name)
-
-  class(ret) <- c("poly_contrast_spec", "contrast_spec", "list")
-  ret
+  .check_basis_args(basis, basis_weights)
+  structure(list(A = A, B = NULL, where = where, degree = degree,
+                 value_map = value_map, basis = basis,
+                 basis_weights = basis_weights, name = name),
+            class = c("poly_contrast_spec", "contrast_spec", "list"))
 }
 
 #' Unit Contrast Weights
