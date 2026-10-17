@@ -103,7 +103,7 @@ feature <- function(x,
   }
 
   hrf_obj <- make_hrf(basis, lag, nbasis = if (missing(nbasis)) NULL else nbasis,
-                      label = .basis_arg_label(substitute(basis)))
+                      label = .basis_fun_label(substitute(basis)))
 
   ret <- list(
     name = final_id,

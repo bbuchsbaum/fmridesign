@@ -535,3 +535,10 @@ test_that("sub_basis.Ident subsets correctly", {
   ss <- sub_basis(ib, c(1, 3, 5))
   expect_equal(nrow(ss$y), 3)
 })
+
+test_that("parametric bases are named after their argument expression", {
+  d <- data.frame(x = c(1, 3, 2, 5), g = factor(c("a", "a", "b", "b")))
+  expect_equal(Poly(d$x, 2)$argname, "d$x")
+  expect_equal(Scale(d$x)$name, "z_d$x")
+  expect_equal(ScaleWithin(d$x, d$g)$name, "z_d$x_by_d$g")
+})

@@ -24,7 +24,7 @@ make_hrf <- function(basis, lag, nbasis = NULL, label = NULL) {
 
 # Label for a plain-function `basis` argument: the symbol it was passed as,
 # or "custom" for an inline function.
-.basis_arg_label <- function(expr) {
+.basis_fun_label <- function(expr) {
   if (is.symbol(expr)) as.character(expr) else "custom"
 }
 
@@ -222,7 +222,7 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
 
   # An omitted nbasis lets basis sets ("fir", "bspline", ...) use their own size
   basis_obj <- make_hrf(basis, lag, nbasis = if (missing(nbasis)) NULL else nbasis,
-                        label = .basis_arg_label(substitute(basis)))
+                        label = .basis_fun_label(substitute(basis)))
 
   # Call the internal constructor, passing quosures directly
   ret <- hrfspec(
@@ -435,7 +435,7 @@ trialwise <- function(basis   = "spmg1",
 
   # Name a plain-function basis here, where its expression is still visible
   if (is.function(basis) && !inherits(basis, "HRF")) {
-    basis <- fmrihrf::gen_hrf(basis, name = .basis_arg_label(substitute(basis)))
+    basis <- fmrihrf::gen_hrf(basis, name = .basis_fun_label(substitute(basis)))
   }
 
   term <- hrf(!!trial_expr,  # Use !! to inject the expression
