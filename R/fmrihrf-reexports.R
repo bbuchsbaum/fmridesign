@@ -23,7 +23,6 @@
 #'   [fmrihrf::blockids()] and [fmrihrf::nbasis()].
 #'
 #' @name fmrihrf-generics
-#' @importFrom fmrihrf onsets durations blockids nbasis
 #' @examples
 #' term <- event_term(
 #'   list(condition = factor(c("A", "B", "A"))),
