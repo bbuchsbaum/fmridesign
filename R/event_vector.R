@@ -389,7 +389,6 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
   }
   
   # --- Combine Tokens using expand.grid --- 
-  names(comp_tokens_list) <- names(Filter(function(tk) length(tk) > 0, x$events)) # Match names to filtered tokens
   full_grid <- expand.grid(comp_tokens_list, stringsAsFactors = FALSE)
   if (nrow(full_grid) == 0L) {
     cond_tags <- character(0)

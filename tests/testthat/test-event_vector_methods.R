@@ -165,6 +165,15 @@ test_that("conditions.event_term() returns canonical condition names", {
 
 # ── longnames.event_term() ───────────────────────────────────────────────
 
+test_that("conditions.event_term() skips a level-less factor in a multi-variable term", {
+  et <- suppressWarnings(event_term(
+    list(a = factor(character(0)), rt = numeric(0)),
+    onsets = numeric(0), blockids = numeric(0)
+  ))
+  expect_equal(conditions(et), "rt")
+  expect_equal(conditions(et, style = "display"), "rt")
+})
+
 test_that("longnames.event_term() returns canonical condition names", {
   et <- event_term(
     list(cond = factor(c("A", "B", "A"))),
