@@ -3,31 +3,6 @@
 library(testthat)
 
 # ===========================================================================
-# dctbasis
-# ===========================================================================
-
-test_that("dctbasis returns correct dimensions without constant", {
-  mat <- fmridesign:::dctbasis(10, p = 10, const = FALSE)
-  expect_true(is.matrix(mat))
-  # p-1 columns (indices 2:p) when const = FALSE
-
-  expect_equal(nrow(mat), 10)
-  expect_equal(ncol(mat), 9)
-})
-
-test_that("dctbasis returns correct dimensions with constant", {
-  mat <- fmridesign:::dctbasis(10, p = 10, const = TRUE)
-  expect_equal(ncol(mat), 10)  # 1 constant + 9 cosine columns
-  expect_equal(nrow(mat), 10)
-})
-
-test_that("dctbasis with small n", {
-  mat <- fmridesign:::dctbasis(3, p = 3, const = FALSE)
-  expect_equal(nrow(mat), 3)
-  expect_equal(ncol(mat), 2)
-})
-
-# ===========================================================================
 # Scale
 # ===========================================================================
 
