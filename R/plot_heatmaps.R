@@ -1321,4 +1321,3 @@ plot_contrasts.event_model <- function(x,
   plt
 }
 
-utils::globalVariables(c("y", "value", "r", "w", "lab", "tcol", "xend", "yend", "col"))

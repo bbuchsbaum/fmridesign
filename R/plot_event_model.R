@@ -576,5 +576,3 @@ plot.event_model <- function(x,
   plt
 }
 
-utils::globalVariables(c("Time", "Response", "Regressor", ".group", ".block", ".colour",
-                         "onset", "xintercept", "duration", "lab", "r", "x"))
