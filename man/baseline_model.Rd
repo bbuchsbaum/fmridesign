@@ -22,8 +22,10 @@ baseline_model(
 \item{sframe}{A sampling_frame object.}
 
 \item{intercept}{Character; whether to include an intercept ("runwise", "global", or "none").
-Ignored when \code{basis == "constant"} because the drift term already
-provides the constant baseline.}
+With \code{basis = "constant"} no separate intercept term is added, because
+the drift term is itself the constant baseline: \code{"global"} makes it a
+single column shared by all runs, while \code{"runwise"} and \code{"none"}
+give one constant column per run.}
 
 \item{nuisance_list}{Optional list of nuisance matrices or data frames (one per fMRI block).}
 

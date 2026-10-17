@@ -1,29 +1,7 @@
-#' Generic functions for fmridesign package
-#' 
-#' This file contains the generic functions used throughout the fmridesign package.
-#' These generics define the interface for working with event models, baseline models,
-#' and related design components.
-
-#' Construct an event model
-#' 
-#' This function creates an event-based fMRI regression model, represented as a data structure.
-#' 
-#' @param formula_or_list The model specification, typically a `formula`.
-#' @param data A data frame containing the experimental design.
-#' @param block A formula specifying the block structure of the design.
-#' @param sampling_frame A sampling frame defining the temporal and block structure.
-#' @param drop_empty Logical value indicating whether to drop empty factor levels.
-#' @param durations A numeric vector specifying the duration (in seconds) of each event.
-#' @param ... Additional arguments to be passed to methods.
-#' 
-#' @return An `event_model` object describing the task design.
-#' @export
-event_model <- function(formula_or_list, data = NULL, block = NULL, sampling_frame, drop_empty=TRUE, durations=0, ...) { 
-  UseMethod("event_model") 
-}
-
-# baseline_model is defined as a regular function in baseline_model.R
-# not as a generic with methods
+## Generic functions used throughout fmridesign: the interface for event
+## models, baseline models and related design components. (event_model() and
+## baseline_model() are ordinary constructors, defined in event_model.R and
+## baseline_model.R.)
 
 #' Extract cells from a design object
 #' 
@@ -483,9 +461,6 @@ term_indices.default <- function(x, ...) {
   col_indices
 }
 
-# baseline_term is defined as a regular function in baseline_model.R
-# not as a generic
-
 #' Construct method
 #'
 #' @param x The object.
@@ -576,7 +551,7 @@ split_onsets <- function(x, sframe, global = FALSE, blocksplit = FALSE, ...) Use
 #'
 #' # Baseline model example
 #' bmod <- baseline_model(basis = "poly", degree = 3, sframe = sframe)
-#' term_names(bmod)  # Returns c("constant", "baseline_poly_3")
+#' term_names(bmod)  # c(drift = "baseline_poly_3", block = "constant")
 #' @export
 term_names <- function(x, ...) UseMethod("term_names")
 

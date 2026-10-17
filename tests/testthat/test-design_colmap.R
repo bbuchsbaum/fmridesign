@@ -107,3 +107,16 @@ test_that("design_colmap.baseline_model has block-diagonal columns", {
   cm <- design_colmap(bmod)
   expect_true(any(cm$is_block_diagonal))
 })
+
+test_that("design_colmap marks a global constant drift column as shared", {
+  bm_global <- baseline_model(basis = "constant", intercept = "global", sframe = sframe)
+  cm <- design_colmap(bm_global)
+  expect_equal(cm$name, "base_constant")
+  expect_identical(cm$is_block_diagonal, FALSE)
+  expect_true(is.na(cm$run))
+
+  bm_runwise <- baseline_model(basis = "constant", intercept = "runwise", sframe = sframe)
+  cm_rw <- design_colmap(bm_runwise)
+  expect_identical(cm_rw$is_block_diagonal, c(TRUE, TRUE))
+  expect_identical(cm_rw$run, 1:2)
+})
