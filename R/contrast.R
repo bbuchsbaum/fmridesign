@@ -1198,8 +1198,9 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
                   stop(paste("Contrast '", x$name, "': Cannot coerce factor levels from formula A to numeric for poly contrast. Use value_map? Error: ", w$message), call.=FALSE)
               })
           } else {
-              mapped_vals <- x$value_map[as.character(vals_fac)]
-              if(anyNA(mapped_vals) || length(mapped_vals) != length(vals_fac)){
+              levs <- as.character(vals_fac)
+              mapped_vals <- x$value_map[levs]
+              if (!all(levs %in% names(x$value_map)) || anyNA(mapped_vals)) {
                   stop(paste("Contrast '", x$name, "': value_map does not cover all factor levels present in relevant cells."), call.=FALSE)
               }
               unlist(mapped_vals)

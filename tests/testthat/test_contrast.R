@@ -580,6 +580,27 @@ test_that("oneway_contrast with basis filtering - multiple basis", {
   expect_equal(length(cw$condnames), 9)  # 3 conditions × 3 basis functions
 })
 
+test_that("poly_contrast reports a value_map that misses factor levels", {
+  des <- data.frame(
+    onset = seq(2, 58, by = 4),
+    intensity = factor(rep(c("low", "medium", "high"), 5),
+                       levels = c("low", "medium", "high")),
+    run = 1
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = 50, TR = 2)
+  espec <- event_model(onset ~ hrf(intensity), data = des, block = ~run,
+                       sampling_frame = sframe)
+  term1 <- terms(espec)[[1]]
+  for (vm in list(list(low = 1, high = 3), list(low = 1))) {
+    con <- poly_contrast(~ intensity, name = "lin", degree = 1, value_map = vm)
+    expect_error(contrast_weights(con, term1),
+                 "value_map does not cover all factor levels")
+  }
+  ok <- poly_contrast(~ intensity, name = "lin", degree = 1,
+                      value_map = list(low = 1, medium = 2, high = 4))
+  expect_equal(ncol(contrast_weights(ok, term1)$weights), 1L)
+})
+
 test_that("poly_contrast with basis filtering", {
   des <- data.frame(
     onset = rep(seq(2, 58, by = 4), 2),
