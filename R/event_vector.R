@@ -1432,12 +1432,14 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
   ## ----------------------------------------------------------------
   ## 2. model.matrix() with the term's formula, named by conditions()
   ## ----------------------------------------------------------------
-  # model.matrix() fails on single-level factors; such a term is a single
-  # constant column.
-  has_single_level_factor <- any(vapply(df, function(col) is.factor(col) && nlevels(col) <= 1,
-                                        logical(1)))
+  # model.matrix() cannot code single-level factors. Such a factor is a
+  # constant indicator, so it is left out of the formula (its level still
+  # appears in the conditions() names); a term made only of such factors is a
+  # single constant column.
+  single_level <- vapply(df, function(col) is.factor(col) && nlevels(col) <= 1,
+                         logical(1))
   
-  if (has_single_level_factor) {
+  if (all(single_level)) {
     mm <- matrix(1, nrow = nrow(df), ncol = 1)
     expected_colnames_raw <- conditions(x, drop.empty = FALSE)
     if (length(expected_colnames_raw) > 0) {
@@ -1446,7 +1448,11 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
       colnames(mm) <- make.names(x$varname, unique = TRUE)
     }
   } else {
-    form <- formula(x)
+    form <- if (any(single_level)) {
+      stats::as.formula(paste("~ (", paste(names(df)[!single_level], collapse = ":"), "-1)"))
+    } else {
+      formula(x)
+    }
     mm <- try(model.matrix(form, data = df), silent=TRUE)
     if (inherits(mm, "try-error")) {
          stop("Failed to create model matrix for event term: ", x$varname, 

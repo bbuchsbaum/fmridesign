@@ -574,6 +574,36 @@ test_that("design_matrix.event_term() returns tibble for factor term", {
   expect_equal(ncol(dm), 2)
 })
 
+test_that("design_matrix.event_term() keeps other variables next to a single-level factor", {
+  # A one-level factor is a constant indicator: it must not collapse the
+  # other variables of the term into a single column of ones.
+  et_mod <- event_term(list(cond = factor(c("A", "A", "A")), rt = c(0.5, 1, 2)),
+                       onsets = c(1, 10, 20), blockids = c(1, 1, 1))
+  dm <- suppressWarnings(design_matrix(et_mod))
+  expect_named(dm, "cond.A_rt")
+  expect_equal(as.vector(dm[["cond.A_rt"]]), c(0.5, 1, 2))
+
+  et_fac <- event_term(list(cond = factor(c("A", "B", "C", "A")), task = factor(rep("go", 4))),
+                       onsets = c(1, 10, 20, 30), blockids = rep(1, 4))
+  dm2 <- design_matrix(et_fac)
+  expect_named(dm2, c("cond.A_task.go", "cond.B_task.go", "cond.C_task.go"))
+  expect_equal(as.vector(dm2[["cond.B_task.go"]]), c(0, 1, 0, 0))
+
+  # Only single-level factors: one constant column, as before
+  et_one <- event_term(list(cond = factor(c("A", "A"))), onsets = c(1, 10), blockids = c(1, 1))
+  expect_equal(as.vector(design_matrix(et_one)[["cond.A"]]), c(1, 1))
+})
+
+test_that("event_model() keeps all cells when a crossed factor has one level", {
+  des <- data.frame(onset = c(1, 10, 20, 30), run = 1,
+                    cond = factor(c("A", "B", "C", "A")), task = factor("go"))
+  sf <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
+  em <- event_model(onset ~ hrf(cond, task), data = des, block = ~run, sampling_frame = sf)
+  expect_equal(ncol(design_matrix(em)), 3L)
+  expect_equal(colnames(design_matrix(em)),
+               paste0("cond_task_cond.", c("A", "B", "C"), "_task.go"))
+})
+
 test_that("design_matrix.event_term() for numeric term returns value matrix", {
   vals <- c(0.5, 1.2, 0.8, 1.5)
   et <- event_term(
