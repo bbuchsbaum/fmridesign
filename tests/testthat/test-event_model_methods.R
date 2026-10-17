@@ -99,6 +99,23 @@ test_that("term_matrices keeps one (NULL) slot per column-less term", {
   expect_equal(ncol(tmats[[names(ci)[1]]]), length(ci[[1]]))
 })
 
+test_that("contrast_weights() strips the term_tag when the term name was de-duplicated", {
+  # The Ident() term (no tag) takes the list name "RT1_RT2", so the second
+  # term is listed as "RT1_RT2.1" while its columns keep the tag "RT1_RT2".
+  set.seed(1)
+  des2 <- data.frame(onset = seq(0, 90, by = 10), run = 1, RT1 = rnorm(10), RT2 = rnorm(10))
+  sf <- fmrihrf::sampling_frame(blocklens = 100, TR = 1)
+  em <- suppressMessages(event_model(
+    onset ~ hrf(Ident(RT1, RT2)) +
+      hrf(RT1, RT2, contrasts = contrast_set(contrast(~ `RT1:RT2`, name = "x"))),
+    data = des2, block = ~run, sampling_frame = sf
+  ))
+  expect_equal(names(terms(em))[2], "RT1_RT2.1")
+  expect_no_warning(cw <- contrast_weights(em))
+  w <- cw[["RT1_RT2.1#x"]]$offset_weights
+  expect_equal(unname(w[, 1]), c(0, 0, 1))
+})
+
 # =========================================================================
 # Section 4: conditions.event_model
 # =========================================================================

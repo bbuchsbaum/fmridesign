@@ -477,7 +477,8 @@ contrast_weights.event_model <- function(x, ...) {
             emb <- .embed_term_weights(cw$weights, colnames(x$design_matrix),
                                        term_indices_vec, tnames[i],
                                        label = sprintf("Contrast '%s'", cw$name),
-                                       strip_if_any_na = FALSE)
+                                       strip_if_any_na = FALSE,
+                                       col_prefix = attr(term, "term_tag") %||% tnames[i])
             if (is.null(emb)) return(NULL)
             if (!is.null(rownames(cw$weights))) {
                 cw$weights <- cw$weights[emb$keep, , drop=FALSE]
@@ -570,7 +571,8 @@ Fcontrasts.event_model <- function(x, ...) {
             emb <- .embed_term_weights(cw, colnames(x$design_matrix),
                                        term_indices_vec, tnames[i],
                                        label = sprintf("F-contrast '%s'", con_name),
-                                       strip_if_any_na = TRUE)
+                                       strip_if_any_na = TRUE,
+                                       col_prefix = attr(term_i, "term_tag") %||% tnames[i])
             if (is.null(emb)) return(NULL)
             out <- emb$out
             attr(out, "term_indices") <- as.vector(term_indices_vec)
@@ -602,7 +604,7 @@ Fcontrasts.event_model <- function(x, ...) {
 #'
 #' Returns a `length(dm_colnames) x ncol(W)` matrix that is zero outside the
 #' term's columns. Named rows of `W` are matched to the term's design columns,
-#' retrying without the `"<term_tag>_"` prefix when none match (or, with
+#' retrying without the `"<col_prefix>_"` prefix when none match (or, with
 #' `strip_if_any_na = TRUE`, when any fail to match); unmatched rows are dropped
 #' with a warning. Unnamed rows must align one-to-one with the term's columns,
 #' otherwise a warning is emitted and `NULL` returned.
@@ -610,16 +612,18 @@ Fcontrasts.event_model <- function(x, ...) {
 #' @param W Term-level weight matrix.
 #' @param dm_colnames Column names of the full design matrix.
 #' @param term_idx Integer column indices of the term in the design matrix.
-#' @param term_tag The term's name in the model (its column prefix).
+#' @param term_name The term's name in the model (used in messages).
 #' @param label Message prefix naming the contrast (e.g. `"Contrast 'x'"`).
 #' @param strip_if_any_na Logical; retry the prefix-stripped match when any
 #'   (rather than all) row names fail to match.
+#' @param col_prefix The term's column prefix: its `term_tag`, which differs
+#'   from `term_name` when the model de-duplicated the term names.
 #' @return `NULL`, or a list with the embedded matrix `out` and the logical
 #'   `keep` (which rows of `W` were placed).
 #' @keywords internal
 #' @noRd
-.embed_term_weights <- function(W, dm_colnames, term_idx, term_tag, label,
-                                strip_if_any_na = FALSE) {
+.embed_term_weights <- function(W, dm_colnames, term_idx, term_name, label,
+                                strip_if_any_na = FALSE, col_prefix = term_name) {
   out <- matrix(0, length(dm_colnames), ncol(W))
   colnames(out) <- colnames(W)
   rownames(out) <- dm_colnames
@@ -628,7 +632,7 @@ Fcontrasts.event_model <- function(x, ...) {
   if (is.null(rn)) {
     if (nrow(W) != length(term_idx)) {
       warning(sprintf("%s for term '%s' has %d rows, but term has %d columns in design matrix. Skipping.",
-                      label, term_tag, nrow(W), length(term_idx)), call. = FALSE)
+                      label, term_name, nrow(W), length(term_idx)), call. = FALSE)
       return(NULL)
     }
     out[term_idx, ] <- W
@@ -639,14 +643,14 @@ Fcontrasts.event_model <- function(x, ...) {
   m <- match(rn, term_cols)
   retry <- if (strip_if_any_na) anyNA(m) else all(is.na(m))
   if (retry && length(term_cols) > 0) {
-    prefix <- paste0(term_tag, "_")
+    prefix <- paste0(col_prefix, "_")
     if (all(startsWith(term_cols, prefix))) {
       m <- match(rn, substring(term_cols, nchar(prefix) + 1L))
     }
   }
   if (anyNA(m)) {
     warning(sprintf("%s for term '%s' has unmatched row names: %s",
-                    label, term_tag, paste(rn[is.na(m)], collapse = ", ")), call. = FALSE)
+                    label, term_name, paste(rn[is.na(m)], collapse = ", ")), call. = FALSE)
   }
   keep <- !is.na(m)
   if (any(keep)) {
