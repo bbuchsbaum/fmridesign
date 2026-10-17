@@ -1101,8 +1101,7 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
   if (nrow(term_cells) > 0 && length(all_condnames) > 0) {
       # A logical selector in `A` (e.g. `~ cond == "A"`) restricts the cells
       # further; a bare factor name (e.g. `~ cond`) selects every cell.
-      sel <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = term_cells),
-                      error = function(e) NULL)
+      sel <- tryCatch(.eval_cell_formula(x$A, term_cells), error = function(e) NULL)
       sel <- if (is.logical(sel) && length(sel) == nrow(term_cells)) !is.na(sel) & sel
       relevant_cells <- .contrast_where_cells(x, term_cells, select = sel)
 
@@ -1258,7 +1257,7 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
       relevant_cells <- .contrast_where_cells(x, term_cells)
 
       if (nrow(relevant_cells) > 0) {
-          vals_fac <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = relevant_cells), error = function(e) {
+          vals_fac <- tryCatch(.eval_cell_formula(x$A, relevant_cells), error = function(e) {
               stop(paste("Contrast '", x$name, "': Error evaluating formula A: ", e$message), call.=FALSE)
           })
 
@@ -1335,13 +1334,13 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
   relevant_cells <- .contrast_where_cells(x, term_cells)
 
   # Evaluate A and B formulas on the relevant cells
-  keepA_rel <- if(nrow(relevant_cells) > 0) tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = relevant_cells), error = function(e) {
+  keepA_rel <- if(nrow(relevant_cells) > 0) tryCatch(.eval_cell_formula(x$A, relevant_cells), error = function(e) {
       warning(paste("Contrast '", x$name, "': Error evaluating formula A: ", e$message), call. = FALSE)
       logical(nrow(relevant_cells)) # Return all FALSE on error
   }) else logical(0)
   
   keepB_rel <- if (is.null(x$B) || nrow(relevant_cells) == 0) NULL else {
-      tryCatch(rlang::eval_tidy(rlang::f_rhs(x$B), data = relevant_cells), error = function(e) {
+      tryCatch(.eval_cell_formula(x$B, relevant_cells), error = function(e) {
           warning(paste("Contrast '", x$name, "': Error evaluating formula B: ", e$message), call. = FALSE)
           logical(nrow(relevant_cells)) # Return all FALSE on error
       })

@@ -501,6 +501,39 @@ test_that("where formulas are evaluated in their own environment", {
                contrast_weights(poly_ref, term2)$weights)
 })
 
+test_that("selector formulas (A, B) are evaluated in their own environment", {
+  des <- expand.grid(category = c("face", "scene", "house"), rep = 1:3)
+  des$onset <- seq(2, by = 5, length.out = nrow(des))
+  des$run <- 1
+  des$intensity <- factor(rep(c(1, 2, 4), 3))
+  sframe <- fmrihrf::sampling_frame(blocklens = 100, TR = 2)
+  term1 <- terms(event_model(onset ~ hrf(category), data = des,
+                             block = ~run, sampling_frame = sframe))[[1]]
+  term2 <- terms(event_model(onset ~ hrf(intensity), data = des,
+                             block = ~run, sampling_frame = sframe))[[1]]
+
+  make_specs <- function(lvl, scale) {
+    list(
+      pair = pair_contrast(~ category == lvl, ~ category != lvl, name = "p"),
+      unit = unit_contrast(~ category == lvl, name = "u"),
+      poly = poly_contrast(~ as.numeric(as.character(intensity)) * scale,
+                           name = "lin", degree = 1)
+    )
+  }
+  ref <- list(
+    pair = pair_contrast(~ category == "scene", ~ category != "scene", name = "p"),
+    unit = unit_contrast(~ category == "scene", name = "u"),
+    poly = poly_contrast(~ intensity, name = "lin", degree = 1)
+  )
+  specs <- make_specs("scene", 10)
+  terms_for <- list(pair = term1, unit = term1, poly = term2)
+  for (nm in names(ref)) {
+    expect_silent(got <- contrast_weights(specs[[nm]], terms_for[[nm]]))
+    expect_equal(got$weights, contrast_weights(ref[[nm]], terms_for[[nm]])$weights,
+                 info = nm)
+  }
+})
+
 test_that("pair_contrast respects where clause", {
   simple_des <- expand.grid(category=c("face", "scene"), attention=c("attend", "ignored"))
   simple_des$onset <- seq(1, 50, length.out=nrow(simple_des))
