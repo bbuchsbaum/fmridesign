@@ -559,3 +559,24 @@ test_that("sliding_window_contrasts work with event model", {
     expect_equal(sum(w), 0, tolerance = 1e-8)
   }
 })
+
+test_that("contrast print methods return their argument invisibly", {
+  des <- data.frame(onset = c(0, 10, 20, 30), run = 1,
+                    cond = factor(c("A", "B", "A", "B")))
+  sframe <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
+  term1 <- terms(event_model(onset ~ hrf(cond), data = des, block = ~run,
+                             sampling_frame = sframe))[[1]]
+  pc <- pair_contrast(~ cond == "A", ~ cond == "B", name = "AB", where = ~ cond != "C")
+  objs <- list(
+    spec = pc,
+    poly = poly_contrast(~ cond, name = "lin", value_map = list(A = 1, B = 2)),
+    diff = pc - unit_contrast(~ cond == "A", name = "uA"),
+    contrast = contrast_weights(pc, term1)
+  )
+  for (nm in names(objs)) {
+    out <- capture.output(res <- withVisible(print(objs[[nm]])))
+    expect_false(res$visible, info = nm)
+    expect_identical(res$value, objs[[nm]], info = nm)
+    expect_true(length(out) > 0, info = nm)
+  }
+})

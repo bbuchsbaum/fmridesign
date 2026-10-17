@@ -925,6 +925,9 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, b
 
 #' Shared plumbing for the cell-based `contrast_weights()` methods
 #'
+#' `.eval_cell_formula()` evaluates the right-hand side of a spec formula
+#' with the cell table as data and the formula's own environment as the
+#' enclosure, so it can use variables from where the spec was created.
 #' `.contrast_where_cells()` restricts a term's cells to the spec's `where`
 #' subset (and to the optional logical `select`); an error while evaluating
 #' `where` becomes a warning and selects no cells.
@@ -938,9 +941,13 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, b
 #' `.cell_contrast_class()` is the class of the factorial (F-type) results.
 #' @keywords internal
 #' @noRd
+.eval_cell_formula <- function(f, cells) {
+  rlang::eval_tidy(rlang::f_rhs(f), data = cells, env = rlang::f_env(f))
+}
+
 .contrast_where_cells <- function(x, term_cells, select = NULL) {
   keep <- if (!is.null(x$where)) {
-    tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
+    tryCatch(.eval_cell_formula(x$where, term_cells), error = function(e) {
       warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
       rep(FALSE, nrow(term_cells))
     })
@@ -1094,8 +1101,7 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
   if (nrow(term_cells) > 0 && length(all_condnames) > 0) {
       # A logical selector in `A` (e.g. `~ cond == "A"`) restricts the cells
       # further; a bare factor name (e.g. `~ cond`) selects every cell.
-      sel <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = term_cells),
-                      error = function(e) NULL)
+      sel <- tryCatch(.eval_cell_formula(x$A, term_cells), error = function(e) NULL)
       sel <- if (is.logical(sel) && length(sel) == nrow(term_cells)) !is.na(sel) & sel
       relevant_cells <- .contrast_where_cells(x, term_cells, select = sel)
 
@@ -1251,7 +1257,7 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
       relevant_cells <- .contrast_where_cells(x, term_cells)
 
       if (nrow(relevant_cells) > 0) {
-          vals_fac <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = relevant_cells), error = function(e) {
+          vals_fac <- tryCatch(.eval_cell_formula(x$A, relevant_cells), error = function(e) {
               stop(paste("Contrast '", x$name, "': Error evaluating formula A: ", e$message), call.=FALSE)
           })
 
@@ -1328,13 +1334,13 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
   relevant_cells <- .contrast_where_cells(x, term_cells)
 
   # Evaluate A and B formulas on the relevant cells
-  keepA_rel <- if(nrow(relevant_cells) > 0) tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = relevant_cells), error = function(e) {
+  keepA_rel <- if(nrow(relevant_cells) > 0) tryCatch(.eval_cell_formula(x$A, relevant_cells), error = function(e) {
       warning(paste("Contrast '", x$name, "': Error evaluating formula A: ", e$message), call. = FALSE)
       logical(nrow(relevant_cells)) # Return all FALSE on error
   }) else logical(0)
   
   keepB_rel <- if (is.null(x$B) || nrow(relevant_cells) == 0) NULL else {
-      tryCatch(rlang::eval_tidy(rlang::f_rhs(x$B), data = relevant_cells), error = function(e) {
+      tryCatch(.eval_cell_formula(x$B, relevant_cells), error = function(e) {
           warning(paste("Contrast '", x$name, "': Error evaluating formula B: ", e$message), call. = FALSE)
           logical(nrow(relevant_cells)) # Return all FALSE on error
       })
@@ -1561,7 +1567,7 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
   display_names <- name_map$display
   
   if (!is.null(x$where)) {
-    keep <- rlang::eval_tidy(rlang::f_rhs(x$where), data=term.cells)
+    keep <- .eval_cell_formula(x$where, term.cells)
     assert_that(sum(keep) > 0)
     term.cells <- term.cells[keep, , drop = FALSE]
     condnames <- condnames[keep]
@@ -1675,8 +1681,7 @@ print.contrast_spec <- function(x,...) {
     cat(" B: ", Reduce(paste, deparse(x$B)), "\n")
   if (!is.null(x$where))
     cat(" where: ", Reduce(paste, deparse(x$where)), "\n")
-  
-
+  invisible(x)
 }
 
 #' Print Contrast
@@ -1694,8 +1699,8 @@ print.contrast <- function(x,...) {
   cat(" term: ", x$term$varname, "\n")
   cat(" weights: ", "\n")
   print(x$weights)
-  cat(" conditions: ", x$condnames)
-  
+  cat(" conditions: ", x$condnames, "\n")
+  invisible(x)
 }
 
 #' Print Polynomial Contrast Specification
@@ -1719,6 +1724,7 @@ print.poly_contrast_spec <- function(x,...) {
   if (!is.null(x$value_map)) {
     cat(" values: ", unlist(x$value_map), "\n")
   }
+  invisible(x)
 }
 
 #' Print Contrast Difference Specification
@@ -1734,6 +1740,7 @@ print.poly_contrast_spec <- function(x,...) {
 print.contrast_diff_spec <- function(x,...) {
   cat("contrast difference:", "\n")
   cat("  ", x$con1$name, "-", x$con2$name, "\n")
+  invisible(x)
 }
 
 #' plot_contrasts

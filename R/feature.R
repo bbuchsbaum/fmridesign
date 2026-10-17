@@ -102,7 +102,8 @@ feature <- function(x,
     final_id <- sanitize(final_id, allow_dot = FALSE)
   }
 
-  hrf_obj <- make_hrf(basis, lag, nbasis = if (missing(nbasis)) NULL else nbasis)
+  hrf_obj <- make_hrf(basis, lag, nbasis = if (missing(nbasis)) NULL else nbasis,
+                      label = .basis_arg_label(substitute(basis)))
 
   ret <- list(
     name = final_id,
@@ -495,7 +496,7 @@ construct.featurespec <- function(x, model_spec, ...) {
   }
   cond_per_col <- rep(base_cnames, each = nb)
   basis_per_col <- rep(seq_len(nb), times = n_cond)
-  basis_name <- if (!is.null(hrf)) class(hrf)[[1L]] else NA_character_
+  basis_name <- .hrf_basis_name(hrf)
 
   .make_col_metadata(
     name = colnames_final,
@@ -504,11 +505,7 @@ construct.featurespec <- function(x, model_spec, ...) {
     basis_name = basis_name,
     basis_ix = if (nb > 1L) basis_per_col else NA_integer_,
     basis_total = if (nb > 1L) as.integer(nb) else NA_integer_,
-    basis_label = if (nb > 1L) {
-      vapply(basis_per_col, function(j) .basis_label(basis_name, j), character(1))
-    } else {
-      NA_character_
-    },
+    basis_label = if (nb > 1L) .basis_label(basis_name, basis_per_col) else NA_character_,
     modulation_type = "feature",
     modulation_id = term$varname %||% NA_character_
   )
