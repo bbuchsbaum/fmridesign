@@ -723,7 +723,9 @@ oneway_contrast <- function(A, name, where = NULL, basis = NULL, basis_weights =
 #' Interaction Contrast
 #'
 #' @description
-#' Create an interaction contrast specification
+#' Create an interaction contrast specification. The contrast tests the
+#' highest-order interaction of all factors named in `A`; for example
+#' `~ A * B * C` gives the three-way interaction.
 #'
 #' @param A A formula specifying the interaction contrast
 #' @param name The name of the contrast
@@ -1133,9 +1135,10 @@ contrast_weights.interaction_contrast_spec <- function(x, term,...) {
 #' Helmert-coded cell weights for main-effect and interaction contrasts
 #'
 #' `generate_main_effect_contrast()` returns an n_cells x (k - 1) matrix for
-#' one factor. `generate_interaction_contrast()` returns the column-wise
-#' products of the main-effect codings of the first two `factors` (further
-#' factors are ignored). Callers set the dimnames.
+#' one factor. `generate_interaction_contrast()` returns all column-wise
+#' products of the main-effect codings of `factors` (the highest-order
+#' interaction, prod(k - 1) columns, the last factor's index varying fastest).
+#' Callers set the dimnames.
 #' @keywords internal
 #' @noRd
 generate_main_effect_contrast <- function(relevant_cells, fac_name) {
@@ -1146,14 +1149,14 @@ generate_main_effect_contrast <- function(relevant_cells, fac_name) {
 
 generate_interaction_contrast <- function(relevant_cells, factors) {
   if (length(factors) < 2) stop("At least two factors required for interaction contrast")
-  f1 <- factor(relevant_cells[[factors[1]]])
-  f2 <- factor(relevant_cells[[factors[2]]])
-  if (nlevels(f1) < 2 || nlevels(f2) < 2) stop("Each factor needs >= 2 levels for interaction")
-  A <- .helmert_cells(f1)                    # n x (k1-1)
-  B <- .helmert_cells(f2)                    # n x (k2-1)
-  # All pairwise products of columns of A and B (B's index varies fastest)
-  A[, rep(seq_len(ncol(A)), each = ncol(B)), drop = FALSE] *
-    B[, rep(seq_len(ncol(B)), times = ncol(A)), drop = FALSE]
+  facs <- lapply(factors, function(f) factor(relevant_cells[[f]]))
+  if (any(vapply(facs, nlevels, integer(1)) < 2)) stop("Each factor needs >= 2 levels for interaction")
+  # All products of one column from each factor's coding (n x prod(k - 1))
+  Reduce(function(A, f) {
+    B <- .helmert_cells(f)
+    A[, rep(seq_len(ncol(A)), each = ncol(B)), drop = FALSE] *
+      B[, rep(seq_len(ncol(B)), times = ncol(A)), drop = FALSE]
+  }, facs[-1], .helmert_cells(facs[[1]]))
 }
 
 # n x (k-1) weights per cell: level indicators times the Helmert basis
