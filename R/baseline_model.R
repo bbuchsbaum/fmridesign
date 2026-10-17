@@ -19,7 +19,7 @@
 .nuisance_colnames <- function(mat) {
   cn <- colnames(mat)
   if (is.null(cn)) {
-    cn <- paste0("V", seq_len(ncol(mat)))
+    cn <- sprintf("V%d", seq_len(ncol(mat)))  # character(0) for no columns
   }
   missing <- is.na(cn) | cn == ""
   cn[missing] <- paste0("V", which(missing))
@@ -536,7 +536,7 @@ make_nuisance_term <- function(nuisance_list,
       mat <- nuisance_list[[i]]
       lab <- .nuisance_labels(colnames(mat),
                               attr(mat, "nuisance_auto_index", exact = TRUE))
-      paste0(prefix, "_", lab, "_block_", i)
+      sprintf("%s_%s_block_%d", prefix, lab, i)  # character(0) for no columns
     }), use.names = FALSE)
 
   colind <- .index_runs(vapply(nuisance_list, ncol, integer(1)))
