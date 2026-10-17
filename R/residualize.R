@@ -34,9 +34,10 @@
 #' @rdname residualize-methods
 NULL
 
-# Internal workhorse: residualize with a numeric design matrix
-.residualize_with_matrix <- function(X, Y) {
+# Internal workhorse: residualize `Y` on (optionally a column subset of) `X`
+.residualize_with_matrix <- function(X, Y, cols = NULL) {
   if (!is.matrix(X)) X <- as.matrix(X)
+  if (!is.null(cols)) X <- X[, cols, drop = FALSE]
   if (inherits(Y, "data.frame")) Y <- as.matrix(Y)
   if (is.vector(Y)) Y <- matrix(Y, ncol = 1)
   stopifnot(is.numeric(X), is.numeric(Y))
@@ -50,44 +51,17 @@ NULL
 #' @export
 #' @rdname residualize-methods
 residualize.matrix <- function(x, data, cols = NULL, ...) {
-  X <- x
-  if (!is.null(cols)) {
-    if (is.character(cols)) {
-      X <- X[, cols, drop = FALSE]
-    } else {
-      X <- X[, cols, drop = FALSE]
-    }
-  }
-  .residualize_with_matrix(X, data)
+  .residualize_with_matrix(x, data, cols)
 }
 
 #' @export
 #' @rdname residualize-methods
 residualize.event_model <- function(x, data, cols = NULL, ...) {
-  dm <- design_matrix(x)
-  X <- as.matrix(dm)
-  if (!is.null(cols)) {
-    if (is.character(cols)) {
-      X <- X[, cols, drop = FALSE]
-    } else {
-      X <- X[, cols, drop = FALSE]
-    }
-  }
-  .residualize_with_matrix(X, data)
+  .residualize_with_matrix(design_matrix(x), data, cols)
 }
 
 #' @export
 #' @rdname residualize-methods
 residualize.baseline_model <- function(x, data, cols = NULL, ...) {
-  dm <- design_matrix(x)
-  X <- as.matrix(dm)
-  if (!is.null(cols)) {
-    if (is.character(cols)) {
-      X <- X[, cols, drop = FALSE]
-    } else {
-      X <- X[, cols, drop = FALSE]
-    }
-  }
-  .residualize_with_matrix(X, data)
+  .residualize_with_matrix(design_matrix(x), data, cols)
 }
-
