@@ -1033,6 +1033,8 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
                                         summate = TRUE, precision = 0.3,
                                         normalize = FALSE, ...) {
   term_tag <- attr(x, "term_tag")
+  # Name used in messages: a bare event_term has no term_tag
+  term_label <- term_tag %||% x$varname
 
   # --- Check for hrf_fun (per-onset HRF generator) ---
   hrfspec <- attr(x, "hrfspec")
@@ -1050,12 +1052,12 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
         hrf_fun(event_data),
         error = function(e) {
           stop(sprintf("hrf_fun failed for term '%s': %s",
-                       term_tag %||% x$varname, e$message), call. = FALSE)
+                       term_label, e$message), call. = FALSE)
         }
       )
     }
 
-    hrf_list <- validate_hrf_list(hrf_list, nrow(event_data), term_tag)
+    hrf_list <- validate_hrf_list(hrf_list, nrow(event_data), term_label)
     hrf <- hrf_list[[1]]
   }
 
@@ -1068,7 +1070,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   if (ncol(dmat) == 0L) {
     warning(sprintf(
       "Design matrix for term '%s' became empty after dropping. Convolution will result in an empty matrix.",
-      term_tag
+      term_label
     ), call. = FALSE)
     base_cnames <- character(0)
   }
@@ -1164,7 +1166,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   if (n_time == 0L) {
     warning(sprintf(
       "Convolution resulted in an empty matrix for term '%s'.\n  Returning tibble with correct names but 0 rows.",
-      term_tag
+      term_label
     ), call. = FALSE)
     empty <- matrix(numeric(0), nrow = 0, ncol = length(cn))
     colnames(empty) <- cn
@@ -1192,7 +1194,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
       cmat <- cbind(cmat, mean_col)
       cn <- c(cn, mean_col_name)
     } else {
-      warning(sprintf("Cannot add sum column for term '%s': no base columns generated.", term_tag))
+      warning(sprintf("Cannot add sum column for term '%s': no base columns generated.", term_label))
     }
   }
 
@@ -1201,7 +1203,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   } else {
     warning(sprintf(
       "Final column name count (%d) mismatch with convolved matrix columns (%d) for term '%s'. Using generic names.",
-      length(cn), ncol(cmat), term_tag
+      length(cn), ncol(cmat), term_label
     ), call. = FALSE)
     colnames(cmat) <- make.names(paste0("col_", seq_len(ncol(cmat))), unique = TRUE)
   }

@@ -437,6 +437,25 @@ test_that("convolve.event_term() with multi-basis HRF expands columns", {
   expect_equal(ncol(conv), 4)
 })
 
+test_that("convolve() warnings name a bare event_term (no term_tag)", {
+  # All-zero modulator: every design column is dropped, so convolve() warns
+  # that the design became empty. The warning must name the term.
+  et <- event_term(list(cond = factor(c("A", "B")), rt = c(0, 0)),
+                   onsets = c(1, 10), blockids = c(1, 1))
+  sf <- fmrihrf::sampling_frame(blocklens = 30, TR = 1)
+  msgs <- character()
+  out <- withCallingHandlers(
+    convolve(et, fmrihrf::HRF_SPMG1, sf),
+    warning = function(w) {
+      msgs <<- c(msgs, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_equal(ncol(out), 0L)
+  expect_true(any(grepl("Design matrix for term 'cond:rt' became empty", msgs, fixed = TRUE)))
+  expect_false(any(msgs == ""))
+})
+
 test_that("convolve.event_term() with normalize=TRUE peak-normalizes", {
   et <- event_term(
     list(cond = factor(c("A", "B", "A", "B"))),
