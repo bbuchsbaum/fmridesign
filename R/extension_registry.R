@@ -249,14 +249,13 @@ list_external_hrfspecs <- function() {
 #' )
 #' requires_external_processing("demo_hrfspec")
 requires_external_processing <- function(x) {
-  # Check if it's a registered external spec
-  if (is_external_hrfspec(x)) {
-    # Get the info for the first matching class
-    for (cls in class(x)) {
-      info <- get_external_hrfspec_info(cls)
-      if (!is.null(info)) {
-        return(info$requires_external_processing)
-      }
+  # A registered external spec, given as an object or (as for
+  # is_external_hrfspec()) as a class name: use the first registered class
+  classes <- if (is.character(x)) x else class(x)
+  for (cls in classes) {
+    info <- get_external_hrfspec_info(cls)
+    if (!is.null(info)) {
+      return(info$requires_external_processing)
     }
   }
 
