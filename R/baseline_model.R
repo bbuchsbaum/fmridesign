@@ -135,6 +135,26 @@
   split(seq_len(sum(fmrihrf::blocklens(sframe))), fmrihrf::blockids(sframe))
 }
 
+# Consecutive integer index runs of the given lengths:
+# list(1:n1, n1 + 1:n2, ...), with integer(0) for a zero length.
+.index_runs <- function(lens) {
+  lens <- as.integer(lens)
+  offsets <- cumsum(lens) - lens
+  lapply(seq_along(lens), function(i) offsets[i] + seq_len(lens[i]))
+}
+
+# Stack per-block matrices into one dense block-diagonal matrix: block i
+# occupies its own rows and its own columns, with zeros elsewhere.
+.block_diag <- function(mats) {
+  rows <- .index_runs(vapply(mats, nrow, integer(1)))
+  cols <- .index_runs(vapply(mats, ncol, integer(1)))
+  out <- matrix(0, sum(lengths(rows)), sum(lengths(cols)))
+  for (i in seq_along(mats)) {
+    out[rows[[i]], cols[[i]]] <- mats[[i]]
+  }
+  out
+}
+
 .baseline_matrix_for_block <- function(baseline_terms, rows, tol) {
   if (length(baseline_terms) == 0) {
     return(matrix(numeric(length(rows) * 0), nrow = length(rows)))
@@ -515,45 +535,6 @@ print.nuisance_check <- function(x, ...) {
   invisible(x)
 }
 
-#' Calculate column indices for a list of block matrices
-#'
-#' Given a list of matrices (e.g., one per block), this function calculates
-#' the corresponding column indices for each matrix as they would appear
-#' when combined into a block-diagonal structure.
-#'
-#' @param mat_list A list of matrices. Each element must be a matrix.
-#' @return A list where each element is an integer vector of column indices
-#'         corresponding to the matrix in the input list.
-#' @noRd
-#' @keywords internal
-get_col_inds <- function(mat_list) {
-  # mat_list must be a list containing only matrices
-  if (!is.list(mat_list)) {
-    stop("mat_list must be a list")
-  }
-  if (!all(vapply(mat_list, is.matrix, logical(1)))) {
-    stop("All elements of mat_list must be matrices")
-  }
-  ncols_per_block <- vapply(mat_list, ncol, integer(1))
-  if (any(ncols_per_block < 0)) {
-      stop("Matrices in mat_list must have non-negative number of columns.")
-  }
-  
-  # Cumulative sum of columns, starting from 0
-  cum_ncols <- c(0, cumsum(ncols_per_block))
-  
-  # Generate sequences of column indices for each block
-  lapply(seq_along(ncols_per_block), function(i) {
-    if (ncols_per_block[i] > 0) {
-      # Indices are from (cumulative cols before this block + 1) to (cumulative cols up to this block)
-      (cum_ncols[i] + 1):cum_ncols[i + 1]
-    } else {
-      # Return an empty integer vector if a block has 0 columns
-      integer(0)
-    }
-  })
-}
-
 #' Build a baseline_term from a list of block-wise nuisance matrices
 #'
 #' @param nuisance_list list of numeric matrices or data frames, **one per run/block**.
@@ -567,18 +548,7 @@ make_nuisance_term <- function(nuisance_list,
                                prefix = "nuis") {
 
   nuisance_list <- .as_nuisance_matrices(nuisance_list, sframe)
-
-  ## --- assemble block-diagonal matrix ------------------------------------
-  # Ensure all elements are plain matrices without special attributes
-  nuisance_mats <- lapply(nuisance_list, function(x) {
-    mat <- as.matrix(x)
-    # Remove any special class attributes that might interfere with bdiag
-    class(mat) <- "matrix"
-    attributes(mat) <- list(dim = dim(mat), dimnames = dimnames(mat))
-    mat
-  })
-  full_mat <- as.matrix(Matrix::bdiag(nuisance_mats))
-  ncols    <- ncol(full_mat)
+  full_mat <- .block_diag(nuisance_list)
 
   ## names: <prefix>_<label>_block_<block>, matching the drift columns
   ## (base_<basis><k>_block_<block>). <label> is the sanitised user column
@@ -591,11 +561,8 @@ make_nuisance_term <- function(nuisance_list,
       paste0(prefix, "_", lab, "_block_", i)
     }), use.names = FALSE)
 
-  ## bookkeeping lists
-  colind <- get_col_inds(lapply(nuisance_list, as.matrix))
-  rowind <- split(seq_len(nrow(full_mat)), fmrihrf::blockids(sframe))
-
-  term <- baseline_term("nuisance", full_mat, colind, rowind)
+  colind <- .index_runs(vapply(nuisance_list, ncol, integer(1)))
+  term <- baseline_term("nuisance", full_mat, colind, .block_rows(sframe))
   # The user's own column names (e.g. motion parameter names), unsanitised,
   # for display. Unnamed columns are labelled "<prefix> <index>".
   term$source_colnames <- unlist(lapply(nuisance_list, function(m) {
@@ -899,72 +866,35 @@ block <- function(x) {
 construct.baselinespec <- function(x, model_spec, ...) {
   sampling_frame <- if (!is.null(model_spec$sampling_frame)) model_spec$sampling_frame else model_spec
   
-  bl <- fmrihrf::blocklens(sampling_frame) # Normalize block lengths usage
-  
-  # Validate block lengths
+  bl <- fmrihrf::blocklens(sampling_frame)
   if (length(bl) == 0 || any(bl <= 0)) {
     stop("Invalid block lengths: must have at least one block with positive length")
   }
-  
-  # Compute baseline covariates for each block, passing correct argument name
+  rowind <- .block_rows(sampling_frame)
+
+  # A global constant is a single column of ones shared by every block
+  if (x$basis == "constant" && x$intercept == "global") {
+    mat <- matrix(1, nrow = sum(bl), ncol = 1,
+                  dimnames = list(NULL, paste0("base_", x$basis)))
+    return(baseline_term(x$name, mat, rep(list(1L), length(rowind)), rowind))
+  }
+
+  # Otherwise one drift basis per block, assembled block-diagonally
   ret_list <- lapply(bl, function(block_len) {
     if (x$basis == "ns") {
       x$fun(seq(1, block_len), df = x$degree)
     } else if (x$basis %in% c("poly", "bs")) {
       x$fun(seq(1, block_len), degree = x$degree)
-    } else { 
+    } else {
       x$fun(seq(1, block_len))
     }
   })
-  
-  # Check that ret_list is not empty
-  if (length(ret_list) == 0) {
-    stop("No baseline terms could be constructed: ret_list is empty")
-  }
-  
-  # Simplified handling for global constant intercept
-  if (x$basis == "constant" && x$intercept == "global") {
-    mat <- matrix(1, nrow = sum(bl), ncol = 1)
-    cnames <- paste0("base_", x$basis)
-    colnames(mat) <- cnames
-    # The single column is shared by every block
-    rowind <- split(seq_len(nrow(mat)), fmrihrf::blockids(sampling_frame))
-    colind <- rep(list(1L), length(rowind))
-    return(baseline_term(x$name, mat, colind, rowind))
-  }
-  
-  # Standard block-wise construction
-  nc_per_block <- ncol(ret_list[[1]])
-  total_cols <- length(ret_list) * nc_per_block
-  mat <- matrix(0, sum(bl), total_cols)
-  
-  colind <- vector("list", length(ret_list))
-  rowind <- vector("list", length(ret_list))
-  all_cnames <- vector("character", total_cols)
-  
-  current_col <- 1
-  current_row <- 1
-  for (i in seq_along(ret_list)) {
-    rows_this_block <- bl[i]
-    cols_this_block <- nc_per_block
-    
-    row_indices <- current_row:(current_row + rows_this_block - 1)
-    col_indices <- current_col:(current_col + cols_this_block - 1)
-    
-    mat[row_indices, col_indices] <- ret_list[[i]]
-    colind[[i]] <- col_indices
-    rowind[[i]] <- row_indices
-    
-    # Generate column names for this block
-    cnames_block <- paste0("base_", x$basis, 1:cols_this_block, "_block_", i)
-    all_cnames[col_indices] <- cnames_block
-    
-    current_row <- current_row + rows_this_block
-    current_col <- current_col + cols_this_block
-  }
-  
-  colnames(mat) <- all_cnames
-  baseline_term(x$name, mat, colind, rowind)
+  ncols <- vapply(ret_list, ncol, integer(1))
+  mat <- .block_diag(ret_list)
+  colnames(mat) <- unlist(lapply(seq_along(ncols), function(i) {
+    paste0("base_", x$basis, seq_len(ncols[i]), "_block_", i)
+  }))
+  baseline_term(x$name, mat, .index_runs(ncols), unname(rowind))
 }
 
 #' Construct a Baseline Term
@@ -1063,31 +993,22 @@ construct_block_term <- function(vname, sframe, intercept = c("global", "runwise
   intercept <- match.arg(intercept)
   blockids_vec <- fmrihrf::blockids(sframe)
   blockord <- sort(unique(blockids_vec))
-  n_total_scans <- length(blockids_vec)
-  n_blocks <- length(blockord)
-  
-  if (n_blocks == 1 || intercept == "global") {
-    # Simple global intercept: single column of 1s
-    mat <- matrix(1, nrow = n_total_scans, ncol = 1)
-    cnames <- paste0(vname, "_global")
-    colnames(mat) <- cnames
-    # Even for global intercept, we need to respect block structure for row indices
-    colind <- rep(list(1), n_blocks)  # Same column for all blocks
-    rowind <- split(1:n_total_scans, blockids_vec)  # Split rows by block
+
+  if (length(blockord) == 1 || intercept == "global") {
+    # Global intercept: one column of 1s shared by every block
+    mat <- matrix(1, nrow = length(blockids_vec), ncol = 1,
+                  dimnames = list(NULL, paste0(vname, "_global")))
+    colind <- rep(list(1), length(blockord))
   } else {
-    # Runwise intercept: use model.matrix once
-    # Create the factor directly for model.matrix
-    expanded_blockids_fac <- factor(blockids_vec, levels = blockord) 
+    # Runwise intercept: one indicator column per block. (The "assign" and
+    # "contrasts" attributes model.matrix() adds end up on every design-matrix
+    # column, so this call is kept as is.)
+    expanded_blockids_fac <- factor(blockids_vec, levels = blockord)
     mat <- model.matrix(~ expanded_blockids_fac - 1)
-    cnames <- paste0(vname, "_", blockord)
-    colnames(mat) <- cnames
-    # colind and rowind reflect the block structure
-    colind <- as.list(1:n_blocks) 
-    rowind <- split(1:n_total_scans, blockids_vec)
+    colnames(mat) <- paste0(vname, "_", blockord)
+    colind <- as.list(seq_along(blockord))
   }
-  
-  # Use baseline_term constructor directly
-  baseline_term(vname, mat, colind, rowind) 
+  baseline_term(vname, mat, colind, .block_rows(sframe))
 }
 
 #' @export
