@@ -857,7 +857,6 @@ design_map.baseline_model <- function(x,
     ".\nDiagonal: variance inflation factor of each column, with run means removed",
     if (n_runs > 1L) " (per-run intercepts)" else "", ".")
 
-  x_idx <- y_idx <- seq_len(p)
   groups <- .fd_hm_groups(ci$term, ci$term_label)
   bounds <- .fd_hm_boundaries(groups)
 
@@ -1326,5 +1325,4 @@ plot_contrasts.event_model <- function(x,
   plt
 }
 
-utils::globalVariables(c("y", "value", "r", "w", "lab", "tcol", "xend", "yend", "col",
-                         "xmin", "xmax", "ymin", "ymax"))
+utils::globalVariables(c("y", "value", "r", "w", "lab", "tcol", "xend", "yend", "col"))

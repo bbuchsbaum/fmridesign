@@ -165,7 +165,7 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
 }
 
 # Build a tidy description of each design-matrix column: which term it belongs
-# to, a human-readable label, basis index, run, and role. Built from the
+# to, a human-readable label, basis index and run. Built from the
 # `col_metadata` attached by the model builders so it follows the actual data
 # layout rather than re-parsing column names.
 .fd_colinfo <- function(x) {
@@ -174,34 +174,29 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
   n <- ncol(DM)
   if (is.null(cm) || nrow(cm) != n) {
     cm <- data.frame(col = seq_len(n), name = colnames(DM), term_tag = "design",
-                     condition = colnames(DM), run = NA_integer_, role = NA_character_,
+                     condition = colnames(DM), run = NA_integer_,
                      basis_ix = NA_integer_, basis_total = NA_integer_,
                      basis_label = NA_character_, stringsAsFactors = FALSE)
   }
   cm$name <- colnames(DM)
   term_vars <- .fd_term_vars(x)
 
-  lab <- vapply(seq_len(n), function(i) {
-    tt <- cm$term_tag[i]
-    cond <- cm$condition[i]
-    if (inherits(x, "baseline_model")) return(.fd_baseline_label(cm[i, ]))
-    if (is.na(cond)) return(cm$name[i])
-    .fd_condition_label(cond, term_vars[[tt]] %||% character(0))
-  }, character(1))
-
   if (inherits(x, "baseline_model")) {
+    lab <- vapply(seq_len(n), function(i) .fd_baseline_label(cm[i, ]), character(1))
     # Nuisance columns (`nuis_<name>_block_<run>`): design_colmap() supplies
-    # the run and role; label them with the user's own column names.
+    # the run; label them with the user's own column names.
     nz <- cm$term_tag %in% "nuisance"
     if (any(nz)) {
-      cm$role[nz] <- "nuisance"
       src <- tryCatch(terms(x)[["nuisance"]]$source_colnames, error = function(e) NULL)
-      if (length(src) == sum(nz)) {
-        lab[nz] <- src
-      } else {
-        lab[nz] <- sub("^nuis_(.*)_block_[0-9]+$", "\\1", cm$name[nz])
-      }
+      lab[nz] <- if (length(src) == sum(nz)) src else
+        sub("^nuis_(.*)_block_[0-9]+$", "\\1", cm$name[nz])
     }
+  } else {
+    lab <- vapply(seq_len(n), function(i) {
+      cond <- cm$condition[i]
+      if (is.na(cond)) return(cm$name[i])
+      .fd_condition_label(cond, term_vars[[cm$term_tag[i]]] %||% character(0))
+    }, character(1))
   }
 
   term <- cm$term_tag
@@ -211,21 +206,15 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
     if (length(v) > 1L) paste(v, collapse = .fd_u(" {times} ")) else if (length(v) == 1L) v else tt
   }, character(1))
 
-  basis_ix <- cm$basis_ix
-  basis_label <- cm$basis_label
-  cond_key <- lab
-
   out <- data.frame(
     col         = seq_len(n),
     name        = cm$name,
     term        = term,
     term_label  = unname(term_lab),
     label       = lab,
-    cond_key    = cond_key,
-    basis_ix    = basis_ix,
-    basis_label = basis_label,
+    basis_ix    = cm$basis_ix,
+    basis_label = cm$basis_label,
     run         = cm$run,
-    role        = cm$role,
     stringsAsFactors = FALSE
   )
   # Full label: add basis component (event models) or run (baseline models)
@@ -268,7 +257,6 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
   if (!inherits(x, "event_model")) return(list())
   tms <- x$terms
   if (is.null(tms)) return(list())
-  cm <- attr(design_matrix(x), "col_metadata")
   tags <- names(attr(design_matrix(x), "col_indices")) %||% names(tms)
   out <- lapply(tms, function(t) {
     ev <- t$events %||% list()
@@ -283,7 +271,8 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
 # Time / run helpers
 # ---------------------------------------------------------------------------
 
-# Per-scan run ids and times plus a run table for bands and labels.
+# Per-scan run ids and times plus a run table for run rules and labels. A
+# frame that does not match the design's rows falls back to scan units.
 .fd_timeline <- function(sframe, n_rows, block_x = c("global", "run")) {
   block_x <- match.arg(block_x)
   if (is.null(sframe)) {
@@ -326,12 +315,9 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
 # ---------------------------------------------------------------------------
 
 # Run idiom for time-series plots: hairline rules at run boundaries (drawn by
-# the caller as geom_vline so tests can find them) and "Run k" labels on the
-# top axis. No shading: shading only alternate runs made unshaded runs read as
-# "no run".
-.fd_run_layers <- function(runs, ...) list()
-
-# Secondary (top) axis carrying "Run k" labels at run midpoints.
+# the caller as geom_vline so tests can find them) and "Run k" labels at run
+# midpoints on this secondary (top) axis. No shading: shading only alternate
+# runs made unshaded runs read as "no run".
 .fd_run_sec_axis <- function(runs) {
   if (is.null(runs) || nrow(runs) < 2L) return(ggplot2::waiver())
   ggplot2::sec_axis(~ ., breaks = (runs$start + runs$end) / 2,
@@ -438,5 +424,3 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
 .fd_shade <- function(col, amount = 0.45) {
   grDevices::colorRampPalette(c(col, .fd_ink$text), space = "Lab")(100)[round(amount * 100)]
 }
-
-utils::globalVariables(c("start", "end"))

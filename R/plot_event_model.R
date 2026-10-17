@@ -16,9 +16,9 @@
 #' * `"overlay"`: all regressors on one shared amplitude axis, useful for
 #'   comparing magnitudes directly.
 #'
-#' Runs are shown as alternating light bands labelled along the top edge, with
-#' thin rules at each run's start and end so late starts and overruns are
-#' easy to spot. Lines never connect across a run boundary.
+#' Runs are labelled along the top edge, with thin rules at each run's start
+#' and end so late starts and overruns are easy to spot. Lines never connect
+#' across a run boundary.
 #'
 #' @param x An \code{event_model} object.
 #' @param term_name Character. Name of a specific term to plot. If `NULL`,
@@ -245,7 +245,6 @@ plot.event_model <- function(x,
     plt <- plt + ggplot2::geom_blank(data = blank, ggplot2::aes(x = Time, y = Response),
                                      inherit.aes = FALSE)
   }
-  if (!facet_by_block && block_x == "global") plt <- plt + .fd_run_layers(runs)
   if (!is.null(bound_df)) {
     plt <- plt + ggplot2::geom_vline(
       data = bound_df, ggplot2::aes(xintercept = xintercept),
@@ -571,5 +570,5 @@ plot.event_model <- function(x,
   plt
 }
 
-utils::globalVariables(c("Time", "Response", "Regressor", ".group", ".block", ".row",
-                         ".basis", ".colour", "onset", "xintercept", "duration", "lab", "r", "x"))
+utils::globalVariables(c("Time", "Response", "Regressor", ".group", ".block", ".colour",
+                         "onset", "xintercept", "duration", "lab", "r", "x"))
