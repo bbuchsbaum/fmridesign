@@ -1681,8 +1681,7 @@ print.contrast_spec <- function(x,...) {
     cat(" B: ", Reduce(paste, deparse(x$B)), "\n")
   if (!is.null(x$where))
     cat(" where: ", Reduce(paste, deparse(x$where)), "\n")
-  
-
+  invisible(x)
 }
 
 #' Print Contrast
@@ -1700,8 +1699,8 @@ print.contrast <- function(x,...) {
   cat(" term: ", x$term$varname, "\n")
   cat(" weights: ", "\n")
   print(x$weights)
-  cat(" conditions: ", x$condnames)
-  
+  cat(" conditions: ", x$condnames, "\n")
+  invisible(x)
 }
 
 #' Print Polynomial Contrast Specification
@@ -1725,6 +1724,7 @@ print.poly_contrast_spec <- function(x,...) {
   if (!is.null(x$value_map)) {
     cat(" values: ", unlist(x$value_map), "\n")
   }
+  invisible(x)
 }
 
 #' Print Contrast Difference Specification
@@ -1740,6 +1740,7 @@ print.poly_contrast_spec <- function(x,...) {
 print.contrast_diff_spec <- function(x,...) {
   cat("contrast difference:", "\n")
   cat("  ", x$con1$name, "-", x$con2$name, "\n")
+  invisible(x)
 }
 
 #' plot_contrasts
