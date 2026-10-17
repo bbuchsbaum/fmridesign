@@ -1,17 +1,10 @@
 ###############################################################################
 ## BASELINE_MODEL.R
 ##
-## This file implements baseline model construction for fMRI analyses.
-## It includes helper routines for:
-##   - Extracting column indices from a list of matrices.
-##   - Constructing baseline models that account for drift, block-wise
-##     intercepts, and nuisance regressors.
-##   - Creating design matrices and terms for baseline models.
-##   - Specifying block and nuisance terms.
-##   - Printing and plotting baseline models.
-##
-## The file has been organized into sections with additional inline comments
-## for clarity. Functionality is preserved exactly as in the original file.
+## Baseline model construction for fMRI analyses: drift terms (constant, poly,
+## bs, ns), block-wise intercepts and nuisance regressors; the nuisance
+## diagnostics behind check_nuisance() / clean_nuisance(); and the
+## design-matrix, term and print methods for baseline models.
 ###############################################################################
 
 ## ============================================================================
@@ -44,15 +37,13 @@
          call. = FALSE)
   }
 
-  nb <- length(fmrihrf::blocklens(sframe))
   bl_lens <- fmrihrf::blocklens(sframe)
-
-  if (length(nuisance_list) != nb) {
+  if (length(nuisance_list) != length(bl_lens)) {
     stop("length(nuisance_list) must equal number of blocks in sframe.",
          call. = FALSE)
   }
 
-  mats <- lapply(seq_along(nuisance_list), function(i) {
+  lapply(seq_along(nuisance_list), function(i) {
     mat <- as.matrix(nuisance_list[[i]])
     if (!(is.numeric(mat) || is.logical(mat))) {
       stop(sprintf("nuisance_list[[%d]] must contain only numeric, integer, or logical columns.", i),
@@ -73,8 +64,6 @@
     attr(mat, "nuisance_auto_index") <- as.integer(auto_index)
     mat
   })
-
-  mats
 }
 
 # Column labels for nuisance regressors in the design matrix. User-supplied
@@ -727,17 +716,13 @@ baseline <- function(degree = 1, basis = c("constant", "poly", "bs", "ns"), name
 #' bmod <- baseline_model(sframe = sframe)
 #' head(design_matrix(bmod))
 design_matrix.baseline_model <- function(x, blockid = NULL, allrows = FALSE, ...) {
-  # Map design_matrix over the terms list, passing blockid and allrows
   mats <- purrr::map(x$terms, design_matrix, blockid = blockid, allrows = allrows)
-  # Combine the resulting matrices column-wise using bind_cols for safety and tibble output
   dplyr::bind_cols(mats)
 }
 
 #' @method terms baseline_model
 #' @export
-#' @importFrom purrr map_lgl
 terms.baseline_model <- function(x, ...) {
-  # Simply return the terms list
   x$terms
 }
 
@@ -750,39 +735,19 @@ baseline_terms.baseline_model <- function(x, ...) {
 
 #' @export
 term_matrices.baseline_model <- function(x, ...) {
-  # Get the design matrix and check for col_indices attribute
-  dm <- design_matrix(x)
-  col_indices <- attr(dm, "col_indices")
+  # (A baseline design matrix never carries a "col_indices" attribute, so the
+  # per-term matrices are always taken from the terms themselves.)
+  result <- vector("list", length(x$terms))
+  names(result) <- names(x$terms)
 
-  if (is.null(col_indices)) {
-    # Fallback: construct indices by computing design matrices for each term
-    result <- vector("list", length(x$terms))
-    names(result) <- names(x$terms)
-
-    for (i in seq_along(x$terms)) {
-      term_dm <- design_matrix(x$terms[[i]])
-      if (ncol(term_dm) > 0) {
-        result[[i]] <- term_dm
-      } else {
-        result[[i]] <- NULL
-      }
-    }
-    return(result)
-  }
-
-  # Use col_indices if available
-  result <- vector("list", length(col_indices))
-  names(result) <- names(col_indices)
-
-  for (i in seq_along(col_indices)) {
-    indices <- col_indices[[i]]
-    if (length(indices) > 0) {
-      result[[i]] <- dm[, indices, drop = FALSE]
+  for (i in seq_along(x$terms)) {
+    term_dm <- design_matrix(x$terms[[i]])
+    if (ncol(term_dm) > 0) {
+      result[[i]] <- term_dm
     } else {
       result[[i]] <- NULL
     }
   }
-
   result
 }
 
@@ -792,24 +757,15 @@ term_matrices.baseline_model <- function(x, ...) {
 #' @importFrom dplyr mutate tibble
 #' @importFrom stringr str_pad
 cells.baseline_model <- function(x, drop.empty = TRUE, ...) {
-  # Use lapply over x$terms
   cells_list <- lapply(x$terms, function(term) {
     conds <- conditions(term)
     ncond <- length(conds)
-    # Handle case with zero conditions gracefully
     if (ncond == 0) return(dplyr::tibble(term = character(0), level = character(0), basis = character(0)))
-    # Use str_pad for consistent zero-padding
     basis_names <- stringr::str_pad(1:ncond, width = ceiling(log10(ncond + 1e-6)), pad = "0")
     dplyr::tibble(term = term$varname, level = conds, basis = paste0("basis", basis_names))
   })
-  # Use do.call(rbind, ...) to combine
   combined_cells <- do.call(rbind, cells_list)
-  # Add index column if there are rows
-  if(nrow(combined_cells) > 0) {
-     dplyr::mutate(combined_cells, index = 1:dplyr::n())
-  } else {
-     dplyr::mutate(combined_cells, index = integer(0))
-  }
+  dplyr::mutate(combined_cells, index = seq_len(nrow(combined_cells)))
 }
 
 ## ============================================================================
@@ -880,21 +836,12 @@ construct.baselinespec <- function(x, model_spec, ...) {
 #'
 #' @param varname The name of the term.
 #' @param mat A matrix (or data frame) of covariates.
-#' @param colind A list of column indices.
-#' @param rowind A list of row indices.
+#' @param colind A list of column indices (the columns active in each block).
+#' @param rowind A list of row indices (the rows of each block).
 #' @return A baseline_term object.
 #' @importFrom tibble as_tibble
 #' @noRd
 #' @keywords internal
-#' Construct a baseline term
-#' 
-#' @param varname Variable name for the term
-#' @param mat Design matrix
-#' @param colind Column indices
-#' @param rowind Row indices
-#' @return A baseline_term object
-#' @keywords internal
-#' @noRd
 baseline_term <- function(varname, mat, colind, rowind) {
   stopifnot(inherits(mat, "matrix") || is.data.frame(mat) || inherits(mat, "Matrix"))
   ret <- list(varname = varname, 
@@ -1033,7 +980,7 @@ construct.blockspec <- function(x, model_spec, ...) {
 
 
 ## ============================================================================
-## Section 4: Print and Plot Methods for Baseline Models
+## Section 5: Print and Plot Helpers for Baseline Models
 ## ============================================================================
 
 #' Print a Baseline Model
@@ -1051,60 +998,51 @@ construct.blockspec <- function(x, model_spec, ...) {
 #' @export
 #' @rdname print
 print.baseline_model <- function(x, ...) {
-  # Extract component information using helper
   drift_cols <- .nz(x$terms$drift)
   const_cols <- .nz(x$terms$block)
   nuis_cols  <- .nz(x$terms$nuisance)
-  total_cols <- sum(drift_cols, const_cols, nuis_cols) # Summing is safer now
-  
-  # Get drift spec details (assuming drift_spec is still stored, adjust if removed)
+  total_cols <- sum(drift_cols, const_cols, nuis_cols)
+
   basis_type <- if (!is.null(x$drift_spec)) x$drift_spec$basis else "N/A"
   degree     <- if (!is.null(x$drift_spec)) x$drift_spec$degree else "N/A"
   drift_name <- if (!is.null(x$terms$drift)) x$terms$drift$varname else "N/A"
-  
-  # Print header.
+  item <- function(...) cat(sprintf("    * %-35s\n", paste(...)))
+
   cat("================================================\n")
   cat("           Baseline Model                       \n")
   cat("================================================\n")
-  
-  # Drift term info.
+
   if (drift_cols > 0) {
-      cat("  Drift Components                           \n")
-      cat(sprintf("    * %-35s\n", paste("Name:", drift_name)))
-      cat(sprintf("    * %-35s\n", paste("Basis type:", basis_type)))
-      cat(sprintf("    * %-35s\n", paste("Degree:", degree)))
-      cat(sprintf("    * %-35s\n", paste("Drift columns:", drift_cols)))
+    cat("  Drift Components                           \n")
+    item("Name:", drift_name)
+    item("Basis type:", basis_type)
+    item("Degree:", degree)
+    item("Drift columns:", drift_cols)
   }
-  
-  # Additional components.
-  cat("\n") 
+
+  cat("\n")
   cat("  Additional Components                    \n")
-  cat(sprintf("    * %-35s\n", paste("Constant columns:", const_cols)))
-  cat(sprintf("    * %-35s\n", paste("Nuisance columns:", nuis_cols)))
-  
-  # Summary.
-  cat("\n") # Blank line
+  item("Constant columns:", const_cols)
+  item("Nuisance columns:", nuis_cols)
+
+  cat("\n")
   cat("  Model Summary                            \n")
-  cat(sprintf("    * %-35s\n", paste("Total columns:", total_cols)))
-  
-  # Preview design matrix.
-  cat("\n") # Blank line
+  item("Total columns:", total_cols)
+
+  # Preview of the first rows and columns of the design matrix
+  cat("\n")
   cat("  Design Matrix Preview                    \n")
   if (total_cols > 0) {
-      dm <- head(design_matrix(x), 3)
-      for (i in 1:min(3, nrow(dm))) {
-        row_preview <- paste(sprintf("%6.3f", as.numeric(dm[i, 1:min(4, ncol(dm))])), collapse = " ")
-        if (ncol(dm) > 4) row_preview <- paste0(row_preview, " ...")
-        # Adjust padding to 37 for design matrix preview lines
-        cat(sprintf("    %-37s\n", row_preview)) 
-      }
-      # Adjust padding for '...' line
-      if (nrow(dm) > 3) cat("    ...                                    \n") 
+    dm <- head(design_matrix(x), 3)
+    for (i in 1:min(3, nrow(dm))) {
+      row_preview <- paste(sprintf("%6.3f", as.numeric(dm[i, 1:min(4, ncol(dm))])), collapse = " ")
+      if (ncol(dm) > 4) row_preview <- paste0(row_preview, " ...")
+      cat(sprintf("    %-37s\n", row_preview))
+    }
   } else {
-      # Adjust padding for 'no terms' line
-      cat("    (No baseline terms in model)           \n") 
+    cat("    (No baseline terms in model)           \n")
   }
-  
+
   cat("================================================\n")
 }
 
@@ -1129,15 +1067,3 @@ print.baseline_model <- function(x, ...) {
   }
   TRUE
 }
-
-
-
-
-
-
-
-
-
-## ============================================================================
-## Section 5: End of File
-###############################################################################
