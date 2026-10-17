@@ -241,24 +241,23 @@ predict.Poly <- function(object,newdata,...) {
 
 #' @export
 sub_basis.Poly <- function(x, subset) {
-  ret <- list(x=x$x[subset],
-       y=x$y[subset, , drop = FALSE],
-       fun=x$fun,
-       argname=x$argname,
-       degree=x$degree)
-  class(ret) <- c("Poly", "ParametricBasis")
-  ret
+  .sub_basis_rows(x, subset)
+}
+
+# Subset a Poly/BSpline basis by event, keeping the basis attributes of `y`
+# (poly coefficients, spline knots) that predict() needs.
+.sub_basis_rows <- function(x, subset) {
+  y <- x$y[subset, , drop = FALSE]
+  keep <- setdiff(names(attributes(x$y)), c("dim", "dimnames"))
+  attributes(y)[keep] <- attributes(x$y)[keep]
+  x$x <- x$x[subset]
+  x$y <- y
+  x
 }
 
 #' @export
 sub_basis.BSpline <- function(x, subset) {
-  ret <- list(x=x$x[subset],
-              y=x$y[subset, , drop=FALSE],
-              fun=x$fun,
-              argname=x$argname,
-              degree=x$degree)
-  class(ret) <- c("BSpline", "ParametricBasis")
-  ret
+  .sub_basis_rows(x, subset)
 }
 
 #' @export

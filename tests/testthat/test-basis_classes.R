@@ -542,3 +542,16 @@ test_that("parametric bases are named after their argument expression", {
   expect_equal(Scale(d$x)$name, "z_d$x")
   expect_equal(ScaleWithin(d$x, d$g)$name, "z_d$x_by_d$g")
 })
+
+test_that("subsetted Poly and BSpline bases keep their name and can predict", {
+  # sub_basis() used to drop `name` and the poly/bs attributes of `y`
+  x <- seq(0, 1, length.out = 10)
+  for (b in list(Poly(x, 3), BSpline(x, 3))) {
+    s <- sub_basis(b, 1:5)
+    expect_equal(s$name, b$name)
+    expect_equal(unclass(s$y)[, , drop = FALSE], unclass(b$y)[1:5, , drop = FALSE],
+                 ignore_attr = TRUE)
+    expect_equal(unclass(predict(s, c(0.25, 0.5))), unclass(predict(b, c(0.25, 0.5))),
+                 ignore_attr = TRUE)
+  }
+})
