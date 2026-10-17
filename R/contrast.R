@@ -247,17 +247,17 @@
 
 #' Calculate contrast weights from logical masks
 #' 
-#' This is the unified function for weight calculation from masks.
+#' This is the unified function for weight calculation from masks: conditions
+#' in group A get `1/nA`, conditions in group B get `-1/nB`.
 #' Returns a *named* numeric vector.
 #' 
 #' @param names Character vector of all condition names.
 #' @param A_mask Logical vector (same length as names) indicating TRUE for conditions in group A.
 #' @param B_mask Logical vector (same length as names) indicating TRUE for conditions in group B. Optional.
-#' @param tol Tolerance for sum-to-zero check.
 #' @return Named numeric vector of weights.
 #' @keywords internal
 #' @noRd
-.calculate_mask_weights <- function(names, A_mask, B_mask = NULL, tol = .CONTRAST_TOLERANCE) {
+.calculate_mask_weights <- function(names, A_mask, B_mask = NULL) {
   # Input validation
   if (!is.character(names)) {
     stop(".calculate_mask_weights: 'names' must be a character vector", call. = FALSE)
@@ -267,7 +267,7 @@
   }
   
   nA <- sum(A_mask)
-  nB <- 0 # Initialize nB for the case where B_mask is NULL
+  nB <- 0
 
   if (!is.null(B_mask)) {
     if (!is.logical(B_mask) || length(B_mask) != length(names)) {
@@ -280,45 +280,25 @@
   }
 
   # Check for completely empty selection: this should be an error.
-  if (nA == 0 && (is.null(B_mask) || nB == 0)) {
+  if (nA == 0 && nB == 0) {
     stop("Cannot calculate contrast weights: No conditions were selected by the provided mask(s). This usually indicates that the patterns or formulas used to define the contrast did not match any existing conditions. Please check your contrast specification.", call. = FALSE)
   }
 
-  # Initialize weights vector
   w <- numeric(length(names))
-  if (length(names) > 0) { # Only assign names if 'names' is not empty
-      names(w) <- names
+  names(w) <- names
+  if (nA > 0) w[A_mask] <- 1 / nA
+  if (nB > 0) w[B_mask] <- -1 / nB
+
+  # An A-vs-B contrast with one empty group cannot sum to zero. (A single-group
+  # contrast, B_mask = NULL, is not expected to.)
+  if (!is.null(B_mask) && (nA == 0 || nB == 0)) {
+    empty <- if (nA == 0) c("A", "B") else c("B", "A")
+    warning(sprintf(".calculate_mask_weights: For A-vs-B contrast, Mask %s is empty but Mask %s is not. Weights will not sum to zero as expected for a balanced comparison.",
+                    empty[1], empty[2]), call. = FALSE)
   }
-  
-  # Assign weights if masks are not empty
-  if (nA > 0) {
-    w[A_mask] <- 1 / nA
-  }
-  # Ensure B_mask is not NULL before checking nB for assignment
-  if (!is.null(B_mask) && nB > 0) {
-    w[B_mask] <- -1 / nB
-  }
-  
-  # Warnings for partially defined A-vs-B contrasts (that won't sum to zero as expected)
-  if (!is.null(B_mask)) { # These warnings only make sense for A-vs-B type contrasts
-    if (nA == 0 && nB > 0) { # A empty, B not (and B_mask was provided)
-      warning(".calculate_mask_weights: For A-vs-B contrast, Mask A is empty but Mask B is not. Weights will not sum to zero as expected for a balanced comparison.", call. = FALSE)
-    } else if (nB == 0 && nA > 0) { # B empty, A not (and B_mask was provided)
-      warning(".calculate_mask_weights: For A-vs-B contrast, Mask B is empty but Mask A is not. Weights will not sum to zero as expected for a balanced comparison.", call. = FALSE)
-    } else if (nA > 0 && nB > 0) { # Both A and B are defined and non-empty for A-vs-B
-        if (abs(sum(w)) > tol) {
-           # This scenario (both non-empty, but sum != 0) should be rare with 1/nA and -1/nB
-           warning(".calculate_mask_weights: Weights for A-vs-B contrast (both groups non-empty) do not sum to zero (Sum: ", sum(w), "). This is unexpected.", call. = FALSE)
-        }
-    }
-  } 
-  # If B_mask is NULL (single group contrast, e.g. from unit_contrast or pattern_A only column_contrast):
-  # - If nA == 0, we would have errored out above.
-  # - If nA > 0, weights are 1/nA for A_mask elements. Sum-to-zero is not expected here. No warning needed.
-  
+
   w
 }
-
 
 #' Contrast Specification
 #'
@@ -945,6 +925,90 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, b
             class = c("poly_contrast_spec", "contrast_spec", "list"))
 }
 
+#' Shared plumbing for the cell-based `contrast_weights()` methods
+#'
+#' `.contrast_where_cells()` restricts a term's cells to the spec's `where`
+#' subset (and to the optional logical `select`); an error while evaluating
+#' `where` becomes a warning and selects no cells.
+#' `.contrast_base_condnames()` returns the term's base (pre-basis) condition
+#' names, or `character(0)` with a warning when they are unavailable.
+#' `.new_contrast()` assembles the standard contrast object;
+#' `.expanded_contrast()` first replicates base-condition weights across the
+#' basis functions of a multi-basis HRF (see `.expand_and_filter_basis()`).
+#' `.cell_contrast_class()` is the class of the factorial (F-type) results.
+#' @keywords internal
+#' @noRd
+.contrast_where_cells <- function(x, term_cells, select = NULL) {
+  keep <- if (!is.null(x$where)) {
+    tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
+      warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
+      rep(FALSE, nrow(term_cells))
+    })
+  } else {
+    rep(TRUE, nrow(term_cells))
+  }
+  if (!is.null(select)) keep <- keep & select
+  relevant_cells <- term_cells[keep, , drop = FALSE]
+  if (nrow(relevant_cells) == 0 && nrow(term_cells) > 0) {
+    warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
+  }
+  relevant_cells
+}
+
+.contrast_base_condnames <- function(x, term) {
+  condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = FALSE), silent = TRUE)
+  if (inherits(condnames, "try-error") || length(condnames) == 0) {
+    warning(paste("Contrast '", x$name, "': Failed to get condition names for term '", term$varname, "'."), call. = FALSE)
+    condnames <- character(0)
+  }
+  condnames
+}
+
+.new_contrast <- function(x, term, weights, condnames, class) {
+  structure(list(term = term, name = x$name, weights = weights,
+                 condnames = condnames, contrast_spec = x),
+            class = class)
+}
+
+.expanded_contrast <- function(x, term, weights, class,
+                               basis_spec = NULL, basis_weights = NULL) {
+  expanded <- .expand_and_filter_basis(weights, term, x$name,
+                                       basis_spec = basis_spec,
+                                       basis_weights = basis_weights)
+  .new_contrast(x, term, expanded$weights, expanded$condnames, class)
+}
+
+.cell_contrast_class <- function(type, weights) {
+  c(type, if (ncol(weights) > 1) "Fcontrast" else "contrast",
+    "cell_contrast", "contrast", "list")
+}
+
+#' Cell-wise weights for the one-way and interaction contrasts
+#'
+#' Restricts the term's cells to `x$where`, calls `build(relevant_cells)` for
+#' the contrast matrix, and labels its rows with the cells' canonical condition
+#' tags (e.g. "task.face_load.low", so `contrast_weights.event_model()` can
+#' match them to design-matrix columns) and its columns `<name>_1`, ....
+#' Returns a 0 x 0 matrix when the term has no categorical cells (with a
+#' warning ending in `no_cells_msg`) or `where` selects none.
+#' @keywords internal
+#' @noRd
+.factorial_cell_weights <- function(x, term, no_cells_msg, build) {
+  term_cells <- cells(term)
+  if (nrow(term_cells) == 0) {
+    warning(paste("Contrast '", x$name, "': Term '", term$varname, no_cells_msg), call. = FALSE)
+    return(matrix(numeric(0), nrow = 0, ncol = 0))
+  }
+  relevant_cells <- .contrast_where_cells(x, term_cells)
+  if (nrow(relevant_cells) == 0) {
+    return(matrix(numeric(0), nrow = 0, ncol = 0))
+  }
+  cmat <- build(relevant_cells)
+  rownames(cmat) <- cell_condition_tags(relevant_cells)
+  colnames(cmat) <- paste(x$name, seq_len(ncol(cmat)), sep = "_")
+  cmat
+}
+
 #' Unit Contrast Weights
 #'
 #' @description
@@ -960,11 +1024,7 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, b
 #' @export
 contrast_weights.unit_contrast_spec <- function(x, term,...) {
   # All possible condition names (pre-basis expansion)
-  all_condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = FALSE), silent = TRUE)
-  if (inherits(all_condnames, "try-error") || length(all_condnames) == 0) {
-      warning(paste("Contrast '", x$name, "': Failed to get condition names for term '", term$varname, "'."), call. = FALSE)
-      all_condnames <- character(0)
-  }
+  all_condnames <- .contrast_base_condnames(x, term)
 
   weights_out <- matrix(0, nrow = length(all_condnames), ncol = 1)
   rownames(weights_out) <- all_condnames
@@ -972,54 +1032,24 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
 
   term_cells <- cells(term)
   if (nrow(term_cells) > 0 && length(all_condnames) > 0) {
-      # Apply 'where' clause
-      keep <- if (!is.null(x$where)) {
-        tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
-            warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
-            rep(FALSE, nrow(term_cells))
-        })
-      } else {
-        rep(TRUE, nrow(term_cells))
-      }
-
       # A logical selector in `A` (e.g. `~ cond == "A"`) restricts the cells
       # further; a bare factor name (e.g. `~ cond`) selects every cell.
       sel <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = term_cells),
                       error = function(e) NULL)
-      if (is.logical(sel) && length(sel) == nrow(term_cells)) {
-        keep <- keep & !is.na(sel) & sel
-      }
+      sel <- if (is.logical(sel) && length(sel) == nrow(term_cells)) !is.na(sel) & sel
+      relevant_cells <- .contrast_where_cells(x, term_cells, select = sel)
 
-      relevant_cells <- term_cells[keep, , drop = FALSE]
-
-      if (nrow(relevant_cells) == 0) {
-          warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
-      } else {
-          target_cond_names <- cell_condition_tags(relevant_cells)
-          idx <- match(target_cond_names, all_condnames)
-
+      if (nrow(relevant_cells) > 0) {
+          idx <- match(cell_condition_tags(relevant_cells), all_condnames)
           mask_A_full <- logical(length(all_condnames))
           mask_A_full[idx[!is.na(idx)]] <- TRUE
-
-          weights_named <- .calculate_mask_weights(all_condnames, mask_A_full)
-          weights_out[,1] <- weights_named
+          weights_out[,1] <- .calculate_mask_weights(all_condnames, mask_A_full)
       }
   }
 
   # Replicate across all basis functions of a multi-basis HRF
-  expanded <- .expand_and_filter_basis(weights_out, term, x$name)
-
-  # Return structure focused on cell-based weights
-  ret <- list(
-    term=term,
-    name=x$name,
-    weights=expanded$weights,
-    condnames=expanded$condnames,
-    contrast_spec=x
-  )
-  
-  class(ret) <- c("unit_contrast", "cell_contrast", "contrast", "list")
-  ret
+  .expanded_contrast(x, term, weights_out,
+                     c("unit_contrast", "cell_contrast", "contrast", "list"))
 }
 
 
@@ -1049,78 +1079,25 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
 #' @rdname contrast_weights
 #' @export
 contrast_weights.oneway_contrast_spec <- function(x, term,...) {
-  # Get cells (categorical only)
-  term_cells <- cells(term)
-  if (nrow(term_cells) == 0) {
-       warning(paste("Contrast '", x$name, "': Term '", term$varname, "' has no categorical cells."), call. = FALSE)
-       weights_out <- matrix(numeric(0), nrow = 0, ncol = 0) # F-contrast, ncol unknown yet
-       cell_names_out <- character(0)
-  } else { 
-      # Apply 'where' clause
-      keep <- if (!is.null(x$where)) {
-        tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
-            warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
-            rep(FALSE, nrow(term_cells))
-        })
-      } else {
-        rep(TRUE, nrow(term_cells))
+  weights_out <- .factorial_cell_weights(x, term, "' has no categorical cells.", function(relevant_cells) {
+      # Identify the factor for the main effect
+      fac_name <- all.vars(rlang::f_rhs(x$A))
+      if (length(fac_name) > 1) {
+          warning(paste("Contrast '", x$name, "': one-way contrast has >1 factor specified (", 
+                        paste(fac_name, collapse=", "), "), using first: ", fac_name[1]), call.=FALSE)
+          fac_name <- fac_name[1]
       }
-      
-      relevant_cells <- term_cells[keep, , drop = FALSE]
-      
-      if (nrow(relevant_cells) == 0) {
-          warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
-          weights_out <- matrix(numeric(0), nrow = 0, ncol = 0)
-          cell_names_out <- character(0)
-      } else {
-          # Identify the factor for the main effect
-          fac_name <- all.vars(rlang::f_rhs(x$A))
-          if (length(fac_name) > 1) {
-              warning(paste("Contrast '", x$name, "': one-way contrast has >1 factor specified (", 
-                            paste(fac_name, collapse=", "), "), using first: ", fac_name[1]), call.=FALSE)
-              fac_name <- fac_name[1]
-          }
-          if (!(fac_name %in% names(relevant_cells))){
-               stop(paste("Contrast '", x$name, "': factor ", fac_name, " not found in relevant cells."), call.=FALSE)
-          }
-          
-          # Generate contrast matrix relative to the levels of the factor in relevant_cells
-          # Assuming generate_main_effect_contrast works on the cell structure
-          # It should return a matrix where rows correspond to relevant_cells
-          cmat <- tryCatch(generate_main_effect_contrast(relevant_cells, fac_name), error = function(e) {
-              stop(paste("Contrast '", x$name, "': Error generating main effect contrast for factor ", fac_name, ": ", e$message), call.=FALSE)
-          })
-          
-          # Map cell rows to proper base condition names
-          cell_names_rel <- cell_condition_tags(relevant_cells)
-
-          rownames(cmat) <- cell_names_rel
-          colnames(cmat) <- paste(x$name, seq_len(ncol(cmat)), sep="_") # Name F-contrast columns
-
-          weights_out <- cmat
-          cell_names_out <- cell_names_rel
+      if (!(fac_name %in% names(relevant_cells))){
+           stop(paste("Contrast '", x$name, "': factor ", fac_name, " not found in relevant cells."), call.=FALSE)
       }
-  }
+      tryCatch(generate_main_effect_contrast(relevant_cells, fac_name), error = function(e) {
+          stop(paste("Contrast '", x$name, "': Error generating main effect contrast for factor ", fac_name, ": ", e$message), call.=FALSE)
+      })
+  })
 
-  expanded <- .expand_and_filter_basis(weights_out, term, x$name,
-                                        basis_spec    = x$basis,
-                                        basis_weights = x$basis_weights)
-  weights_out    <- expanded$weights
-  cell_names_out <- expanded$condnames
-
-  # Return structure focused on cell-based weights
-  ret <- list(
-    term = term,
-    name = x$name,
-    weights = weights_out, # Weights matrix relative to relevant cells
-    condnames = cell_names_out, # Names of relevant cells
-    contrast_spec = x
-  )
-
-  # Classify as Fcontrast if multiple columns, otherwise simple contrast
-  base_class <- if(ncol(weights_out) > 1) "Fcontrast" else "contrast"
-  class(ret) <- c("oneway_contrast", base_class, "cell_contrast", "contrast", "list")
-  ret
+  .expanded_contrast(x, term, weights_out,
+                     .cell_contrast_class("oneway_contrast", weights_out),
+                     basis_spec = x$basis, basis_weights = x$basis_weights)
 }
 
 #' Interaction Contrast Weights
@@ -1137,117 +1114,55 @@ contrast_weights.oneway_contrast_spec <- function(x, term,...) {
 #' @rdname contrast_weights
 #' @export
 contrast_weights.interaction_contrast_spec <- function(x, term,...) {
-  # Get cells (categorical only)
-  term_cells <- cells(term)
-  if (nrow(term_cells) == 0) {
-       warning(paste("Contrast '", x$name, "': Term '", term$varname, "' has no categorical cells for interaction."), call. = FALSE)
-       weights_out <- matrix(numeric(0), nrow = 0, ncol = 0)
-       cell_names_out <- character(0)
-  } else {
-      # Apply 'where' clause
-      keep <- if (!is.null(x$where)) {
-        tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
-            warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
-            rep(FALSE, nrow(term_cells))
-        })
-      } else {
-        rep(TRUE, nrow(term_cells))
+  weights_out <- .factorial_cell_weights(x, term, "' has no categorical cells for interaction.", function(relevant_cells) {
+      # Identify factors for interaction
+      factors <- all.vars(rlang::f_rhs(x$A))
+      if (length(factors) < 2) {
+          stop(paste("Contrast '", x$name, "': Interaction contrast requires at least two factors."), call.=FALSE)
       }
-      
-      relevant_cells <- term_cells[keep, , drop = FALSE]
-      
-      if (nrow(relevant_cells) == 0) {
-          warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
-          weights_out <- matrix(numeric(0), nrow = 0, ncol = 0)
-          cell_names_out <- character(0)
-      } else {
-          # Identify factors for interaction
-          factors <- all.vars(rlang::f_rhs(x$A))
-          if (length(factors) < 2) {
-              stop(paste("Contrast '", x$name, "': Interaction contrast requires at least two factors."), call.=FALSE)
-          }
-          if (!all(factors %in% names(relevant_cells))) {
-              missing_facs <- factors[!factors %in% names(relevant_cells)]
-              stop(paste("Contrast '", x$name, "': Factor(s)", paste(missing_facs, collapse=", "), "not found in relevant cells."), call.=FALSE)
-          }
-          
-          # Generate interaction contrast matrix relative to relevant cells
-          # Assuming generate_interaction_contrast works on cell structure
-          cmat <- tryCatch(generate_interaction_contrast(relevant_cells, factors), error = function(e) {
-              stop(paste("Contrast '", x$name, "': Error generating interaction contrast: ", e$message), call.=FALSE)
-          })
-          
-          # Row names must be the term's canonical condition tags (e.g.
-          # "task.face_load.low") so contrast_weights.event_model() can match
-          # them to design-matrix columns.
-          cell_names_rel <- cell_condition_tags(relevant_cells)
-          rownames(cmat) <- cell_names_rel
-          colnames(cmat) <- paste(x$name, seq_len(ncol(cmat)), sep="_") # Name F-contrast columns
-          
-          weights_out <- cmat
-          cell_names_out <- cell_names_rel
+      if (!all(factors %in% names(relevant_cells))) {
+          missing_facs <- factors[!factors %in% names(relevant_cells)]
+          stop(paste("Contrast '", x$name, "': Factor(s)", paste(missing_facs, collapse=", "), "not found in relevant cells."), call.=FALSE)
       }
-  }
-  
-  # Replicate across all basis functions of a multi-basis HRF
-  expanded <- .expand_and_filter_basis(weights_out, term, x$name)
-  weights_out    <- expanded$weights
-  cell_names_out <- expanded$condnames
+      tryCatch(generate_interaction_contrast(relevant_cells, factors), error = function(e) {
+          stop(paste("Contrast '", x$name, "': Error generating interaction contrast: ", e$message), call.=FALSE)
+      })
+  })
 
-  # Return structure focused on cell-based weights
-  ret <- list(
-    term = term,
-    name = x$name,
-    weights = weights_out, # Weights matrix relative to relevant cells
-    condnames = cell_names_out, # Names of relevant cells
-    contrast_spec = x
-  )
-  
-  # Classify as Fcontrast (interactions usually are)
-  base_class <- if(is.null(ncol(weights_out)) || ncol(weights_out) > 1) "Fcontrast" else "contrast"
-  class(ret) <- c("interaction_contrast", base_class, "cell_contrast", "contrast", "list")
-  ret
+  # Replicate across all basis functions of a multi-basis HRF
+  .expanded_contrast(x, term, weights_out,
+                     .cell_contrast_class("interaction_contrast", weights_out))
 }
 
-# Internal: build main-effect contrast matrix over cells
+#' Helmert-coded cell weights for main-effect and interaction contrasts
+#'
+#' `generate_main_effect_contrast()` returns an n_cells x (k - 1) matrix for
+#' one factor. `generate_interaction_contrast()` returns the column-wise
+#' products of the main-effect codings of the first two `factors` (further
+#' factors are ignored). Callers set the dimnames.
 #' @keywords internal
+#' @noRd
 generate_main_effect_contrast <- function(relevant_cells, fac_name) {
   f <- factor(relevant_cells[[fac_name]])
-  k <- nlevels(f)
-  if (k < 2) stop("Need at least 2 levels to form a main-effect contrast")
-  G <- model.matrix(~ f - 1)                # n x k indicator for levels
-  H <- stats::contr.helmert(k)              # k x (k-1) Helmert basis
-  W <- G %*% H                              # n x (k-1) weights per cell
-  colnames(W) <- paste0(fac_name, "_h", seq_len(ncol(W)))
-  W
+  if (nlevels(f) < 2) stop("Need at least 2 levels to form a main-effect contrast")
+  .helmert_cells(f)
 }
 
-# Internal: build interaction contrast matrix over cells for two+ factors
-#' @keywords internal
 generate_interaction_contrast <- function(relevant_cells, factors) {
   if (length(factors) < 2) stop("At least two factors required for interaction contrast")
-  # For simplicity, handle the first two factors; extensions can generalize further
   f1 <- factor(relevant_cells[[factors[1]]])
   f2 <- factor(relevant_cells[[factors[2]]])
-  k1 <- nlevels(f1); k2 <- nlevels(f2)
-  if (k1 < 2 || k2 < 2) stop("Each factor needs >= 2 levels for interaction")
-  E1 <- model.matrix(~ f1 - 1)              # n x k1
-  E2 <- model.matrix(~ f2 - 1)              # n x k2
-  H1 <- stats::contr.helmert(k1)            # k1 x (k1-1)
-  H2 <- stats::contr.helmert(k2)            # k2 x (k2-1)
-  A <- E1 %*% H1                             # n x (k1-1)
-  B <- E2 %*% H2                             # n x (k2-1)
-  # All pairwise products of columns of A and B
-  cols <- list()
-  for (i in seq_len(ncol(A))) {
-    for (j in seq_len(ncol(B))) {
-      cols[[length(cols) + 1]] <- A[, i] * B[, j]
-    }
-  }
-  W <- do.call(cbind, cols)
-  colnames(W) <- paste0(factors[1], "_h", rep(seq_len(ncol(A)), each = ncol(B)),
-                        ":", factors[2], "_h", rep(seq_len(ncol(B)), times = ncol(A)))
-  W
+  if (nlevels(f1) < 2 || nlevels(f2) < 2) stop("Each factor needs >= 2 levels for interaction")
+  A <- .helmert_cells(f1)                    # n x (k1-1)
+  B <- .helmert_cells(f2)                    # n x (k2-1)
+  # All pairwise products of columns of A and B (B's index varies fastest)
+  A[, rep(seq_len(ncol(A)), each = ncol(B)), drop = FALSE] *
+    B[, rep(seq_len(ncol(B)), times = ncol(A)), drop = FALSE]
+}
+
+# n x (k-1) weights per cell: level indicators times the Helmert basis
+.helmert_cells <- function(f) {
+  model.matrix(~ f - 1) %*% stats::contr.helmert(nlevels(f))
 }
 
 #' Polynomial Contrast Weights
@@ -1264,11 +1179,7 @@ generate_interaction_contrast <- function(relevant_cells, factors) {
 #' @rdname contrast_weights
 #' @export
 contrast_weights.poly_contrast_spec <- function(x, term,...) {
-  all_condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = FALSE), silent = TRUE)
-  if (inherits(all_condnames, "try-error") || length(all_condnames) == 0) {
-      warning(paste("Contrast '", x$name, "': Failed to get condition names for term '", term$varname, "'."), call. = FALSE)
-      all_condnames <- character(0)
-  }
+  all_condnames <- .contrast_base_condnames(x, term)
 
   weights_out <- matrix(0, nrow = length(all_condnames), ncol = x$degree)
   rownames(weights_out) <- all_condnames
@@ -1276,20 +1187,9 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
 
   term_cells <- cells(term)
   if (nrow(term_cells) > 0 && length(all_condnames) > 0) {
-      keep <- if (!is.null(x$where)) {
-        tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
-            warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
-            rep(FALSE, nrow(term_cells))
-        })
-      } else {
-        rep(TRUE, nrow(term_cells))
-      }
+      relevant_cells <- .contrast_where_cells(x, term_cells)
 
-      relevant_cells <- term_cells[keep, , drop = FALSE]
-
-      if (nrow(relevant_cells) == 0) {
-          warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
-      } else {
+      if (nrow(relevant_cells) > 0) {
           vals_fac <- tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = relevant_cells), error = function(e) {
               stop(paste("Contrast '", x$name, "': Error evaluating formula A: ", e$message), call.=FALSE)
           })
@@ -1324,24 +1224,9 @@ contrast_weights.poly_contrast_spec <- function(x, term,...) {
       }
   }
 
-  expanded <- .expand_and_filter_basis(weights_out, term, x$name,
-                                        basis_spec    = x$basis,
-                                        basis_weights = x$basis_weights)
-  weights_out   <- expanded$weights
-  all_condnames <- expanded$condnames
-
-  ret <- list(
-    term = term,
-    name = x$name,
-    weights = weights_out,
-    condnames = all_condnames,
-    contrast_spec = x
-  )
-
-  # Classify as Fcontrast (poly usually has multiple columns)
-  base_class <- if(is.null(ncol(weights_out)) || ncol(weights_out) > 1) "Fcontrast" else "contrast"
-  class(ret) <- c("poly_contrast", base_class, "cell_contrast", "contrast", "list")
-  ret
+  .expanded_contrast(x, term, weights_out,
+                     .cell_contrast_class("poly_contrast", weights_out),
+                     basis_spec = x$basis, basis_weights = x$basis_weights)
 }
 
 #' Pair Contrast Weights
@@ -1361,9 +1246,8 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
   # Get cells (only categorical combinations) for evaluating formulas A & B
   term_cells <- cells(term)
 
-  # Get base condition names (pre-expansion) - these are the targets for weights.
-  # Basis expansion is handled by the unified .expand_and_filter_basis() helper
-  # that runs after we build the base mask.
+  # Base condition names (pre-expansion) are the targets for the weights;
+  # basis expansion / filtering happens once the base mask is built.
   base_condnames_all <- try(conditions(term, drop.empty=FALSE, expand_basis=FALSE), silent=TRUE)
   if (inherits(base_condnames_all, "try-error") || length(base_condnames_all) == 0) {
       warning(paste("Contrast '", x$name, "': Failed to get base condition names for term '", term$varname, "'. Skipping."), call. = FALSE)
@@ -1376,22 +1260,9 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
       warning(paste("Contrast '", x$name, "': Term '", term$varname, "' has no observed categorical cells. Contrast weights might be all zero."), call. = FALSE)
   }
   
-  # Evaluate 'where' clause on term_cells
-  keep <- if (!is.null(x$where)) {
-      tryCatch(rlang::eval_tidy(rlang::f_rhs(x$where), data = term_cells), error = function(e) {
-          warning(paste("Contrast '", x$name, "': Error evaluating 'where' clause: ", e$message), call. = FALSE)
-          rep(FALSE, nrow(term_cells)) # Default to FALSE on error
-      })
-  } else {
-      rep(TRUE, nrow(term_cells)) # Keep all if no 'where'
-  }
-  relevant_cells <- term_cells[keep, , drop = FALSE]
-  
-  if (nrow(relevant_cells) == 0 && nrow(term_cells) > 0) {
-       warning(paste("Contrast '", x$name, "' resulted in no relevant cells after applying the 'where' clause."), call. = FALSE)
-       # Proceed, but weights will likely be zero
-  }
-  
+  # Restrict to the 'where' subset; if it is empty the weights will be zero
+  relevant_cells <- .contrast_where_cells(x, term_cells)
+
   # Evaluate A and B formulas on the relevant cells
   keepA_rel <- if(nrow(relevant_cells) > 0) tryCatch(rlang::eval_tidy(rlang::f_rhs(x$A), data = relevant_cells), error = function(e) {
       warning(paste("Contrast '", x$name, "': Error evaluating formula A: ", e$message), call. = FALSE)
@@ -1405,29 +1276,21 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
       })
   }
   
-  # --- FIX: Map formula evaluation results to condition names --- 
-  mask_A_full <- logical(length(base_condnames_all))
-  mask_B_full <- if (!is.null(keepB_rel)) logical(length(base_condnames_all)) else NULL
-  
-  if (nrow(relevant_cells) > 0) {
-    target_cond_names <- cell_condition_tags(relevant_cells)
-    idx_all <- match(target_cond_names, base_condnames_all)
-
-    len_A <- min(length(keepA_rel), length(idx_all))
-    if (len_A > 0) {
-      idx_A <- idx_all[seq_len(len_A)]
-      mask_A_full[idx_A[keepA_rel[seq_len(len_A)] & !is.na(idx_A)]] <- TRUE
+  # Map the per-cell selections onto the base condition names
+  idx_all <- if (nrow(relevant_cells) > 0) {
+    match(cell_condition_tags(relevant_cells), base_condnames_all)
+  } else integer(0)
+  to_mask <- function(keep_rel) {
+    mask <- logical(length(base_condnames_all))
+    n <- min(length(keep_rel), length(idx_all))
+    if (n > 0) {
+      idx <- idx_all[seq_len(n)]
+      mask[idx[keep_rel[seq_len(n)] & !is.na(idx)]] <- TRUE
     }
-
-    if (!is.null(mask_B_full)) {
-      len_B <- min(length(keepB_rel), length(idx_all))
-      if (len_B > 0) {
-        idx_B <- idx_all[seq_len(len_B)]
-        mask_B_full[idx_B[keepB_rel[seq_len(len_B)] & !is.na(idx_B)]] <- TRUE
-      }
-    }
+    mask
   }
-  # --- END FIX --- 
+  mask_A_full <- to_mask(keepA_rel)
+  mask_B_full <- if (!is.null(keepB_rel)) to_mask(keepB_rel)
 
   # Calculate base weights relative to the full set of base conditions
   base_weights_named <- .calculate_mask_weights(base_condnames_all, mask_A_full, mask_B_full)
@@ -1437,23 +1300,8 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
   rownames(weights_base) <- names(base_weights_named)
   colnames(weights_base) <- x$name
 
-  expanded <- .expand_and_filter_basis(weights_base, term, x$name,
-                                        basis_spec    = x$basis,
-                                        basis_weights = x$basis_weights)
-  weights_out    <- expanded$weights
-  cell_names_out <- expanded$condnames
-
-  # Return structure focused on cell-based weights
-  ret <- list(
-    term = term,
-    name = x$name,
-    weights = weights_out, # Weights relative to (potentially expanded) relevant cells
-    condnames = cell_names_out, # Names of the relevant cells corresponding to rows of weights
-    contrast_spec = x
-  )
-  
-  class(ret) <- c("cell_contrast", "contrast", "list") 
-  ret  
+  .expanded_contrast(x, term, weights_base, c("cell_contrast", "contrast", "list"),
+                     basis_spec = x$basis, basis_weights = x$basis_weights)
 }
 
 #' Column Contrast Weights
@@ -1490,18 +1338,10 @@ contrast_weights.column_contrast_spec <- function(x, term, ...) {
       # It's possible conditions() returns empty if term has no levels/columns
       warning(paste("Column contrast '", x$name, "': Term '", term$varname %||% "<unknown>",
                     "' resulted in zero condition names. Weights will be empty."), call. = FALSE)
-      # Return structure with empty weights
       weights_out <- matrix(numeric(0), nrow = 0, ncol = 1)
       colnames(weights_out) <- x$name
-      ret <- list(
-          term = term,
-          name = x$name,
-          weights = weights_out,
-          condnames = character(0),
-          contrast_spec = x
-      )
-      class(ret) <- c("column_contrast", "contrast", "list")
-      return(ret)
+      return(.new_contrast(x, term, weights_out, character(0),
+                           c("column_contrast", "contrast", "list")))
   }
 
   # Full design-matrix column names, aligned one-to-one with all_condnames.
@@ -1510,25 +1350,18 @@ contrast_weights.column_contrast_spec <- function(x, term, ...) {
 
   idx_A <- .match_column_pattern(x$pattern_A, "pattern_A", all_colnames,
                                  all_condnames, x$name, term_label)
-  nA <- length(idx_A)
+  idx_B <- if (!is.null(x$pattern_B)) {
+    .match_column_pattern(x$pattern_B, "pattern_B", all_colnames,
+                          all_condnames, x$name, term_label)
+  } else integer(0)
 
-  idx_B <- integer(0)
-  nB <- 0
-  if (!is.null(x$pattern_B)) {
-    idx_B <- .match_column_pattern(x$pattern_B, "pattern_B", all_colnames,
-                                   all_condnames, x$name, term_label)
-    nB <- length(idx_B)
-  }
-
-  # --- Retain overlap check ---
-  if (nA > 0 && nB > 0 && any(idx_A %in% idx_B)) {
+  if (any(idx_A %in% idx_B)) {
     stop(paste("Column contrast '", x$name, "': pattern_A and pattern_B match overlapping columns.",
                " Indices A: ", paste(idx_A, collapse=", "),
                "; Indices B: ", paste(idx_B, collapse=", ")),
          call. = FALSE)
   }
 
-  # --- Calculate weights using weight helper ---
   mask_A <- seq_along(all_condnames) %in% idx_A
   mask_B <- if (!is.null(x$pattern_B)) seq_along(all_condnames) %in% idx_B else NULL
 
@@ -1542,18 +1375,9 @@ contrast_weights.column_contrast_spec <- function(x, term, ...) {
   rownames(weights_mat) <- all_condnames
   colnames(weights_mat) <- x$name
 
-  # Return structure
-  ret <- list(
-    term = term,
-    name = x$name,
-    weights = weights_mat,
-    condnames = all_condnames, # These are the expanded names used for weights
-    contrast_spec = x
-  )
-
-  # Classify appropriately
-  class(ret) <- c("column_contrast", "contrast", "list")
-  ret
+  # condnames are the expanded names used for the weights
+  .new_contrast(x, term, weights_mat, all_condnames,
+                c("column_contrast", "contrast", "list"))
 }
 
 #' Design-matrix column names for a term's expanded conditions
@@ -1703,18 +1527,7 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
   colnames(weights) <- x$name
 
   # Replicate across all basis functions of a multi-basis HRF
-  expanded <- .expand_and_filter_basis(weights, term, x$name)
-
-  # Return structure
-  ret <- list(
-    term=term,
-    name=x$name,
-    weights=expanded$weights,
-    condnames=expanded$condnames,
-    contrast_spec=x)
-  
-  class(ret) <- c("contrast", "list")
-  ret  
+  .expanded_contrast(x, term, weights, c("contrast", "list"))
 }
 
 #' Contrast Difference Weights
@@ -1733,18 +1546,9 @@ contrast_weights.contrast_formula_spec <- function(x, term,...) {
 contrast_weights.contrast_diff_spec <- function(x, term,...) {
   wts1 <- contrast_weights(x$con1, term)
   wts2 <- contrast_weights(x$con2, term)
-
-  ret <- structure(
-    list(
-      term=term,
-      name=x$name,
-      weights=wts1$weights - wts2$weights,
-      condnames=rownames(wts1$weights) %||% longnames(term),
-      contrast_spec=x),
-    class=c("contrast_diff", "contrast")
-  )
-
-  ret  
+  .new_contrast(x, term, wts1$weights - wts2$weights,
+                rownames(wts1$weights) %||% longnames(term),
+                c("contrast_diff", "contrast"))
 }
 
 #' Print Contrast Set
