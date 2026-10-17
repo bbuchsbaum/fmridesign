@@ -224,21 +224,17 @@ check_estimability <- function(x, contrasts = NULL, baseline = NULL,
     }
     # Reuse an existing proportional intercept column; never drop user columns.
     if (!is.null(B)) {
-      keep <- vapply(seq_len(ncol(B)), function(j) {
+      # prop[k, j]: design column k is a nonzero multiple of intercept column j
+      prop <- matrix(vapply(seq_len(ncol(B)), function(j) {
         b <- B[, j]
-        !any(vapply(seq_len(ncol(X)), function(k) {
+        first <- which(b != 0)[1L]
+        vapply(seq_len(ncol(X)), function(k) {
           z <- X[, k]
-          any(b != 0) && z[which(b != 0)[1L]] != 0 &&
-            all(z == b * z[which(b != 0)[1L]])
-        }, logical(1)))
-      }, logical(1))
-      reused <- which(vapply(seq_len(ncol(X)), function(k) any(vapply(seq_len(ncol(B)), function(j) {
-        b <- B[, j]
-        z <- X[, k]
-        z[which(b != 0)[1L]] != 0 && all(z == b * z[which(b != 0)[1L]])
-      }, logical(1))), logical(1)))
-      constants <- union(constants, reused)
-      B <- B[, keep, drop = FALSE]
+          !is.na(first) && z[first] != 0 && all(z == b * z[first])
+        }, logical(1))
+      }, logical(ncol(X))), ncol(X), ncol(B))
+      constants <- union(constants, which(rowSums(prop) > 0))
+      B <- B[, colSums(prop) == 0, drop = FALSE]
       # Generated names must not collide with supplied column identities.
       colnames(B) <- utils::tail(make.unique(c(colnames(X), colnames(B))), ncol(B))
     }
