@@ -1,35 +1,6 @@
 # Internal constants
 .CONTRAST_TOLERANCE <- 1e-8
 
-#' Translate legacy contrast regex patterns
-#'
-#' Convert older column-naming patterns to the current naming scheme.
-#'
-#' @param pattern Character string with the legacy regex.
-#' @return Updated regex string.
-#' @keywords internal
-#' @name translate_legacy_pattern
-#' @rdname translate_legacy_pattern
-translate_legacy_pattern <- function(pattern) {
-  # Input validation
-  if (!is.character(pattern) || length(pattern) != 1) {
-    stop("pattern must be a single character string", call. = FALSE)
-  }
-  
-  # 1. Replace Var[Level] -> Var.Level (Do this first)
-  # Handles VarName[LevelName] -> VarName.LevelName
-  pattern <- gsub("([A-Za-z0-9_\\.]+)\\[([^]]+)\\]", "\\1.\\2", pattern, perl = TRUE)
-
-  # 2. Replace :basis[digits] -> _b<digits>
-  # Handles :basis[3] -> _b3
-  pattern <- gsub(":basis\\[(\\d+)\\](\\$?)$", "_b\\1\\2", pattern, perl = TRUE)
-  # 3. Replace standalone : -> _ (interaction separator)
-  # Uses lookarounds to avoid replacing potential future :: syntax
-  pattern <- gsub("(?<!:):(?!:)", "_", pattern, perl = TRUE)
-  
-  pattern
-}
-
 #' Get condition names for a term
 #' Wraps conditions() with standard arguments for internal use.
 #' @param term An event_term object.
@@ -312,13 +283,6 @@ translate_legacy_pattern <- function(pattern) {
   
   w
 }
-
-# Backward compatibility aliases (will be deprecated in future)
-.mask_to_weights <- .calculate_mask_weights
-.make_weights <- .calculate_mask_weights
-
-
-
 
 
 #' Contrast Specification
@@ -991,7 +955,6 @@ column_contrast <- function(pattern_A, pattern_B = NULL, name, where = NULL) {
               msg = "name must be a single character string")
   if (!is.null(where)) {
       warning("'where' argument is currently ignored for column_contrast.")
-      # assert_that(rlang::is_formula(where)) # Keep structure if needed later
   }
 
   ret <- list(
@@ -1900,27 +1863,6 @@ contrast_weights.contrast_diff_spec <- function(x, term,...) {
   ret  
 }
 
-# Estimated Contrast (internal function, commented out)
-#
-# @description
-# Compute the estimated contrast for a given fit and indices.
-#
-# @param x The contrast to estimate.
-# @param fit The fit object.
-# @param indices The indices to use.
-# @param ... Additional arguments (currently unused).
-#
-# @return The estimated contrast.
-#
-# @noRd
-# @keywords internal
-# estcon.contrast <- function(x, fit, indices, ...) {
-#   wts <- numeric(length(fit$assign))
-#   wts[indices] <- x$weights
-#   
-#   gmodels::estimable(fit, wts)
-# }
-
 #' Print Contrast Set
 #'
 #' @description
@@ -2081,20 +2023,6 @@ print.contrast_diff_spec <- function(x,...) {
 #' @export
 plot_contrasts <- function(x, ...) {
   UseMethod("plot_contrasts")
-}
-
-
-
-#' A small utility to preserve factor order in ggplot
-#' 
-#' Makes a factor from a character vector but preserves the order of appearance.
-#' If `reverse=TRUE`, it reverses that order.
-#' @keywords internal
-#' @noRd
-ReorderFactor <- function(x, reverse=FALSE) {
-  levs <- unique(as.character(x))
-  if (reverse) levs <- rev(levs)
-  factor(x, levels=levs)
 }
 
 #' Contrast Weights for a Contrast Set

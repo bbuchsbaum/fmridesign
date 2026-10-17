@@ -321,26 +321,10 @@ test_that("plot.event_model overlay style covers faceting branches", {
 })
 
 # ---------------------------------------------------------------------------
-# contrast helpers: legacy patterns and basis filtering edges
+# contrast helpers: basis filtering edges
 # ---------------------------------------------------------------------------
 
-test_that("translate_legacy_pattern and basis filter helpers cover edges", {
-  expect_error(fmridesign:::translate_legacy_pattern(1), "character")
-  expect_error(fmridesign:::translate_legacy_pattern(c("a", "b")), "character")
-  expect_equal(
-    fmridesign:::translate_legacy_pattern("Cond[A]:basis[2]"),
-    "Cond.A_basis.2"
-  )
-  expect_equal(
-    fmridesign:::translate_legacy_pattern("A:B"),
-    "A_B"
-  )
-  # Trailing $ preserved for basis rewrite form
-  expect_equal(
-    fmridesign:::translate_legacy_pattern("Cond[A]:basis[2]$"),
-    "Cond.A_basis.2$"
-  )
-
+test_that("basis filter helper covers edges", {
   names_b <- c("cond.A_b01", "cond.A_b02", "cond.B_b01", "cond.B_b02")
   expect_equal(
     fmridesign:::.filter_basis(names_b, basis = NULL, nbasis = 2),
