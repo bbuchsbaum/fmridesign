@@ -19,12 +19,7 @@ event_factor(fac, name, onsets, blockids = 1, durations = 0, subset = NULL)
 
 \item{subset}{Optional logical vector indicating which events to keep. If
 provided, the vector must match \code{onsets} in length and contain no \code{NA}
-values.
-
-Column names are sanitized using \code{.sanitizeName()} if provided. If
-column names are missing or not unique, deterministic feature suffixes
-(\code{f01}, \code{f02}, ...) are generated instead. The resulting names are
-returned by \code{levels()} for the event object.}
+values.}
 }
 \value{
 An S3 object of class \code{event} and \code{event_seq}.

@@ -1,6 +1,4 @@
 #' @importFrom utils head
-#' @importFrom tidyr complete pivot_longer
-#' @importFrom dplyr mutate
 #' @importFrom rlang .data
 NULL
 
@@ -131,15 +129,6 @@ event_model <- function(formula_or_list, data = NULL, block = NULL, sampling_fra
   ret
 }
 
-## ============================================================================
-## Section 1.5: Deprecated Constructors (REMOVED)
-## ============================================================================
-
-# Deprecated event_model.formula removed.
-# Deprecated event_model.list removed.
-# Deprecated create_event_model removed.
-
-
 #' @export
 #' @rdname split_by_block
 split_by_block.event_model <- function(x, ...) {
@@ -252,21 +241,10 @@ term_matrices.event_model <- function(x, ...) {
     stop("Design matrix missing 'col_indices' attribute")
   }
 
-  term_names <- names(col_indices)
-  result <- vector("list", length(col_indices))
-  names(result) <- term_names
-
-  for (i in seq_along(col_indices)) {
-    indices <- col_indices[[i]]
-    if (length(indices) > 0) {
-      result[[i]] <- dm[, indices, drop = FALSE]
-    } else {
-      # For terms with no columns (e.g., external terms)
-      result[[i]] <- NULL
-    }
-  }
-
-  result
+  # One entry per term; terms with no columns (e.g. external terms) get NULL
+  lapply(col_indices, function(indices) {
+    if (length(indices) > 0) dm[, indices, drop = FALSE] else NULL
+  })
 }
 
 #' @export
@@ -465,7 +443,6 @@ contrasts.event_model <- function(x, ...) {
 contrast_weights.event_model <- function(x, ...) {
   tnames <- names(terms(x))
   tind <- attr(x$design_matrix, "col_indices") 
-  ncond <- ncol(x$design_matrix)
   if (is.null(tind)) {
       stop("Cannot compute contrast weights: design matrix missing 'col_indices' attribute.")
   }
@@ -495,50 +472,18 @@ contrast_weights.event_model <- function(x, ...) {
         ret_mapped <- lapply(cwlist_local, function(cw) {
             if(is.null(cw)) return(NULL) # Skip if contrast calculation failed
 
-            term_cols <- colnames(x$design_matrix)[term_indices_vec]
-            rn <- rownames(cw$weights)
-
-            out <- matrix(0, ncond, ncol(cw$weights))
-            colnames(out) <- colnames(cw$weights) # Preserve contrast names if multiple columns
-            rownames(out) <- colnames(x$design_matrix)
-
-            if (!is.null(rn)) {
-                # Try direct match first
-                m <- match(rn, term_cols)
-                
-                # If no matches and term_cols have a common prefix, try stripping it
-                if (all(is.na(m)) && length(term_cols) > 0) {
-                    # Strip explicit term tag prefix (e.g., "condition_block_") and retry
-                    term_tag <- names(terms(x))[i]
-                    prefix <- paste0(term_tag, "_")
-                    if (all(startsWith(term_cols, prefix))) {
-                        esc <- gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", prefix)
-                        term_cols_stripped <- sub(paste0("^", esc), "", term_cols)
-                        m <- match(rn, term_cols_stripped)
-                    }
-                }
-                
-                if (anyNA(m)) {
-                    warning(sprintf("Contrast '%s' for term '%s' has unmatched row names: %s",
-                                     cw$name, names(terms(x))[i],
-                                     paste(rn[is.na(m)], collapse=", ")), call.=FALSE)
-                }
-                keep <- !is.na(m)
-                if (any(keep)) {
-                    out[term_indices_vec[m[keep]], ] <- cw$weights[keep, , drop=FALSE]
-                }
-                cw$weights <- cw$weights[keep, , drop=FALSE]
-            } else {
-                if (nrow(cw$weights) != length(term_indices_vec)){
-                    warning(sprintf("Contrast '%s' for term '%s' has %d rows, but term has %d columns in design matrix. Skipping.",
-                                   cw$name, names(terms(x))[i], nrow(cw$weights), length(term_indices_vec)), call.=FALSE)
-                    return(NULL)
-                }
-                out[term_indices_vec, ] <- cw$weights
+            emb <- .embed_term_weights(cw$weights, colnames(x$design_matrix),
+                                       term_indices_vec, tnames[i],
+                                       label = sprintf("Contrast '%s'", cw$name),
+                                       strip_if_any_na = FALSE,
+                                       col_prefix = attr(term, "term_tag") %||% tnames[i])
+            if (is.null(emb)) return(NULL)
+            if (!is.null(rownames(cw$weights))) {
+                cw$weights <- cw$weights[emb$keep, , drop=FALSE]
             }
 
             # Add attributes/update structure
-            cw$offset_weights <- out
+            cw$offset_weights <- emb$out
             cw$condnames <- colnames(x$design_matrix) # Update condnames to full set
             attr(cw, "term_indices") <- as.vector(term_indices_vec)
           cw
@@ -602,7 +547,6 @@ contrast_weights.event_model <- function(x, ...) {
 Fcontrasts.event_model <- function(x, ...) {
   tnames <- names(terms(x))
   tind <- attr(x$design_matrix, "col_indices") 
-  ncond <- ncol(x$design_matrix)
   if (is.null(tind)) {
       stop("Cannot compute Fcontrasts: design matrix missing 'col_indices' attribute.")
   }
@@ -611,71 +555,34 @@ Fcontrasts.event_model <- function(x, ...) {
     term_i <- terms(x)[[i]]
     term_indices_vec <- tind[[ names(terms(x))[i] ]]
     
-    # Terms without a categorical variable (e.g. hrf(rt), covariates) have no
-    # omnibus condition F-test; skip them rather than failing the whole model.
+    # Terms without a categorical variable (e.g. hrf(rt), covariates), or
+    # whose factors have a single level, have no omnibus condition F-test;
+    # skip them rather than failing the whole model.
     if (!.has_categorical_event(term_i)) return(NULL)
 
     # Calculate Fcontrasts relative to the term itself
     fcon_local <- Fcontrasts(term_i)
     
     if (!is.null(fcon_local) && length(fcon_local) > 0) {
-        ret_mapped <- lapply(names(fcon_local), function(con_name) {
-            cw <- fcon_local[[con_name]]
-            cw <- .expand_fcontrast_basis(cw, term_i)
-
-            term_cols <- colnames(x$design_matrix)[term_indices_vec]
-            rn <- rownames(cw)
-
-            out <- matrix(0, ncond, ncol(cw))
-            colnames(out) <- colnames(cw)
-            rownames(out) <- colnames(x$design_matrix)
-
-            if (!is.null(rn)) {
-                m <- match(rn, term_cols)
-                if (anyNA(m) && length(term_cols) > 0) {
-                    # Try stripping the explicit term tag prefix
-                    term_tag <- names(terms(x))[i]
-                    prefix <- paste0(term_tag, "_")
-                    if (all(startsWith(term_cols, prefix))) {
-                        esc <- gsub("([.|()\\^{}+$*?]|\\[|\\])", "\\\\\\1", prefix)
-                        term_cols_stripped <- sub(paste0("^", esc), "", term_cols)
-                        m <- match(rn, term_cols_stripped)
-                    }
-                }
-                if (anyNA(m)) {
-                    warning(sprintf("F-contrast '%s' for term '%s' has unmatched row names: %s",
-                                     con_name, names(terms(x))[i],
-                                     paste(rn[is.na(m)], collapse=", ")), call.=FALSE)
-                }
-                keep <- !is.na(m)
-                if (any(keep)) {
-                    out[term_indices_vec[m[keep]], ] <- cw[keep, , drop=FALSE]
-                }
-            } else {
-                if (nrow(cw) != length(term_indices_vec)){
-                    warning(sprintf("F-contrast '%s' for term '%s' has %d rows, but term has %d columns in design matrix. Skipping.",
-                                    con_name, names(terms(x))[i], nrow(cw), length(term_indices_vec)), call.=FALSE)
-                    return(NULL)
-                }
-                out[term_indices_vec, ] <- cw
-            }
-
-            # Add attributes/update structure if needed (Fcontrast might just be matrix)
+        ret_mapped <- lapply(stats::setNames(nm = names(fcon_local)), function(con_name) {
+            cw <- .expand_fcontrast_basis(fcon_local[[con_name]], term_i)
+            emb <- .embed_term_weights(cw, colnames(x$design_matrix),
+                                       term_indices_vec, tnames[i],
+                                       label = sprintf("F-contrast '%s'", con_name),
+                                       strip_if_any_na = TRUE,
+                                       col_prefix = attr(term_i, "term_tag") %||% tnames[i])
+            if (is.null(emb)) return(NULL)
+            out <- emb$out
             attr(out, "term_indices") <- as.vector(term_indices_vec)
             out
         })
       
-        # Filter out NULLs from failed mappings
-        ret_mapped <- ret_mapped[!sapply(ret_mapped, is.null)]
-        
-        # Set names based on original contrast names, prefixed with term name
+        # Drop failed mappings; name the rest "<term>#<contrast>"
+        ret_mapped <- ret_mapped[!vapply(ret_mapped, is.null, logical(1))]
         if (length(ret_mapped) > 0) {
-            prefix <- tnames[i]
-            # Check if sapply(fcon_local, non_null) is necessary or exists
-            valid_local_cons <- !sapply(fcon_local, is.null) # Simple check for non-NULL
-            names(ret_mapped) <- paste0(prefix, "#", names(fcon_local)[valid_local_cons]) 
+            names(ret_mapped) <- paste0(tnames[i], "#", names(ret_mapped))
         }
-         ret_mapped
+        ret_mapped
          
     } else { # No Fcontrasts for this term
         NULL
@@ -691,7 +598,67 @@ Fcontrasts.event_model <- function(x, ...) {
   ret
 }
 
-#' Does a term contain at least one categorical event variable?
+#' Embed a term-level weight matrix into the full design matrix
+#'
+#' Returns a `length(dm_colnames) x ncol(W)` matrix that is zero outside the
+#' term's columns. Named rows of `W` are matched to the term's design columns,
+#' retrying without the `"<col_prefix>_"` prefix when none match (or, with
+#' `strip_if_any_na = TRUE`, when any fail to match); unmatched rows are dropped
+#' with a warning. Unnamed rows must align one-to-one with the term's columns,
+#' otherwise a warning is emitted and `NULL` returned.
+#'
+#' @param W Term-level weight matrix.
+#' @param dm_colnames Column names of the full design matrix.
+#' @param term_idx Integer column indices of the term in the design matrix.
+#' @param term_name The term's name in the model (used in messages).
+#' @param label Message prefix naming the contrast (e.g. `"Contrast 'x'"`).
+#' @param strip_if_any_na Logical; retry the prefix-stripped match when any
+#'   (rather than all) row names fail to match.
+#' @param col_prefix The term's column prefix: its `term_tag`, which differs
+#'   from `term_name` when the model de-duplicated the term names.
+#' @return `NULL`, or a list with the embedded matrix `out` and the logical
+#'   `keep` (which rows of `W` were placed).
+#' @keywords internal
+#' @noRd
+.embed_term_weights <- function(W, dm_colnames, term_idx, term_name, label,
+                                strip_if_any_na = FALSE, col_prefix = term_name) {
+  out <- matrix(0, length(dm_colnames), ncol(W))
+  colnames(out) <- colnames(W)
+  rownames(out) <- dm_colnames
+
+  rn <- rownames(W)
+  if (is.null(rn)) {
+    if (nrow(W) != length(term_idx)) {
+      warning(sprintf("%s for term '%s' has %d rows, but term has %d columns in design matrix. Skipping.",
+                      label, term_name, nrow(W), length(term_idx)), call. = FALSE)
+      return(NULL)
+    }
+    out[term_idx, ] <- W
+    return(list(out = out, keep = rep(TRUE, nrow(W))))
+  }
+
+  term_cols <- dm_colnames[term_idx]
+  m <- match(rn, term_cols)
+  retry <- if (strip_if_any_na) anyNA(m) else all(is.na(m))
+  if (retry && length(term_cols) > 0) {
+    prefix <- paste0(col_prefix, "_")
+    if (all(startsWith(term_cols, prefix))) {
+      m <- match(rn, substring(term_cols, nchar(prefix) + 1L))
+    }
+  }
+  if (anyNA(m)) {
+    warning(sprintf("%s for term '%s' has unmatched row names: %s",
+                    label, term_name, paste(rn[is.na(m)], collapse = ", ")), call. = FALSE)
+  }
+  keep <- !is.na(m)
+  if (any(keep)) {
+    out[term_idx[m[keep]], ] <- W[keep, , drop = FALSE]
+  }
+  list(out = out, keep = keep)
+}
+
+#' Does a term contain a categorical event variable with an effect to test
+#' (i.e. at least two levels)?
 #' @keywords internal
 #' @noRd
 .has_categorical_event <- function(term) {
@@ -699,7 +666,9 @@ Fcontrasts.event_model <- function(x, ...) {
     return(FALSE)
   }
   evs <- term$events
-  length(evs) > 0L && any(!vapply(evs, is_continuous, logical(1)))
+  length(evs) > 0L && any(vapply(evs, function(ev) {
+    !is_continuous(ev) && length(levels(ev)) >= 2L
+  }, logical(1)))
 }
 
 #' Expand a term-level F-contrast across the basis functions of its HRF
@@ -716,10 +685,9 @@ Fcontrasts.event_model <- function(x, ...) {
 #' @keywords internal
 #' @noRd
 .expand_fcontrast_basis <- function(cw, term) {
-  hrfspec <- attr(term, "hrfspec")
-  if (is.null(hrfspec) || is.null(hrfspec$hrf) || !is.matrix(cw)) return(cw)
-  nb <- tryCatch(as.integer(fmrihrf::nbasis(hrfspec$hrf)), error = function(e) 1L)
-  if (length(nb) != 1L || is.na(nb) || nb <= 1L) return(cw)
+  if (!is.matrix(cw)) return(cw)
+  nb <- .term_nbasis(term)
+  if (nb <= 1L) return(cw)
   rn <- rownames(cw)
   if (is.null(rn) || any(grepl("_b[0-9]+$", rn))) return(cw)
 
@@ -737,8 +705,6 @@ Fcontrasts.event_model <- function(x, ...) {
 #' @param x An `event_model` object.
 #' @param ... Additional arguments (unused).
 #'
-#' @importFrom cli cli_h1 cli_div cli_text cli_h2 cli_ul cli_li cli_end cli_verbatim cli_alert_info
-#' @importFrom utils head
 #' @export
 #' @rdname print
 print.event_model <- function(x, ...) {

@@ -8,15 +8,6 @@
 ###############################################################################
 
 ## ============================================================================
-## Section 1: Helper Functions (Moved to R/utils-internal.R)
-## ============================================================================
-
-# Removed .sanitizeName
-# Removed is.increasing
-# Removed is.strictly.increasing
-# Removed .checkEVArgs
-
-## ============================================================================
 ## Section 2: Event Term Construction
 ## ============================================================================
 
@@ -78,20 +69,12 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
   }
   
   # Ensure blockids are non-decreasing.
-  # Use base R equivalent of is.increasing
   assert_that(!is.unsorted(blockids), msg = "'blockids' must consist of non-decreasing integers")
   
-  # NOTE: subset handling is now primarily inside event(), 
-  # but event_term might still need its own subset logic if it uses it before calling EV?
-  # Currently, it passes subset down to EV.
+  # Subsetting and duration recycling are applied inside event().
   if (is.null(subset)) { 
     subset <- rep(TRUE, length(onsets)) 
   }
-  
-  # Duration recycling is handled inside event() via .checkEVArgs
-  # if (length(durations) == 1) {
-  #   durations <- rep(durations, length(onsets))
-  # }
   
   vnames <- names(evlist)
   onlen <- length(onsets)
@@ -108,13 +91,15 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
                   msg=sprintf("Length mismatch between onsets (%d) and variable '%s' (%d)", 
                               onlen, vnames[i], getlen(evlist[[i]])))
   }
+  if (length(evlist) == 0L) {
+    stop("`evlist` must contain at least one variable.", call. = FALSE)
+  }
   
   # Create event objects by dispatching to the appropriate public wrapper
   evs <- lapply(seq_along(evlist), function(i) {
     vals <- evlist[[i]]
     vname_i <- vnames[i]
     
-    # Type checking and dispatching (replaces EV factory logic)
     if (inherits(vals, "event")) {
         # If it's already an event object, just use it as-is
         # TODO: Consider whether to re-apply subset/durations/etc from current call
@@ -124,8 +109,6 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
     } else if (is.factor(vals) || is.character(vals)) {
         event_factor(fac = vals, name = vname_i, onsets = onsets, blockids = blockids, durations = durations, subset = subset)
     } else if (is.matrix(vals)) {
-        # Handle single-column matrices as vectors for event_variable?
-        # No, event_matrix handles matrices directly now.
         event_matrix(mat = vals, name = vname_i, onsets = onsets, blockids = blockids, durations = durations, subset = subset)
     } else if (is.numeric(vals) && (is.vector(vals) || length(dim(vals)) <= 1)) {
          # Check specifically for numeric vectors (or 1D arrays)
@@ -136,15 +119,12 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
   })
   
   names(evs) <- sapply(evs, function(ev) ev$varname)
-  pterms <- unlist(lapply(evs, function(ev) ev$varname))
   
   # Check if any event object creation resulted in zero events after subsetting
-  if (length(evs) > 0 && length(evs[[1]]$onsets) == 0) {
+  if (length(evs[[1]]$onsets) == 0) {
       term_label <- paste(vnames, collapse = ":")
-      n_in <- length(onsets)
-      n_keep <- if (is.null(subset)) n_in else sum(isTRUE(subset))
-      subset_note <- if (!is.null(subset)) paste0(" (kept ", n_keep, "/", n_in, ")") else ""
-      msg <- sprintf("Event term '%s' has zero realized events after processing%s.", term_label, subset_note)
+      msg <- sprintf("Event term '%s' has zero realized events after processing (kept %d/%d).",
+                     term_label, sum(subset), length(onsets))
 
       warn_enabled <- getOption("fmridesign.warn_zero_events", TRUE)
       if (isTRUE(warn_enabled)) {
@@ -154,34 +134,22 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
       }
       # Proceed with empty structures; downstream code will handle gracefully
   }
-  
-  # Rebuild event_table based on the *actual* content of the event objects
-  # event() now handles the internal structure, so we use elements()
-  # This relies on elements.event(..., values=FALSE) returning the appropriate factor levels/names
-  
-  # Get descriptive elements (levels/names) for each event
-  descriptive_elements <- elements(evs[[1]], values = FALSE) # Need a way to call elements on list 'evs'? 
-  # No, elements.event_term works on the term object after it's built.
-  # Let's reconstruct the table *after* building the initial list. 
 
   varname <- paste(sapply(evs, function(x) x$varname), collapse = ":")
   
-  # Create the list structure first
   ret <- list(varname = varname, 
               events = evs, 
-              subset = subset, # Keep original subset for reference?
-              # Placeholder for event_table, rebuild below
-              event_table = NULL, 
-              # Use onsets/blockids/durations from the *first* processed event object
-              # Assumes they are consistent across all events after processing (checked by event())
-              onsets = if(length(evs) > 0) evs[[1]]$onsets else numeric(0), 
-              blockids = if(length(evs) > 0) evs[[1]]$blockids else numeric(0), 
-              durations = if(length(evs) > 0) evs[[1]]$durations else numeric(0))
+              subset = subset,
+              event_table = NULL, # filled in below
+              # Timing comes from the first processed event; event() applies the
+              # same onsets/blockids/durations/subset to every variable.
+              onsets = evs[[1]]$onsets, 
+              blockids = evs[[1]]$blockids, 
+              durations = evs[[1]]$durations)
   
   class(ret) <- c("event_term", "event_seq")
   
-  # Now build the event_table using elements()
-  # Get descriptive elements (levels/names) for the term
+  # Build the event_table from the descriptive labels of each event
   descriptive_elements_list <- elements(ret, what = "labels") # Explicitly request labels
   # Combine into a tibble directly from the list
   etab <- try(tibble::as_tibble(descriptive_elements_list), silent = TRUE)
@@ -215,31 +183,15 @@ event_table.event_term <- function(x, ...) x$event_table
 
   # Default metadata for intercept-only / continuous-only terms
   if (length(categorical_events) == 0L) {
-    levels_out <- "condition"
-    ids_out <- if (n_events > 0L) rep.int(1L, n_events) else integer(0)
-    return(list(levels = levels_out, ids = as.integer(ids_out)))
+    return(list(levels = "condition", ids = rep.int(1L, n_events)))
   }
 
-  # Prepare level tokens for each categorical event component
+  # Canonical condition levels: crossed level tokens (first factor fastest)
   level_tokens <- lapply(categorical_events, function(ev) {
-    levs <- levels(ev)
-    level_token(ev$varname, levs)
+    level_token(ev$varname, levels(ev))
   })
-
-  # Generate canonical ordering of condition levels via expand.grid
-  cond_grid <- if (length(level_tokens) == 1L) {
-    data.frame(level_tokens[[1L]], stringsAsFactors = FALSE)
-  } else {
-    do.call(expand.grid, c(level_tokens, list(stringsAsFactors = FALSE)))
-  }
-
-  if (nrow(cond_grid) == 0L) {
-    cond_levels <- character(0)
-  } else if (is.null(dim(cond_grid))) {
-    cond_levels <- make_cond_tag(cond_grid)
-  } else {
-    cond_levels <- apply(cond_grid, 1, make_cond_tag)
-  }
+  cond_grid <- expand.grid(level_tokens, stringsAsFactors = FALSE)
+  cond_levels <- do.call(paste, c(unname(as.list(cond_grid)), sep = "_"))
 
   if (n_events == 0L) {
     return(list(levels = cond_levels, ids = integer(0)))
@@ -247,35 +199,17 @@ event_table.event_term <- function(x, ...) x$event_table
 
   # Map each event instance to the corresponding condition token combination
   per_event_tokens <- lapply(seq_along(categorical_events), function(idx) {
-    ev <- categorical_events[[idx]]
-    tok <- level_tokens[[idx]]
-    labels <- elements(ev, what = "labels")
-    if (length(labels) == 0L) {
-      rep(NA_character_, n_events)
-    } else {
-      ids <- as.integer(labels)
-      vals <- tok[ids]
-      vals[is.na(ids)] <- NA_character_
-      vals
-    }
+    ids <- as.integer(elements(categorical_events[[idx]], what = "labels"))
+    level_tokens[[idx]][ids]
+  })
+  tokens_matrix <- do.call(cbind, per_event_tokens)
+
+  event_labels <- apply(tokens_matrix, 1, function(row) {
+    row <- row[!is.na(row)]
+    if (length(row) == 0L) NA_character_ else make_cond_tag(row)
   })
 
-  tokens_matrix <- do.call(cbind, per_event_tokens)
-  if (!is.null(tokens_matrix) && !is.matrix(tokens_matrix)) {
-    tokens_matrix <- matrix(tokens_matrix, ncol = 1L)
-  }
-
-  event_labels <- if (is.null(tokens_matrix) || nrow(tokens_matrix) == 0L) {
-    character(0)
-  } else {
-    apply(tokens_matrix, 1, function(row) {
-      row <- row[!is.na(row)]
-      if (length(row) == 0L) NA_character_ else make_cond_tag(row)
-    })
-  }
-
-  ids_out <- match(event_labels, cond_levels)
-  list(levels = cond_levels, ids = as.integer(ids_out))
+  list(levels = cond_levels, ids = match(event_labels, cond_levels))
 }
 
 #' @keywords internal
@@ -291,44 +225,13 @@ event_table.event_term <- function(x, ...) x$event_table
 }
 
 ## ============================================================================
-## Section 3: EV Factory and Event Constructors (REMOVE EV Factory)
-## ============================================================================
-
-# Removed EV factory function. Logic is now inlined in event_term.
-
-# Removed event_factor, event_variable, event_matrix, event_basis wrappers.
-# They are now located in R/event-classes.R
-
-## ============================================================================
 ## Section 4: Levels and Formula Methods
 ## ============================================================================
 
 #' @method formula event_term
 #' @export
 formula.event_term <- function(x, ...) {
-  # NOTE: This uses parent_terms.event_term which still exists below
-  #       It might need adjustment if parent_terms logic changes.
   as.formula(paste("~ (", paste(parent_terms(x), collapse = ":"), "-1)"))
-}
-
-#' @noRd
-.vector_of_labels <- function(ev) {
-  # Helper to generate the vector of condition labels for a single event.
-  # Uses levels.event() for the actual levels/column names.
-  lvls <- levels(ev) # Get levels/colnames from levels.event
-  
-  if (is_continuous(ev) && length(lvls) > 1) {
-    # Continuous multi-column (matrix/basis): Use index 1:ncol
-    vapply(seq_along(lvls), 
-           \(k) .label_component(ev, k), 
-           character(1))
-  } else if (is_categorical(ev)) {
-    # Categorical: Use actual levels
-    vapply(lvls, \(lvl) .label_component(ev, lvl), character(1))
-  } else {
-    # Single continuous variable (vector): Just the variable name
-    .label_component(ev)
-  }
 }
 
 ## ============================================================================
@@ -339,102 +242,50 @@ formula.event_term <- function(x, ...) {
 #' @rdname cells
 #' @export
 cells.event_term <- function(x, drop.empty = TRUE, ...) {
-  ## ----------------------------------------------------------------
-  ## 0. fast cache ---------------------------------------------------
-  # Use fixed name as levels rarely change post-construction
-  cache_attr_name <- "..cells" 
-  if (!is.null(cached <- attr(x, cache_attr_name))) {
-    cnt <- attr(cached, "count")
-    # Need to handle potential NULL count if cache is invalid
-    if(is.null(cnt)) {
-        warning("Invalid cache detected for cells.event_term, recomputing.")
-    } else {
-        return(if (drop.empty) cached[cnt > 0, , drop = FALSE] else cached)
-    }
-  }
-
-  ## ----------------------------------------------------------------
   ## 1. categorical events only -------------------------------------
-  # Use Filter and Negate for conciseness
   cats <- Filter(Negate(is_continuous), x$events)
 
   if (length(cats) == 0) {                  # no factors => one big cell
-    # Use a more descriptive name if needed, maybe based on varname
     # Consistent with cells.event: use the (first/only) varname
     var_name_cont <- if (length(x$events) > 0) x$events[[1]]$varname else "all_events"
-    out <- tibble::tibble(!!var_name_cont := var_name_cont) # Use varname for column
-    count_val <- length(x$onsets)
-    attr(out, "count") <- count_val
-    # Assign name to the count attribute
-    names(attr(out, "count")) <- var_name_cont 
-    
-    attr(x, cache_attr_name) <- out # Cache the result
+    out <- tibble::tibble(!!var_name_cont := var_name_cont)
+    attr(out, "count") <- stats::setNames(length(x$onsets), var_name_cont)
     return(out)
   }
 
-  ## ----------------------------------------------------------------
   ## 2. observed combination counts ---------------------------------
   # Reconstruct factors from internal representation
   obs_list <- lapply(cats, \(ev) {
-      # Add checks for valid meta$levels and value structure
       if (is.null(ev$meta$levels) || !is.matrix(ev$value) || ncol(ev$value) != 1) {
            stop(paste("Invalid internal structure for categorical event:", ev$varname), call.=FALSE)
       }
       factor(ev$value[, 1L], levels = seq_along(ev$meta$levels), labels = ev$meta$levels)
   })
-  # Create data frame of observed factor combinations
   obs <- do.call(data.frame, c(obs_list, stringsAsFactors = FALSE))
-  
-  # Use table() for efficient contingency counting (if few factors)
-  # For many factors, alternative might be needed 
-  # tbl <- as.data.frame.matrix(table(obs)) # This creates wide format, not needed directly
-  
-  # Generate the grid of all possible level combinations
+
+  # Grid of all possible level combinations, as factors matching obs_list
   levels_list <- lapply(cats, levels)
-  grid <- expand.grid(levels_list, stringsAsFactors = FALSE) # Use FALSE then convert relevant columns
-  # Ensure column names match original variable names
+  grid <- expand.grid(levels_list, stringsAsFactors = FALSE)
   colnames(grid) <- names(cats)
-  # Convert grid columns to factors matching the levels in obs_list
   for(i in seq_along(grid)){
       grid[[i]] <- factor(grid[[i]], levels=levels(obs_list[[i]]))
   }
 
-  ## match() much faster than join for simple cases ------------------
-  # Create unique string keys for observed and grid rows
-  # Use sep that's unlikely to appear in levels
-  key_obs  <- do.call(paste, c(obs, sep = "\001")) 
+  # Count observed rows per grid cell by matching string keys
+  key_obs  <- do.call(paste, c(obs, sep = "\001"))
   key_grid <- do.call(paste, c(grid, sep = "\001"))
-  # Count occurrences by matching observed keys to grid keys
   count    <- tabulate(match(key_obs, key_grid), nbins = nrow(grid))
 
-  ## ----------------------------------------------------------------
   ## 3. assemble result ---------------------------------------------
-  out <- tibble::as_tibble(grid) # Convert final grid to tibble
-
-  # --- Add names to the count vector ---
-  # Generate names for the counts based on the grid rows (factor level combinations)
+  out <- tibble::as_tibble(grid)
   if (nrow(grid) > 0) {
-      # Use a separator consistent with how interactions might be named elsewhere
-      cell_names <- apply(grid, 1, paste, collapse = ":")
-      # Ensure counts has names before attaching
-      if (length(count) == length(cell_names)) {
-         names(count) <- cell_names
-      } else {
-         # This shouldn't happen if logic above is correct, but add a warning
-         warning("Mismatch between number of cells and counts calculated in cells.event_term")
-      }
-  } # Else count is likely integer(0) and doesn't need names
-  # --- End adding names ---
+      names(count) <- apply(grid, 1, paste, collapse = ":")
+  }
+  attr(out, "count") <- count
 
-  attr(out, "count") <- count # Attach the now named count vector
-
-  attr(x, cache_attr_name) <- out # Cache the result (with named counts)
-
-  # Filter based on drop.empty
   if (drop.empty) {
       keep_idx <- count > 0
       filtered_out <- out[keep_idx, , drop = FALSE]
-      # Ensure the count attribute on the filtered output is also correct
       attr(filtered_out, "count") <- count[keep_idx]
       filtered_out
   } else {
@@ -442,23 +293,20 @@ cells.event_term <- function(x, drop.empty = TRUE, ...) {
   }
 }
 
+# Observed cells of the wrapped event_term, crossed with the HRF basis labels
+# (basis varying fastest, matching the condition-major design columns).
 #' @noRd
 .event_set <- function(x, exclude_basis = FALSE) {
-  evtab <- event_table(x)
-  
-  evset <- if (fmrihrf::nbasis(x) > 1 & !exclude_basis) {
-    ncond <- fmrihrf::nbasis(x)
-    # Construct a zero-padded string for basis labels.
-    zstr <- paste0(rep("0", ceiling(log10(ncond + 1e-6))), collapse = "")
-    
-          evlist <- c(list(factor(paste("basis", zstr, 1:fmrihrf::nbasis(x), sep = ""))), cells(x$evterm))
-    names(evlist) <- c("basis", parent_terms(x$evterm))
-    evlist <- lapply(evlist, levels)
-    ret <- expand.grid(evlist, stringsAsFactors = TRUE)
-    ret[c(2:length(ret), 1)]
-  } else {
-    cells(x$evterm)
+  base <- cells(x$evterm)
+  nb <- fmrihrf::nbasis(x)
+  if (nb <= 1 || exclude_basis) {
+    return(base)
   }
+  basis_labels <- paste0("basis", zeropad(seq_len(nb), nb))
+  rows <- rep(seq_len(nrow(base)), each = nb)
+  cols <- lapply(base, function(col) col[rows])
+  cols$basis <- factor(rep(basis_labels, times = nrow(base)), levels = basis_labels)
+  as.data.frame(cols, stringsAsFactors = FALSE, optional = TRUE)
 }
 
 #' @export
@@ -468,15 +316,11 @@ cells.covariate_convolved_term <- function(x, ...) {
 }
 
 #' @export
-#' @importFrom stringr str_trim
 cells.convolved_term <- function(x, ...) {
   exclude_basis <- list(...)$exclude_basis
   if (is.null(exclude_basis)) exclude_basis <- FALSE
   
-  evtab <- event_table(x)
   evset <- .event_set(x, exclude_basis = exclude_basis)
-  
-  strels <- apply(apply(evtab, 2, stringr::str_trim), 1, paste, collapse = ":")
   
   strlevs <- if (nrow(evset) > 1) {
     apply(apply(evset, 2, stringr::str_trim), 1, paste, collapse = ":")
@@ -509,34 +353,14 @@ cells.convolved_term <- function(x, ...) {
 conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
                                   style = c("canonical", "display"), ...) {
   style <- match.arg(style)
-  
-  # --- Caching --- 
-  opts_key <- paste(drop.empty, expand_basis, style, sep="|")
-  cached_val <- attr(x, "..conds")
-  cached_opts <- attr(x, "..conds_opts")
-  
-  # --- RE-ENABLE CACHE --- 
-  if (!is.null(cached_val) && !is.null(cached_opts) && identical(cached_opts, opts_key)) {
-    return(cached_val)
-  }
-  # message("--- conditions.event_term: Cache bypassed/missed, recalculating ---") # Keep commented out
-  # --- END RE-ENABLE ---
-  
-  # --- Shortcut for single continuous event with one column --- 
+  nb <- if (expand_basis) .term_nbasis(x) else 1L
+
+  # --- Shortcut: a single one-column continuous event is its column token
+  # (returned as is, attributes included)
   if (length(x$events) == 1 && is_continuous(x$events[[1]])) {
-    cols <- try(columns(x$events[[1]]), silent=TRUE)
+    cols <- try(columns(x$events[[1]]), silent = TRUE)
     if (!inherits(cols, "try-error") && length(cols) == 1) {
-        base_cond_tags <- cols 
-        if (expand_basis) {
-            hrfspec <- attr(x, "hrfspec")
-            nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
-            final_cond_tags <- add_basis(base_cond_tags, nb)
-        } else {
-            final_cond_tags <- base_cond_tags
-        }
-        attr(x, "..conds") <- final_cond_tags
-        attr(x, "..conds_opts") <- opts_key
-        return(final_cond_tags)
+      return(add_basis(cols, nb))
     }
   }
   
@@ -544,7 +368,6 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
   comp_tokens_list <- lapply(x$events, function(ev) {
       if (is_categorical(ev)) {
           levs <- levels(ev) 
-          # Handle case where factor might have no levels after subsetting? levels() should return character(0)
           if (length(levs) == 0) return(character(0))
           if (identical(style, "canonical")) {
             level_token(ev$varname, levs)
@@ -560,44 +383,23 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
   comp_tokens_list <- Filter(function(tk) length(tk) > 0, comp_tokens_list)
   
   if (length(comp_tokens_list) == 0) { # If ALL components became empty
-       final_out <- character(0)
-       attr(x, "..conds") <- final_out
-       attr(x, "..conds_opts") <- opts_key
-       return(final_out)
+       return(character(0))
   }
   
-  # --- Combine Tokens using expand.grid and make_cond_tag --- 
-  names(comp_tokens_list) <- names(Filter(function(tk) length(tk) > 0, x$events)) # Match names to filtered tokens
+  # --- Combine Tokens using expand.grid --- 
   full_grid <- expand.grid(comp_tokens_list, stringsAsFactors = FALSE)
   if (nrow(full_grid) == 0L) {
-    base_cond_tags_all <- character(0)
+    cond_tags <- character(0)
   } else if (ncol(full_grid) == 1L) {
-    base_cond_tags_all <- full_grid[[1L]]
+    cond_tags <- full_grid[[1L]]
   } else {
     sep <- if (identical(style, "canonical")) "_" else ":"
-    base_cond_tags_all <- apply(full_grid, 1, function(row) paste(row, collapse = sep))
+    cond_tags <- apply(full_grid, 1, function(row) paste(row, collapse = sep))
   }
   
-  # --- REMOVED drop.empty LOGIC BLOCK --- 
-  # The logic relying on cells() was flawed for mixed continuous/categorical terms.
-  # Dropping based on actual matrix rank deficiency is handled by design_matrix() / model.matrix().
-  base_cond_tags_final <- base_cond_tags_all
-  
-  # --- Handle expand_basis --- 
-  if (expand_basis) {
-      hrfspec <- attr(x, "hrfspec")
-      nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
-      final_cond_tags <- add_basis(base_cond_tags_final, nb)
-  } else {
-      final_cond_tags <- base_cond_tags_final
-  }
-  
-  # --- Cache and Return --- 
-  final_out <- as.vector(final_cond_tags)
-  attr(x, "..conds") <- final_out
-  attr(x, "..conds_opts") <- opts_key
-  
-  return(final_out)
+  # drop.empty is not applied here: conditions() is the full grid (see
+  # .present_cells() for the cells that actually get a design column).
+  as.vector(add_basis(cond_tags, nb))
 }
 
 # conditions() always returns the full grid of factor levels. For names,
@@ -620,9 +422,7 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
   keep <- if (isTRUE(drop.empty)) .present_cells(x) else rep(TRUE, length(out))
   out <- out[keep]
   if (isTRUE(expand_basis)) {
-    hrfspec <- attr(x, "hrfspec")
-    nb <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
-    out <- add_basis(out, nb)
+    out <- add_basis(out, .term_nbasis(x))
   }
   out
 }
@@ -649,7 +449,7 @@ condition_map.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
 }
 
 #' @noRd
-parent_terms.event_term <- function(x) unlist(lapply(x$events, function(ev) ev$varname))
+parent_terms <- function(x) unlist(lapply(x$events, function(ev) ev$varname))
 
 ## ============================================================================
 ## Section 7: Continuous/Categorical Checks and Elements Extraction
@@ -838,12 +638,8 @@ event_table.convolved_term <- function(x, ...) {
 #' @rdname fmrihrf-generics
 #' @export
 nbasis.convolved_term <- function(x, ...) {
-  hrfspec <- x$hrfspec %||% attr(x, "hrfspec")
-  if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
-    fmrihrf::nbasis(hrfspec$hrf)
-  } else {
-    1L
-  }
+  hrf <- (x$hrfspec %||% attr(x, "hrfspec"))$hrf
+  if (is.null(hrf)) 1L else fmrihrf::nbasis(hrf)
 }
 
 #' @export
@@ -921,7 +717,18 @@ split_onsets.event_term <- function(x, sframe, global = FALSE, blocksplit = FALS
     })
   }
   
-  names(ret) <- longnames(x)
+  # Name each group by its condition. The groups are the observed factor
+  # cells in canonical order; when every continuous component is a single
+  # column, the full condition grid has one name per factor cell. (Naming by
+  # longnames() would drop cells whose modulator column is all zero and shift
+  # the remaining names.)
+  full <- conditions(x, drop.empty = FALSE, expand_basis = FALSE)
+  meta <- .event_term_condition_metadata(x)
+  names(ret) <- if (length(full) == length(meta$levels)) {
+    full[sort(unique(meta$ids[!is.na(meta$ids)]))]
+  } else {
+    longnames(x)
+  }
   ret
 }
 
@@ -1133,7 +940,8 @@ convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE, hrf_l
       fmrihrf::regressor(onsets = numeric(0), hrf = ref_hrf, amplitude = 0)
     } else if (hrf_is_list) {
       # Per-onset HRFs: create individual regressors per event since
-      # fmrihrf::regressor does not accept a list of HRF objects
+      # (one regressor per event, summed after evaluation; this predates
+      # fmrihrf::regressor() accepting a list of HRFs and is kept as is)
       per_event_regs <- lapply(nonzero, function(k) {
         fmrihrf::regressor(
           onsets = globons[k],
@@ -1172,14 +980,8 @@ convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE, hrf_l
 #' @export
 regressors.event_term <- function(x, hrf, sampling_frame, summate = FALSE, drop.empty = TRUE, ...) {
   globons <- fmrihrf::global_onsets(sampling_frame, x$onsets, x$blockids)
-  durations <- x$durations
-  blockids <- x$blockids
-  nimages <- sum(fmrihrf::blocklens(sampling_frame))
-  cnames <- conditions(x)
   dmat <- design_matrix(x, drop.empty)
-  ncond <- ncol(dmat)
-  
-  reg <- convolve_design(hrf, dmat, globons, durations, summate = summate)
+  reg <- convolve_design(hrf, dmat, globons, x$durations, summate = summate)
   names(reg) <- colnames(dmat)
   reg
 }
@@ -1188,7 +990,6 @@ regressors.event_term <- function(x, hrf, sampling_frame, summate = FALSE, drop.
 #' @rdname convolve
 #' @export
 #' @importFrom tibble as_tibble
-#' @importFrom dplyr %>% group_by select do ungroup
 #' @examples
 #' term <- event_term(
 #'   list(condition = factor(c("A", "B", "A"))),
@@ -1234,6 +1035,8 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
                                         summate = TRUE, precision = 0.3,
                                         normalize = FALSE, ...) {
   term_tag <- attr(x, "term_tag")
+  # Name used in messages: a bare event_term has no term_tag
+  term_label <- term_tag %||% x$varname
 
   # --- Check for hrf_fun (per-onset HRF generator) ---
   hrfspec <- attr(x, "hrfspec")
@@ -1251,12 +1054,12 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
         hrf_fun(event_data),
         error = function(e) {
           stop(sprintf("hrf_fun failed for term '%s': %s",
-                       term_tag %||% x$varname, e$message), call. = FALSE)
+                       term_label, e$message), call. = FALSE)
         }
       )
     }
 
-    hrf_list <- validate_hrf_list(hrf_list, nrow(event_data), term_tag)
+    hrf_list <- validate_hrf_list(hrf_list, nrow(event_data), term_label)
     hrf <- hrf_list[[1]]
   }
 
@@ -1269,7 +1072,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   if (ncol(dmat) == 0L) {
     warning(sprintf(
       "Design matrix for term '%s' became empty after dropping. Convolution will result in an empty matrix.",
-      term_tag
+      term_label
     ), call. = FALSE)
     base_cnames <- character(0)
   }
@@ -1365,7 +1168,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   if (n_time == 0L) {
     warning(sprintf(
       "Convolution resulted in an empty matrix for term '%s'.\n  Returning tibble with correct names but 0 rows.",
-      term_tag
+      term_label
     ), call. = FALSE)
     empty <- matrix(numeric(0), nrow = 0, ncol = length(cn))
     colnames(empty) <- cn
@@ -1393,7 +1196,7 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
       cmat <- cbind(cmat, mean_col)
       cn <- c(cn, mean_col_name)
     } else {
-      warning(sprintf("Cannot add sum column for term '%s': no base columns generated.", term_tag))
+      warning(sprintf("Cannot add sum column for term '%s': no base columns generated.", term_label))
     }
   }
 
@@ -1402,18 +1205,9 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
   } else {
     warning(sprintf(
       "Final column name count (%d) mismatch with convolved matrix columns (%d) for term '%s'. Using generic names.",
-      length(cn), ncol(cmat), term_tag
+      length(cn), ncol(cmat), term_label
     ), call. = FALSE)
     colnames(cmat) <- make.names(paste0("col_", seq_len(ncol(cmat))), unique = TRUE)
-  }
-
-  if (getOption("fmrireg.debug", FALSE)) {
-    fn <- get0("is_valid_heading", mode = "function")
-    if (!is.null(fn)) {
-      stopifnot(all(fn(colnames(cmat))))
-    } else {
-      warning("fmrireg.debug=TRUE: is_valid_heading helper not found for validation.")
-    }
   }
 
   base_meta <- .term_col_metadata(
@@ -1456,13 +1250,16 @@ Fcontrasts.event_term <- function(x, max_inter = 4L, ...) {
   evs_cat <- Filter(.is_cat, x$events)
   if (!length(evs_cat)) stop("No categorical variables found in term '", x$varname, "' for Fcontrasts.", call.=FALSE)
 
-  C <- lapply(evs_cat, function(ev) .Cvec(length(levels(ev))))
-  D <- lapply(evs_cat, function(ev) .Dmat(length(levels(ev))))
-  names(C) <- names(D) <- names(evs_cat)
+  # A single-level factor is constant: it enters every contrast through its
+  # 1 x 1 margin and has no effect of its own.
+  nlev <- vapply(evs_cat, function(ev) length(levels(ev)), integer(1))
+  testable <- which(nlev != 1L)
+  if (!length(testable)) stop("Need at least 2 levels for contrasts.")
+  C <- lapply(nlev, .Cvec)
+  D <- lapply(nlev, function(n) if (n == 1L) NULL else .Dmat(n))
 
-  # --- Get expected row names in Kronecker order ---------------------------
+  # --- Row names: Cartesian product of levels (Kronecker order) -----------
   cat_levels_list <- lapply(evs_cat, levels)
-  # --- build Cartesian product of levels (Kronecker order) ------------------ 
   lvl_grid        <- do.call(expand.grid, cat_levels_list)
   cat_cond_names  <- apply(lvl_grid, 1, paste, collapse = ":")
   expected_rows   <- nrow(lvl_grid)
@@ -1471,59 +1268,35 @@ Fcontrasts.event_term <- function(x, max_inter = 4L, ...) {
   if (!inherits(cond_tags, "try-error") && length(cond_tags) == expected_rows) {
     cat_cond_names <- cond_tags
   }
-  # ---------------------------------------------------------------------- 
 
-  ## --- Compute main effects matrices (without rownames yet) ---------------
+  ## --- Effect matrices (without rownames yet) -----------------------------
   # Row order must match expand.grid()/conditions(), where the FIRST factor
   # varies fastest. kronecker(A, B) makes its second argument vary fastest, so
   # the factor list is reversed before reducing.
-  main <- Map(function(i) {
+  .effect <- function(ix) {
       mat_list <- C
-      mat_list[[i]] <- D[[i]] 
+      mat_list[ix] <- D[ix]
       Reduce(kronecker, rev(mat_list))
-  }, seq_along(D)) |> 
-    stats::setNames(names(evs_cat))
+  }
+  final_contrasts_list <- stats::setNames(lapply(testable, .effect), names(evs_cat)[testable])
 
-  ## --- Compute interaction effects matrices (without rownames yet) -------
-  final_contrasts_list <- if (length(D) > 1 && length(D) <= max_inter) {
-      inter <- unlist(lapply(2:length(D), function(k) {
-          combn(length(D), k, simplify = FALSE, FUN = function(ix) {
-              mat_list <- C
-              mat_list[ix] <- D[ix] 
-              M <- Reduce(kronecker, rev(mat_list))
+  if (length(testable) > 1 && length(testable) <= max_inter) {
+      inter <- unlist(lapply(2:length(testable), function(k) {
+          combn(testable, k, simplify = FALSE, FUN = function(ix) {
+              M <- .effect(ix)
               attr(M, "name") <- paste(names(evs_cat)[ix], collapse=":")
               M
           })
       }), recursive = FALSE)
       names(inter) <- vapply(inter, attr, "", "name")
-      c(main, inter)
-  } else {
-      main
+      final_contrasts_list <- c(final_contrasts_list, inter)
   }
   
-  ## --- Assign correct categorical rownames to all matrices -------
-  final_contrasts_named <- lapply(seq_along(final_contrasts_list), function(i) {
-       M <- final_contrasts_list[[i]]
-       mat_name <- names(final_contrasts_list)[i]
-       if (!is.matrix(M)) { 
-            warning(paste("Skipping rownames for invalid matrix in Fcontrasts list element:", mat_name))
-            return(M)
-       }
-       # Compare nrow(M) to expected rows from CATEGORICAL grid/interaction
-       if (nrow(M) == expected_rows) {
-            # Use dimnames[[1]] <- assignment (should be correct now)
-            dimnames(M)[[1]] <- cat_cond_names
-       } else {
-           # This warning should be less likely now, but keep for safety
-           warning(paste("Dimension mismatch for contrast '", mat_name, "': expected ", 
-                         expected_rows, " rows (from categorical interaction), but matrix has ", nrow(M), ". Rownames not assigned."))
-       }
-       M # Return matrix (modified in place)
+  ## --- Assign categorical rownames (every matrix has prod(nlevels) rows) ---
+  lapply(final_contrasts_list, function(M) {
+       dimnames(M)[[1]] <- cat_cond_names
+       M
   })
-  
-  names(final_contrasts_named) <- names(final_contrasts_list)
-  
-  final_contrasts_named
 }
 
 #' Retrieve contrast definitions for an event term
@@ -1606,62 +1379,43 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
 
   # --- Special case: term contains only one continuous event --- 
   # This includes single numeric variables and multi-column basis functions.
-  # Bypass model.matrix and return the value matrix directly.
+  # Bypass model.matrix and return the value matrix directly, named by the
+  # intermediate condition tags from columns() (e.g. "01", "02" for Poly).
   if (is_continuous(x) && length(x$events) == 1) {
     ev      <- x$events[[1]]
-    # Directly use the value matrix (N x K)
-    out_mat <- ev$value 
-    # Ensure it's a data frame before naming
-    out_df <- as.data.frame(out_mat) # Convert matrix to data frame
-    
-    # Use columns() to get the base condition tags for naming intermediate matrix
-    # These tags represent the *parts* of the final name (e.g., "01", "02" for Poly)
-    # Do NOT sanitize with make.names here, as these are intermediate component names.
+    out_df <- as.data.frame(ev$value)
     intermediate_cond_tags <- try(columns(ev), silent = TRUE)
 
     if (inherits(intermediate_cond_tags, "try-error") || length(intermediate_cond_tags) != ncol(out_df)) {
       warning(sprintf("Failed to get valid condition tags via columns() or column count mismatch for event term '%s' (varname: '%s'). Using generic V# names for intermediate matrix.", 
                       x$varname %||% "UnnamedTerm", ev$varname %||% "UnnamedEventVar"), call. = FALSE)
-      # Fallback to generic, sanitized names if columns() fails or gives wrong number
       cnames <- make.names(paste0("V", seq_len(ncol(out_df))), unique = TRUE) 
     } else {
-      # Use the raw condition tags (e.g., "01", "02") directly as intermediate names.
-      # These are not necessarily valid full R names yet but are components.
       cnames <- intermediate_cond_tags 
     }
     
     names(out_df) <- cnames
-    # Return as a tibble
     return(tibble::as_tibble(out_df, .name_repair = "minimal"))
   }
   
   ## ----------------------------------------------------------------
   ## 1. Build the "data" data-frame that model.matrix() needs
   ## ----------------------------------------------------------------
-  #   * For categorical events -> factor column (1 per event)
-  #   * For continuous events  -> numeric column(s) (one per matrix column)
-  
-  # Helper to extract appropriate column(s) from an event object
+  #   * categorical events -> one factor column named ev$varname
+  #   * continuous events  -> one matrix column (I()) named ev$varname
   build_cols <- function(ev) {
-    if (is_categorical(ev)) {
-      # Categorical: return data frame with factor column named ev$varname
-      fac <- factor(ev$value[, 1L],
-                    levels = seq_along(ev$meta$levels),
-                    labels = ev$meta$levels)
-      df_out <- data.frame(fac, check.names=FALSE)
-      colnames(df_out) <- ev$varname 
-      df_out
+    df_out <- if (is_categorical(ev)) {
+      data.frame(factor(ev$value[, 1L],
+                        levels = seq_along(ev$meta$levels),
+                        labels = ev$meta$levels),
+                 check.names = FALSE)
     } else {
-      # Continuous/Basis: return data frame with a single matrix column named ev$varname
-      mat_col <- ev$value # This is the N x K matrix
-      df_out <- data.frame(I(mat_col)) # Use I() to store matrix in one column
-      colnames(df_out) <- ev$varname # Name the column containing the matrix
-      df_out
+      data.frame(I(ev$value))
     }
+    colnames(df_out) <- ev$varname
+    df_out
   }
   
-  # Combine columns from all events into a single data frame
-  # cbind should now handle the mix of factor columns and matrix columns
   df_list <- lapply(x$events, build_cols)
   df <- try(do.call(cbind, df_list), silent=TRUE)
   if (inherits(df, "try-error")) {
@@ -1669,37 +1423,22 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
            "\n  Original error: ", attr(df, "condition")$message)
   }
   
-  # === DEBUG PRINT ===
-  #message(sprintf("Term: %s, nrow(df): %d, length(x$onsets): %d", x$varname, nrow(df), length(x$onsets)))
-  # === END DEBUG ===
-  
   if (nrow(df) != length(x$onsets)) {
       stop("Internal error: Row mismatch when building data frame for event term: ", x$varname)
   }
 
   ## ----------------------------------------------------------------
-  ## 2. model.matrix() with the term's formula
+  ## 2. model.matrix() with the term's formula, named by conditions()
   ## ----------------------------------------------------------------
-  # Get the formula (e.g., ~ Condition:Modulator - 1)
-  form <- formula(x)
+  # model.matrix() cannot code single-level factors. Such a factor is a
+  # constant indicator, so it is left out of the formula (its level still
+  # appears in the conditions() names); a term made only of such factors is a
+  # single constant column.
+  single_level <- vapply(df, function(col) is.factor(col) && nlevels(col) <= 1,
+                         logical(1))
   
-  # Special case: Check for single-level factors which cause model.matrix to fail
-  # If any factor column has only one level, handle it specially
-  has_single_level_factor <- FALSE
-  for (col_name in colnames(df)) {
-    col_data <- df[[col_name]]
-    if (is.factor(col_data) && nlevels(col_data) <= 1) {
-      has_single_level_factor <- TRUE
-      break
-    }
-  }
-  
-  if (has_single_level_factor) {
-    # For single-level factors, create a simple matrix of ones
-    # This represents the constant effect of that single level
-    n_rows <- nrow(df)
-    mm <- matrix(1, nrow = n_rows, ncol = 1)
-    # Use the condition name from conditions() for naming
+  if (all(single_level)) {
+    mm <- matrix(1, nrow = nrow(df), ncol = 1)
     expected_colnames_raw <- conditions(x, drop.empty = FALSE)
     if (length(expected_colnames_raw) > 0) {
       colnames(mm) <- make.names(expected_colnames_raw[1], unique = TRUE)
@@ -1707,11 +1446,11 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
       colnames(mm) <- make.names(x$varname, unique = TRUE)
     }
   } else {
-    # Normal case: use model.matrix
-    # Ensure the data frame column names match what the formula expects
-    # (formula uses original names, df uses sanitized/numbered names)
-    # model.matrix should handle this via the data=df argument.
-    
+    form <- if (any(single_level)) {
+      stats::as.formula(paste("~ (", paste(names(df)[!single_level], collapse = ":"), "-1)"))
+    } else {
+      formula(x)
+    }
     mm <- try(model.matrix(form, data = df), silent=TRUE)
     if (inherits(mm, "try-error")) {
          stop("Failed to create model matrix for event term: ", x$varname, 
@@ -1720,33 +1459,14 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
               "\n  Original error: ", attr(mm, "condition")$message)
     }
     
-    # --- SET COLNAMES using conditions() as the single source of truth --- 
-    # Get potentially *all* condition names first (before drop.empty)
+    # conditions() is the single source of truth for column names. Columns
+    # are named positionally, which assumes model.matrix() and conditions()
+    # enumerate cells in the same order (true for full-rank designs).
     expected_colnames_raw <- conditions(x, drop.empty = FALSE)
-    
-    # Sanitize the raw names using make.names
     expected_colnames <- make.names(expected_colnames_raw, unique = TRUE)
-    
-    # Basic check: Does the number of columns match?
-    # model.matrix might produce fewer columns if rank-deficient, 
-    # but conditions() should produce the full set based on expand.grid.
-    # This mismatch needs careful handling. For now, assume model.matrix is correct
-    # in terms of *which* columns are estimable, and use conditions() to name them.
-    # If ncol(mm) < length(expected_colnames), it implies model.matrix dropped some.
-    
-    # TODO: How to robustly map expected_colnames to the columns present in mm?
-    # This is tricky. model.matrix column names (e.g., ConditionB:Modulator1)
-    # don't directly map to conditions() output (e.g., Condition[B]:Modulator[1]).
-    # For now, we ASSUME the order is the same and the number of columns matches 
-    # *if the design is full rank*. If not, this naming will be wrong.
-    # A more robust solution might involve parsing model.matrix colnames or attributes.
-    # Let's proceed with the direct assignment as per the reviewer's suggestion, 
-    # but acknowledge this fragility.
     if (ncol(mm) != length(expected_colnames)) {
         warning(sprintf("Column count mismatch for '%s': model.matrix (%d) vs conditions (%d). Naming may be incorrect due to rank deficiency.",
                         x$varname, ncol(mm), length(expected_colnames_raw)), call. = FALSE)
-        # Attempt to name the existing columns anyway, hoping the order matches
-        # This might fail if length(expected_colnames) is shorter, though unlikely.
         colnames(mm) <- expected_colnames[1:ncol(mm)] 
     } else {
         colnames(mm) <- expected_colnames
@@ -1754,10 +1474,8 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
   }
   
   ## ----------------------------------------------------------------
-  ## 3. Drop empty columns if requested (optional)
+  ## 3. Drop empty columns if requested
   ## ----------------------------------------------------------------
-  # model.matrix might return fewer columns than expected if interactions 
-  # lead to rank deficiency. drop.empty applies to the *output* matrix.
   if (isTRUE(drop.empty)) {
       # A zero-event term deliberately retains its declared zero columns (and
       # emits fmridesign_zero_events above). For one or more events, drop only
@@ -1775,13 +1493,9 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
       }
       
       if (length(keep_cols) < ncol(mm)){
-          # message("Dropping empty columns: ", paste(colnames(mm)[! (1:ncol(mm)) %in% keep_cols], collapse=", "))
           mm <- mm[, sort(keep_cols), drop = FALSE]
       }
   }
-  
-  # Optional: Handle NAs by zero-filling (historical behavior)
-  # mm[is.na(mm)] <- 0 
 
   tibble::as_tibble(mm, .name_repair = "check_unique")
 }
@@ -1869,33 +1583,7 @@ print.event_term <- function(x, ...) {
   }
   
   if (nevents > 0) {
-    cli::cli_h2("Timing")
-    onset_range <- range(x$onsets, na.rm = TRUE)
-    dur_range <- range(x$durations, na.rm = TRUE)
-    # Evaluate sprintf outside cli::cli_text to avoid interpolation issues
-    onset_range_str <- sprintf("%.2f - %.2f sec", onset_range[1], onset_range[2])
-    dur_range_str <- sprintf("%.2f - %.2f sec", dur_range[1], dur_range[2])
-    cli::cli_text("{.info * Onset Range:} {onset_range_str}")
-    cli::cli_text("{.info * Duration Range:} {dur_range_str}")
-    
-    cli::cli_h2("Blocks")
-    blocks_table <- table(x$blockids)
-    nblocks <- length(blocks_table)
-    cli::cli_text("{.info * Number of Blocks:} {nblocks}")
-    # Truncate long block lists
-    max_show_blocks <- 10
-    blocks_display <- if(nblocks > max_show_blocks) {
-                          paste(c(names(blocks_table)[1:max_show_blocks], "..."), collapse = ", ")
-                      } else {
-                          paste(names(blocks_table), collapse = ", ")
-                      }
-    cli::cli_text("{.info * Block IDs:} {blocks_display}")
-    events_per_block_display <- if(nblocks > max_show_blocks) {
-                                     paste(c(blocks_table[1:max_show_blocks], "..."), collapse = ", ")
-                                 } else {
-                                     paste(blocks_table, collapse = ", ")
-                                 }
-    cli::cli_text("{.info * Events per Block:} {events_per_block_display}")
+    .cli_timing_and_blocks(x, per_block = TRUE)
   } else {
       cli::cli_alert_info("Event term is empty.")
   }

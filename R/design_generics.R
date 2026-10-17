@@ -705,9 +705,3 @@ contrast_weights <- function(x, ...) UseMethod("contrast_weights")
 regressors <- function(x, ...) UseMethod("regressors")
 
 
-#' Extract parent terms
-#' 
-#' @param x The object.
-#' @keywords internal
-#' @noRd
-parent_terms <- function(x) UseMethod("parent_terms")

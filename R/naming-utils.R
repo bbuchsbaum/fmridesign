@@ -1,12 +1,10 @@
-# Naming Utilities for fmrireg Design Matrix Column Names
+# Naming Utilities for Design Matrix Column Names
 
 # Internal helper for zero-padding numbers
 #' @keywords internal
 #' @noRd
 zeropad <- function(i, n_total) {
-  # Handle edge case n_total = 0 or 1 gracefully
-  #width <- if (n_total <= 1) 1 else ceiling(log10(n_total + 1e-9)) # OLD width calc
-  # Calculate width needed based on magnitude of the largest number (n_total)
+  # Width needed for the largest number (n_total)
   log_width <- if (n_total < 1) 1L else ceiling(log10(n_total + 1e-9))
   # Ensure minimum width is 2 if there's more than one item, otherwise use calculated width
   final_width <- if (n_total > 1) max(2L, as.integer(log_width)) else as.integer(log_width) 
@@ -29,14 +27,11 @@ sanitize <- function(x, allow_dot = TRUE) {
   sanitized <- make.names(x, unique = FALSE)
 
   if (!allow_dot) {
-    # Replace dots introduced by make.names (or pre-existing) with underscores.
-    # CRITICAL FIX: Replace sequences of one or more dots/underscores with a single underscore.
-    # This prevents ".." becoming "__".
-    # First, replace all dots with underscores to normalize separators
+    # Dots (from make.names or pre-existing) become underscores; runs of
+    # underscores collapse to one (so ".." never becomes "__") and leading /
+    # trailing underscores are dropped.
     sanitized <- gsub(".", "_", sanitized, fixed = TRUE)
-    # Then, replace multiple consecutive underscores with a single one
     sanitized <- gsub("_+", "_", sanitized)
-    # Optional: remove leading/trailing underscores that might result
     sanitized <- gsub("^_|_$", "", sanitized)
   }
   sanitized
@@ -106,7 +101,6 @@ make_unique_tags <- function(tags) {
 #' @param hrfspec The HRF specification list for the term.
 #' @param existing_tags Character vector of already assigned term tags.
 #' @return A single, unique, sanitized term tag.
-#' @importFrom rlang as_label
 #' @keywords internal
 #' @noRd
 make_term_tag <- function(hrfspec, existing_tags = character()) {
@@ -150,29 +144,20 @@ make_term_tag <- function(hrfspec, existing_tags = character()) {
     }
   }
   
-  # Handle vector inputs - collapse to single tag
+  # A vector tag collapses to its first element; NA / empty become a placeholder
   if (length(tag_base) > 1) {
-    # For vector tags, use the first element
-    # This ensures we always have a scalar for comparison
     tag_base <- tag_base[1]
   }
-  
-  # Handle NA values that might result from subsetting
   if (is.na(tag_base)) {
     tag_base <- "empty_id_tag"
   }
-  
-  # Now safe to do scalar comparison
   if (tag_base == "") {
       tag_base <- "empty_id_tag" 
   }
 
-  tag <- tag_base 
-
-  all_tags <- c(existing_tags, tag)
-  unique_tags <- make_unique_tags(all_tags)
-  final_tag <- unique_tags[length(all_tags)]
-  return(final_tag)
+  # Make unique against the tags already assigned (e.g. "cond", "cond#1")
+  all_tags <- c(existing_tags, tag_base)
+  make_unique_tags(all_tags)[length(all_tags)]
 }
 
 #' Create Factor Level Token
@@ -291,8 +276,3 @@ make_column_names <- function(term_tag, cond_tags, nb) {
   }
 }
 
-# Null-coalescing operator (from rlang)
-# Avoids direct dependency if only used here, but rlang is needed for as_label anyway
-`%||%` <- function(x, y) {
-  if (is.null(x)) y else x
-} 

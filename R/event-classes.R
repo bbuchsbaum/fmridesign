@@ -53,67 +53,46 @@ event <- function(value, name, onsets, blockids, durations = 0, subset = NULL) {
       subset <- rep(TRUE, n_initial)
   }
   
-  # --------------------------------------------
-  # 1. Validate / recycle / pre-process with the existing helper
-  # TODO: Review/refactor/integrate .checkEVArgs itself later (Ticket EV-4)
-  meta_checked <- .checkEVArgs(name, value, onsets, blockids, durations)
+  # Validate lengths/ordering, sanitize the name and recycle durations
+  checked   <- .checkEVArgs(name, value, onsets, blockids, durations)
+  name      <- checked$varname
+  durations <- checked$durations
   
-  # Overwrite with validated/processed objects from the helper
-  name      <- meta_checked$varname # Use sanitized name
-  value     <- meta_checked$value
-  onsets    <- meta_checked$onsets
-  blockids  <- meta_checked$blockids
-  durations <- meta_checked$durations # Recycled by helper
-  # --------------------------------------------
-  
-  # Apply subsetting safely AFTER validation and recycling
+  # Apply subsetting AFTER validation and recycling
   keep_indices <- which(subset)
   onsets_sub    <- onsets[keep_indices]
   blockids_sub  <- blockids[keep_indices]
   durations_sub <- durations[keep_indices]
   n_final <- length(onsets_sub)
   
-  # Determine continuous flag based on *original* input type
   # Basis, numeric, matrix are continuous; factor, character are not.
   is_continuous <- !(is.factor(value) || is.character(value))
   
-  # Process value based on type, applying subsetting.
-  # Use if/else if/else for conditional logic
-  
+  # Standardize the payload to a numeric matrix (subsetted) plus metadata
+  meta_list <- NULL
   if (inherits(value, "ParametricBasis")) {
       basis_subset <- sub_basis(value, subset)
-      switch_result <- list(value = basis_subset$y, meta = list(basis = basis_subset))
+      val_mat   <- basis_subset$y
+      meta_list <- list(basis = basis_subset)
   } else if (is.factor(value) || is.character(value)) {
-      # Store original levels - handle both factors and character vectors
-      original_levels <- if (is.factor(value)) {
-          levels(value)
-      } else {
-          # For character vectors, get unique values as levels
-          unique(as.character(value))
-      }
-      # Create factor 'f' using subsetted values BUT preserving original levels
+      # Keep the ORIGINAL levels (unique values for character input), even
+      # those that no retained event uses
+      original_levels <- if (is.factor(value)) levels(value) else unique(as.character(value))
       f <- factor(as.character(value)[keep_indices], levels = original_levels)
-      if (length(f) == 0) {
-          val_payload <- matrix(numeric(0), nrow = 0, ncol = 1L)
+      val_mat <- if (length(f) == 0) {
+          matrix(numeric(0), nrow = 0, ncol = 1L)
       } else {
-          val_payload <- matrix(as.integer(f), ncol = 1L)
+          matrix(as.integer(f), ncol = 1L)
       }
-      # Store the ORIGINAL levels in meta$levels
-      switch_result <- list(value = val_payload, meta = list(levels = original_levels))
+      meta_list <- list(levels = original_levels)
   } else if (is.matrix(value)) {
-      switch_result <- list(value = value[keep_indices, , drop = FALSE], meta = NULL)
+      val_mat <- value[keep_indices, , drop = FALSE]
   } else if (is.numeric(value) && (is.vector(value) || length(dim(value)) == 1)) {
-      switch_result <- list(value = matrix(value[keep_indices], ncol = 1L), meta = NULL)
+      val_mat <- matrix(value[keep_indices], ncol = 1L)
   } else {
-      # Default case (should be caught by .checkEVArgs, but defensive)
       stop(paste("Unsupported `value` type:", class(value)[1], "for variable:", name))
   }
-  
-  # Assign results from the conditional logic
-  val_mat   <- switch_result$value
-  meta_list <- switch_result$meta
 
-  # Ensure payload is a matrix
   if (!is.matrix(val_mat)) {
       stop("Internal error: Processed event value is not a matrix.") 
   }
@@ -163,11 +142,6 @@ event <- function(value, name, onsets, blockids, durations = 0, subset = NULL) {
 #' @param subset Optional logical vector indicating which events to keep. If
 #'   provided, the vector must match `onsets` in length and contain no `NA`
 #'   values.
-#'
-#' Column names are sanitized using `.sanitizeName()` if provided. If
-#' column names are missing or not unique, deterministic feature suffixes
-#' (`f01`, `f02`, ...) are generated instead. The resulting names are
-#' returned by `levels()` for the event object.
 #'
 #' @return An S3 object of class `event` and `event_seq`.
 #'
@@ -225,9 +199,6 @@ event_variable <- function(vec, name, onsets, blockids = 1, durations = 0, subse
   if (!is.numeric(vec) || !(is.vector(vec) || length(dim(vec)) <= 1)) {
       stop("`vec` must be a numeric vector.")
   }
-  if (is.factor(vec)) {
-    stop("Cannot create an event_variable from a factor, use 'event_factor'.")
-  }
 
   # Call the unified internal constructor
   event(value = vec, 
@@ -252,9 +223,10 @@ event_variable <- function(vec, name, onsets, blockids = 1, durations = 0, subse
 #'   provided, the vector must match `onsets` in length and contain no `NA`
 #'   values.
 #'
-#' If `mat` has column names and more than one column, those names are
-#' sanitized using `.sanitizeName()` before being stored. The sanitized
-#' column names are returned by `levels()` for the resulting event object.
+#' Column names of `mat` are sanitized using `.sanitizeName()` before being
+#' stored. If they are missing or not unique, deterministic feature suffixes
+#' (`f01`, `f02`, ...) are generated instead. The resulting names are
+#' returned by `levels()` for the event object.
 #'
 #' @return An S3 object of class `event` and `event_seq`.
 #'
@@ -470,64 +442,42 @@ cells.event <- function(x, drop.empty = TRUE, ...) {
 elements.event <- function(x, what = c("values", "labels"), transformed = TRUE, ...) {
   
   what <- match.arg(what)
-  var_name_sanitized <- .sanitizeName(x$varname)
-  
-  element_data <- NULL
   
   if (what == "values") {
-      # --- Handle VALUES --- 
-      
-      # Check cache first
-      cache_val_attr <- paste0("_elements_cache_", what) # Unique cache attribute name
-      cached_data <- attr(x, cache_val_attr)
-      if (!is.null(cached_data)) {
-          # Return cached data wrapped in a named list
-          return(stats::setNames(list(cached_data), var_name_sanitized))
-      }
-      
-      # Handle basis 'transformed' case (although !transformed is tricky)
+      # The payload is always an N x K matrix (or 0 x K)
       if (!is.null(x$meta$basis) && !transformed) {
           warning("'transformed = FALSE' for basis elements is not reliably supported, returning the transformed basis matrix.")
-          element_data <- x$value
-      } else {
-           element_data <- x$value # This is always an N x K matrix (or 0xK)
       }
-      
-      # Store in cache before returning
-      attr(x, cache_val_attr) <- element_data
-      
-  } else {
-      # --- Handle LABELS --- 
-      # Return descriptive names/levels for EACH event instance
-      n_events <- length(x$onsets)
-      lvls <- levels.event(x) # Get the names/levels (length K)
-      
-      if (n_events == 0) {
-          # Handle empty event sequence consistently
-          if (!x$continuous && !is.null(x$meta$levels)) {
-              element_data <- factor(character(0), levels = lvls)
-          } else if (length(lvls) <= 1) { # Single name/level
-              element_data <- character(0)
-          } else { # Multi-column name/level
-              element_data <- matrix(character(0), nrow=0, ncol=length(lvls), dimnames=list(NULL, lvls))
-          }
-      } else if (!x$continuous && !is.null(x$meta$levels)) {
-          # Categorical: Reconstruct factor values as a factor vector (length = n_events)
-          element_data <- factor(x$value[, 1L], levels = seq_along(lvls), labels = lvls)
-      } else if (length(lvls) == 1) {
-          # Single continuous variable or basis: repeat name n_events times (length = n_events)
-          element_data <- rep(lvls, n_events)
-      } else {
-          # Multi-column continuous (matrix/basis): create matrix repeating colnames (N x K)
-          element_data <- matrix(rep(lvls, each = n_events), 
-                                 nrow = n_events, 
-                                 ncol = length(lvls), 
-                                 dimnames = list(NULL, lvls))
-      } 
+      return(x$value)
   }
-  
-  # Return the data directly, not wrapped in a list
-  element_data
+
+  # --- LABELS: descriptive names/levels for EACH event instance ---
+  n_events <- length(x$onsets)
+  lvls <- levels.event(x) # Get the names/levels (length K)
+  is_fac <- !x$continuous && !is.null(x$meta$levels)
+
+  if (n_events == 0) {
+      # Handle empty event sequence consistently
+      if (is_fac) {
+          factor(character(0), levels = lvls)
+      } else if (length(lvls) <= 1) { # Single name/level
+          character(0)
+      } else { # Multi-column name/level
+          matrix(character(0), nrow=0, ncol=length(lvls), dimnames=list(NULL, lvls))
+      }
+  } else if (is_fac) {
+      # Categorical: Reconstruct factor values as a factor vector (length = n_events)
+      factor(x$value[, 1L], levels = seq_along(lvls), labels = lvls)
+  } else if (length(lvls) == 1) {
+      # Single continuous variable or basis: repeat name n_events times (length = n_events)
+      rep(lvls, n_events)
+  } else {
+      # Multi-column continuous (matrix/basis): create matrix repeating colnames (N x K)
+      matrix(rep(lvls, each = n_events), 
+             nrow = n_events, 
+             ncol = length(lvls), 
+             dimnames = list(NULL, lvls))
+  }
 }
 
 #' Print event objects
@@ -559,25 +509,7 @@ print.event <- function(x, ...) {
   cli::cli_text("{.info * Events:} {nevents}")
   
   if (nevents > 0) {
-    cli::cli_h2("Timing")
-    onset_range <- range(x$onsets, na.rm = TRUE)
-    dur_range <- range(x$durations, na.rm = TRUE)
-    onset_range_str <- sprintf("%.2f - %.2f sec", onset_range[1], onset_range[2])
-    dur_range_str <- sprintf("%.2f - %.2f sec", dur_range[1], dur_range[2])
-    cli::cli_text("{.info * Onset Range:} {onset_range_str}")
-    cli::cli_text("{.info * Duration Range:} {dur_range_str}")
-    
-    cli::cli_h2("Blocks")
-    blocks_table <- table(x$blockids)
-    nblocks <- length(blocks_table)
-    cli::cli_text("{.info * Number of Blocks:} {nblocks}")
-    max_show_blocks <- 10
-    blocks_display <- if(nblocks > max_show_blocks) {
-                          paste(c(names(blocks_table)[1:max_show_blocks], "..."), collapse = ", ")
-                      } else {
-                          paste(names(blocks_table), collapse = ", ")
-                      }
-    cli::cli_text("{.info * Block IDs:} {blocks_display}")
+    .cli_timing_and_blocks(x)
   } else {
       cli::cli_alert_info("Event sequence is empty.")
   }
@@ -595,6 +527,43 @@ print.event <- function(x, ...) {
   invisible(x)
 }
 
+#' Print the Timing and Blocks sections shared by event and event_term printers
+#'
+#' Must be called inside the caller's `cli_div()` (it uses the `.info` span).
+#'
+#' @param x An `event` or `event_term` with `onsets`, `durations`, `blockids`.
+#' @param per_block Logical; also list the number of events in each block.
+#' @keywords internal
+#' @noRd
+.cli_timing_and_blocks <- function(x, per_block = FALSE) {
+  max_show_blocks <- 10
+  show <- function(v) {
+    paste(if (length(v) > max_show_blocks) c(v[1:max_show_blocks], "...") else v,
+          collapse = ", ")
+  }
+
+  cli::cli_h2("Timing")
+  onset_range <- range(x$onsets, na.rm = TRUE)
+  dur_range <- range(x$durations, na.rm = TRUE)
+  # Evaluate sprintf outside cli::cli_text to avoid interpolation issues
+  onset_range_str <- sprintf("%.2f - %.2f sec", onset_range[1], onset_range[2])
+  dur_range_str <- sprintf("%.2f - %.2f sec", dur_range[1], dur_range[2])
+  cli::cli_text("{.info * Onset Range:} {onset_range_str}")
+  cli::cli_text("{.info * Duration Range:} {dur_range_str}")
+
+  cli::cli_h2("Blocks")
+  blocks_table <- table(x$blockids)
+  nblocks <- length(blocks_table)
+  blocks_display <- show(names(blocks_table))
+  cli::cli_text("{.info * Number of Blocks:} {nblocks}")
+  cli::cli_text("{.info * Block IDs:} {blocks_display}")
+  if (per_block) {
+    events_per_block_display <- show(blocks_table)
+    cli::cli_text("{.info * Events per Block:} {events_per_block_display}")
+  }
+  invisible(NULL)
+}
+
 ## ============================================================================
 ## Section: Get Formatted Labels for Single Event
 ## ============================================================================
@@ -603,7 +572,7 @@ print.event <- function(x, ...) {
 #'
 #' Returns a character vector of formatted labels for an event object,
 #' using the `Variable[Level]` style for categorical events, 
-#' `Variable[Index]` for multi-column continuous events, or just
+#' `Variable[Column]` for multi-column continuous events, or just
 #' `Variable` for single continuous events.
 #' Useful for getting consistent labels for individual event components.
 #' This is distinct from `levels()` which returns the raw level names or column names.
@@ -626,11 +595,9 @@ print.event <- function(x, ...) {
 #' mat <- matrix(1:12, 6, 2)
 #' colnames(mat) <- c("C1", "C2")
 #' ev_mat <- event_matrix(mat, "MatrixVar", onsets, blockids = rep(1, length(onsets)))
-#' labels(ev_mat) # Should return c("MatrixVar[1]", "MatrixVar[2]") 
+#' labels(ev_mat) # Should return c("MatrixVar[C1]", "MatrixVar[C2]")
 #' @export
 labels.event <- function(object, ...) {
-  # Directly call the internal helper (now in utils-internal.R)
-  # Assumes utils-internal.R functions are available in package namespace
   .level_vector(object)
 }
 

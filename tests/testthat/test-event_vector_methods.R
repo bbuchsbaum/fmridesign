@@ -165,6 +165,15 @@ test_that("conditions.event_term() returns canonical condition names", {
 
 # ── longnames.event_term() ───────────────────────────────────────────────
 
+test_that("conditions.event_term() skips a level-less factor in a multi-variable term", {
+  et <- suppressWarnings(event_term(
+    list(a = factor(character(0)), rt = numeric(0)),
+    onsets = numeric(0), blockids = numeric(0)
+  ))
+  expect_equal(conditions(et), "rt")
+  expect_equal(conditions(et, style = "display"), "rt")
+})
+
 test_that("longnames.event_term() returns canonical condition names", {
   et <- event_term(
     list(cond = factor(c("A", "B", "A"))),
@@ -352,6 +361,19 @@ test_that("split_onsets.event_term() with global=TRUE adjusts onsets", {
   expect_true(is.list(sp_global))
 })
 
+test_that("split_onsets.event_term() keeps names aligned when a modulator column is all zero", {
+  # cond B has acc == 0 for all its events, so its design column is dropped;
+  # the onsets of B must still be labelled B (not shifted onto C).
+  et <- event_term(
+    list(cond = factor(c("A", "B", "C", "A", "B", "C")), acc = c(1, 0, 1, 1, 0, 0.5)),
+    onsets = c(1, 5, 10, 15, 20, 25), blockids = rep(1, 6)
+  )
+  sp <- suppressWarnings(split_onsets(et, sframe))
+  expect_named(sp, c("cond.A_acc", "cond.B_acc", "cond.C_acc"))
+  expect_equal(sp[["cond.B_acc"]], c(5, 20))
+  expect_equal(sp[["cond.C_acc"]], c(10, 25))
+})
+
 test_that("split_onsets.event_term() for continuous-only term", {
   et <- event_term(
     list(RT = c(0.5, 1.2, 0.8)),
@@ -363,6 +385,56 @@ test_that("split_onsets.event_term() for continuous-only term", {
   # Continuous-only: returns list with one element (split by block)
   expect_true(is.list(sp))
   expect_equal(length(sp), 1)
+})
+
+# A bare convolved_term wrapping an event_term (as built by extensions).
+.mk_convolved <- function(evterm, hrf) {
+  structure(list(evterm = evterm, hrfspec = list(hrf = hrf)),
+            class = c("convolved_term", "fmri_term", "list"))
+}
+
+test_that("cells.convolved_term() crosses observed cells with basis labels", {
+  et <- event_term(list(cond = factor(c("A", "B", "A"))),
+                   onsets = c(1, 10, 20), blockids = c(1, 1, 1))
+  cc <- cells(.mk_convolved(et, fmrihrf::HRF_SPMG3))
+  expect_equal(as.character(cc$cond), rep(c("A", "B"), each = 3))
+  expect_equal(as.character(cc$basis), rep(c("basis01", "basis02", "basis03"), 2))
+  expect_equal(unname(attr(cc, "count")), rep(c(2L, 1L), each = 3))
+  expect_equal(attr(cc, "rownames")[1:2], c("A:basis01", "A:basis02"))
+  # exclude_basis drops the basis dimension
+  expect_equal(nrow(cells(.mk_convolved(et, fmrihrf::HRF_SPMG3), exclude_basis = TRUE)), 2L)
+})
+
+test_that("cells.convolved_term() labels 10+ basis functions in order", {
+  et <- event_term(list(cond = factor(c("A", "B", "A"))),
+                   onsets = c(1, 10, 20), blockids = c(1, 1, 1))
+  cc <- cells(.mk_convolved(et, fmrihrf::getHRF("fir", nbasis = 10)))
+  expect_equal(as.character(cc$basis[1:10]), sprintf("basis%02d", 1:10))
+  expect_equal(levels(cc$basis), sprintf("basis%02d", 1:10))
+})
+
+test_that("cells.convolved_term() counts align when some cells are empty", {
+  # Cell y:v has no events; it must not appear (nor shift the counts).
+  et <- event_term(list(a = factor(c("x", "y", "x")), b = factor(c("u", "u", "v"))),
+                   onsets = c(1, 10, 20), blockids = c(1, 1, 1))
+  cc <- cells(.mk_convolved(et, fmrihrf::HRF_SPMG2))
+  expect_equal(nrow(cc), 6L)
+  expect_equal(paste(cc$a, cc$b), rep(c("x u", "y u", "x v"), each = 2))
+  expect_equal(length(attr(cc, "count")), nrow(cc))
+})
+
+test_that("cells.convolved_term() works for terms with continuous variables", {
+  et_rt <- event_term(list(rt = c(1, 2, 3)), onsets = c(1, 10, 20), blockids = c(1, 1, 1))
+  cc <- cells(.mk_convolved(et_rt, fmrihrf::HRF_SPMG3))
+  expect_equal(nrow(cc), 3L)
+  expect_equal(as.character(cc$basis), c("basis01", "basis02", "basis03"))
+
+  et_mix <- event_term(list(cond = factor(c("A", "B", "A")), rt = c(1, 2, 3)),
+                       onsets = c(1, 10, 20), blockids = c(1, 1, 1))
+  cc2 <- cells(.mk_convolved(et_mix, fmrihrf::HRF_SPMG2))
+  expect_equal(names(cc2), c("cond", "basis"))
+  expect_equal(nrow(cc2), 4L)
+  expect_equal(unname(attr(cc2, "count")), rep(c(2L, 1L), each = 2))
 })
 
 # ── onsets/blockids/durations accessors for convolved_term ───────────────
@@ -437,6 +509,25 @@ test_that("convolve.event_term() with multi-basis HRF expands columns", {
   expect_equal(ncol(conv), 4)
 })
 
+test_that("convolve() warnings name a bare event_term (no term_tag)", {
+  # All-zero modulator: every design column is dropped, so convolve() warns
+  # that the design became empty. The warning must name the term.
+  et <- event_term(list(cond = factor(c("A", "B")), rt = c(0, 0)),
+                   onsets = c(1, 10), blockids = c(1, 1))
+  sf <- fmrihrf::sampling_frame(blocklens = 30, TR = 1)
+  msgs <- character()
+  out <- withCallingHandlers(
+    convolve(et, fmrihrf::HRF_SPMG1, sf),
+    warning = function(w) {
+      msgs <<- c(msgs, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_equal(ncol(out), 0L)
+  expect_true(any(grepl("Design matrix for term 'cond:rt' became empty", msgs, fixed = TRUE)))
+  expect_false(any(msgs == ""))
+})
+
 test_that("convolve.event_term() with normalize=TRUE peak-normalizes", {
   et <- event_term(
     list(cond = factor(c("A", "B", "A", "B"))),
@@ -481,6 +572,60 @@ test_that("design_matrix.event_term() returns tibble for factor term", {
   expect_s3_class(dm, "tbl_df")
   expect_equal(nrow(dm), 4)
   expect_equal(ncol(dm), 2)
+})
+
+test_that("design_matrix.event_term() keeps other variables next to a single-level factor", {
+  # A one-level factor is a constant indicator: it must not collapse the
+  # other variables of the term into a single column of ones.
+  et_mod <- event_term(list(cond = factor(c("A", "A", "A")), rt = c(0.5, 1, 2)),
+                       onsets = c(1, 10, 20), blockids = c(1, 1, 1))
+  dm <- suppressWarnings(design_matrix(et_mod))
+  expect_named(dm, "cond.A_rt")
+  expect_equal(as.vector(dm[["cond.A_rt"]]), c(0.5, 1, 2))
+
+  et_fac <- event_term(list(cond = factor(c("A", "B", "C", "A")), task = factor(rep("go", 4))),
+                       onsets = c(1, 10, 20, 30), blockids = rep(1, 4))
+  dm2 <- design_matrix(et_fac)
+  expect_named(dm2, c("cond.A_task.go", "cond.B_task.go", "cond.C_task.go"))
+  expect_equal(as.vector(dm2[["cond.B_task.go"]]), c(0, 1, 0, 0))
+
+  # Only single-level factors: one constant column, as before
+  et_one <- event_term(list(cond = factor(c("A", "A"))), onsets = c(1, 10), blockids = c(1, 1))
+  expect_equal(as.vector(design_matrix(et_one)[["cond.A"]]), c(1, 1))
+})
+
+test_that("event_model() keeps all cells when a crossed factor has one level", {
+  des <- data.frame(onset = c(1, 10, 20, 30), run = 1,
+                    cond = factor(c("A", "B", "C", "A")), task = factor("go"))
+  sf <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
+  em <- event_model(onset ~ hrf(cond, task), data = des, block = ~run, sampling_frame = sf)
+  expect_equal(ncol(design_matrix(em)), 3L)
+  expect_equal(colnames(design_matrix(em)),
+               paste0("cond_task_cond.", c("A", "B", "C"), "_task.go"))
+})
+
+test_that("Fcontrasts.event_term() treats a single-level factor as constant", {
+  ons <- c(1, 10, 20, 30)
+  et <- event_term(list(cond = factor(c("A", "B", "C", "A")), task = factor(rep("go", 4))),
+                   onsets = ons, blockids = rep(1, 4))
+  fc <- Fcontrasts(et)
+  expect_named(fc, "cond")
+  expect_equal(rownames(fc$cond), c("cond.A_task.go", "cond.B_task.go", "cond.C_task.go"))
+  ref <- Fcontrasts(event_term(list(cond = factor(c("A", "B", "C", "A"))),
+                               onsets = ons, blockids = rep(1, 4)))
+  expect_equal(unname(fc$cond), unname(ref$cond))
+})
+
+test_that("Fcontrasts.event_model() skips constant factors instead of failing", {
+  des <- data.frame(onset = c(1, 10, 20, 30), run = 1,
+                    cond = factor(c("A", "B", "C", "A")), task = factor("go"))
+  sf <- fmrihrf::sampling_frame(blocklens = 40, TR = 1)
+  em <- event_model(onset ~ hrf(cond, task) + hrf(task), data = des, block = ~run,
+                    sampling_frame = sf)
+  fc <- Fcontrasts(em)
+  expect_named(fc, "cond_task#cond")
+  expect_equal(nrow(fc[[1]]), ncol(design_matrix(em)))
+  expect_equal(unname(colSums(abs(fc[[1]][4, , drop = FALSE]))), c(0, 0))
 })
 
 test_that("design_matrix.event_term() for numeric term returns value matrix", {
