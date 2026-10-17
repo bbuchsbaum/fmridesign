@@ -316,7 +316,6 @@ cells.covariate_convolved_term <- function(x, ...) {
 }
 
 #' @export
-#' @importFrom stringr str_trim
 cells.convolved_term <- function(x, ...) {
   exclude_basis <- list(...)$exclude_basis
   if (is.null(exclude_basis)) exclude_basis <- FALSE

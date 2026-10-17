@@ -1,6 +1,4 @@
 #' @importFrom utils head
-#' @importFrom tidyr complete pivot_longer
-#' @importFrom dplyr mutate
 #' @importFrom rlang .data
 NULL
 
@@ -707,8 +705,6 @@ Fcontrasts.event_model <- function(x, ...) {
 #' @param x An `event_model` object.
 #' @param ... Additional arguments (unused).
 #'
-#' @importFrom cli cli_h1 cli_div cli_text cli_h2 cli_ul cli_li cli_end cli_verbatim cli_alert_info
-#' @importFrom utils head
 #' @export
 #' @rdname print
 print.event_model <- function(x, ...) {

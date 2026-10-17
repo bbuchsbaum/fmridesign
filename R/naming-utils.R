@@ -101,7 +101,6 @@ make_unique_tags <- function(tags) {
 #' @param hrfspec The HRF specification list for the term.
 #' @param existing_tags Character vector of already assigned term tags.
 #' @return A single, unique, sanitized term tag.
-#' @importFrom rlang as_label
 #' @keywords internal
 #' @noRd
 make_term_tag <- function(hrfspec, existing_tags = character()) {
