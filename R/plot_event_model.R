@@ -101,7 +101,7 @@ plot.event_model <- function(x,
   DM <- as.matrix(design_matrix(x))
   ci <- .fd_colinfo(x)
   tl <- .fd_timeline(x$sampling_frame, nrow(DM), block_x = block_x)
-  has_frame <- !is.null(x$sampling_frame) && identical(tl$unit, "s")
+  has_frame <- identical(tl$unit, "s")
 
   # ---- column selection ---------------------------------------------------
   keep <- seq_len(ncol(DM))
@@ -166,9 +166,9 @@ plot.event_model <- function(x,
   }
   df_long$.colour <- factor(colour_of_row[as.character(df_long$.row)], levels = colour_keys)
 
-  # ---- events -------------------------------------------------------------
+  # ---- events (NULL, or at least one row) ---------------------------------
   ev <- if (isTRUE(show_events)) .fd_ev_events(x, ci, row_key, tl, block_x) else NULL
-  if (!is.null(ev) && nrow(ev)) {
+  if (!is.null(ev)) {
     ev$.row <- factor(ev$.row, levels = row_levels)
     ev$.colour <- factor(colour_of_row[as.character(ev$.row)], levels = colour_keys)
   }
@@ -188,12 +188,11 @@ plot.event_model <- function(x,
   }
 
   # ---- titles -------------------------------------------------------------
-  n_ev <- if (!is.null(ev)) length(unique(ev$.event)) else NA
   default_sub <- paste0(
     ncol(DM), if (ncol(DM) == 1) " regressor" else " regressors",
     if (has_frame) paste0(.fd_u(" {dot} "), n_blocks, if (n_blocks == 1) " run" else " runs",
                           .fd_u(" {dot} "), nrow(DM), " scans (TR ", .fd_fmt_tr(tl$TR), ")") else "",
-    if (!is.na(n_ev) && n_ev > 0) paste0(.fd_u(" {dot} "), n_ev, " events") else ""
+    if (!is.null(ev)) paste0(.fd_u(" {dot} "), length(unique(ev$.event)), " events") else ""
   )
   title <- .fd_title(title, "Event regressors")
   subtitle <- .fd_title(subtitle, default_sub)
@@ -202,7 +201,7 @@ plot.event_model <- function(x,
   x_lab <- if (!has_frame) "Scan" else .fd_time_label(block_x)
 
   if (style == "heatmap") {
-    return(.fd_ev_heatmap(df_long, ci, row_key, ev, runs, bound_df, x_scale, x_lab,
+    return(.fd_ev_heatmap(df_long, ci, row_key, ev, bound_df, x_scale, x_lab,
                           title, subtitle, suppress_labels, strip_text_size,
                           facet_by_block, time_range, DM))
   }
@@ -218,7 +217,7 @@ plot.event_model <- function(x,
       ifelse(b == bl[1], paste0(r, .fd_u(" {dot} "), b), b)
     })))
     df_long$.rowb <- factor(paste(df_long$.row, df_long$.basis, sep = "\r"), levels = rb_levels)
-    if (!is.null(ev) && nrow(ev)) {
+    if (!is.null(ev)) {
       # Onset marks only under the first basis row of each condition.
       ev$.basis <- bl[1]
       ev$.rowb <- factor(paste(ev$.row, ev$.basis, sep = "\r"), levels = rb_levels)
@@ -260,7 +259,7 @@ plot.event_model <- function(x,
                          position = "identity", na.rm = TRUE) +
       ggplot2::geom_line(ggplot2::aes(colour = .colour), linewidth = 0.5, na.rm = TRUE) +
       ggplot2::scale_fill_manual(values = pal, guide = "none")
-    if (!is.null(ev) && nrow(ev)) {
+    if (!is.null(ev)) {
       plt <- plt + ggplot2::geom_rug(
         data = ev, ggplot2::aes(x = onset, colour = .colour), inherit.aes = FALSE,
         sides = "b", length = grid::unit(0.16, "npc"), linewidth = 0.35, alpha = 0.9)
@@ -283,7 +282,7 @@ plot.event_model <- function(x,
         space = if (facet_by_block) "free_x" else "fixed",
         switch = "y",
         labeller = ggplot2::labeller(.row = row_labeller, .rowb = row_labeller,
-                                     .block = function(b) paste("Run", b))) +
+                                     .block = .fd_run_strip)) +
       ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.22, 0.08)),
                                   position = "right", breaks = .fd_peak_breaks,
                                   labels = function(v) .fd_num(v, 2)) +
@@ -330,7 +329,7 @@ plot.event_model <- function(x,
     theme_fmridesign() +
     .fd_run_axis_theme() +
     ggplot2::theme(panel.grid.major.x = ggplot2::element_blank())
-  if (!is.null(ev) && nrow(ev)) {
+  if (!is.null(ev)) {
     plt <- plt + ggplot2::geom_rug(
       data = ev, ggplot2::aes(x = onset), inherit.aes = FALSE, sides = "b",
       colour = .fd_ink$muted, length = grid::unit(0.03, "npc"), linewidth = 0.3)
@@ -341,13 +340,13 @@ plot.event_model <- function(x,
                                      labeller = ggplot2::labeller(
                                        Regressor = if (suppress_labels) ggplot2::label_value
                                                    else ggplot2::as_labeller(reg_lab),
-                                       .block = function(b) paste("Run", b)))
+                                       .block = .fd_run_strip))
   } else if (use_facets) {
     plt <- plt + ggplot2::facet_wrap(~ Regressor, scales = "free_y",
                                      labeller = ggplot2::as_labeller(reg_lab))
   } else if (facet_by_block) {
     plt <- plt + ggplot2::facet_wrap(~ .block, scales = "free_x",
-                                     labeller = ggplot2::labeller(.block = function(b) paste("Run", b)))
+                                     labeller = ggplot2::labeller(.block = .fd_run_strip))
   }
   if (use_facets || suppress_labels) {
     plt <- plt + ggplot2::theme(legend.position = "none")
@@ -369,7 +368,8 @@ plot.event_model <- function(x,
   key
 }
 
-# Event onsets per display row, in plot time units.
+# Event onsets per display row, in plot time units; NULL when there are none
+# (never a zero-row data frame).
 .fd_ev_events <- function(x, ci, row_key, tl, block_x) {
   cidx <- attr(design_matrix(x), "col_indices")
   if (is.null(cidx) || is.null(x$terms) || !identical(tl$unit, "s")) return(NULL)
@@ -461,7 +461,7 @@ plot.event_model <- function(x,
     term = "Rows of the same term share a scale (right axis)",
     row = "Each row has its own scale (right axis)",
     shared = "All rows share one scale (right axis)")
-  if (is.null(ev) || !nrow(ev)) return(paste0(scale_txt, "."))
+  if (is.null(ev)) return(paste0(scale_txt, "."))
   dur <- any(ev$duration > 0)
   paste0(scale_txt, ". Ticks mark event onsets",
          if (dur) "; bars show event durations" else "", ".")
@@ -471,13 +471,16 @@ plot.event_model <- function(x,
   paste0(paste(format(unique(TR)), collapse = "/"), " s")
 }
 
+# Strip labels for run facets.
+.fd_run_strip <- function(b) paste("Run", b)
+
 .fd_title <- function(value, default) {
   if (is.null(value)) return(default)
   if (length(value) == 1L && is.na(value)) return(NULL)
   value
 }
 
-.fd_ev_heatmap <- function(df_long, ci, row_key, ev, runs, bound_df, x_scale, x_lab,
+.fd_ev_heatmap <- function(df_long, ci, row_key, ev, bound_df, x_scale, x_lab,
                            title, subtitle, suppress_labels, strip_text_size,
                            facet_by_block, time_range = NULL, DM = NULL) {
   # Order rows by first event onset when events are known, else design order.
@@ -485,7 +488,7 @@ plot.event_model <- function(x,
   lab <- stats::setNames(ci$full_label, ci$name)
   # Order by first onset for one-column-per-event designs (trialwise); keep
   # design order when rows are basis functions of a few conditions.
-  if (!is.null(ev) && nrow(ev) && all(is.na(ci$basis_ix))) {
+  if (!is.null(ev) && all(is.na(ci$basis_ix))) {
     first_on <- tapply(ev$onset, as.character(ev$.row), min)
     ord <- order(first_on[row_key], na.last = TRUE)
     reg_levels <- reg_levels[ord]
@@ -507,10 +510,9 @@ plot.event_model <- function(x,
     plt <- plt + ggplot2::geom_vline(data = bound_df, ggplot2::aes(xintercept = xintercept),
                                      inherit.aes = FALSE, colour = .fd_ink$muted, linewidth = 0.3)
   }
-  if (!is.null(ev) && nrow(ev)) {
+  if (!is.null(ev)) {
     ev$Regressor <- factor(ci$name[match(as.character(ev$.row), row_key)],
                            levels = levels(df_long$Regressor))
-    ev <- ev[!is.na(ev$Regressor), , drop = FALSE]
     plt <- plt + ggplot2::geom_point(data = ev, ggplot2::aes(x = onset, y = Regressor),
                                      inherit.aes = FALSE, shape = "|", size = 3,
                                      colour = .fd_ink$text)
@@ -548,7 +550,7 @@ plot.event_model <- function(x,
                               expand = c(0, 0)) +
     ggplot2::labs(x = x_lab, y = NULL, title = title, subtitle = subtitle,
                   caption = paste0(
-                    if (!is.null(ev) && nrow(ev) && all(is.na(ci$basis_ix))) "Rows ordered by first onset; ticks mark event onsets. " else if (!is.null(ev) && nrow(ev)) "Ticks mark event onsets. " else "",
+                    if (!is.null(ev) && all(is.na(ci$basis_ix))) "Rows ordered by first onset; ticks mark event onsets. " else if (!is.null(ev)) "Ticks mark event onsets. " else "",
                     "Cells are sampled at the TR.",
                     if (show_r) " max r: largest correlation with any other regressor (orange when 0.5 or more)." else "")) +
     ggplot2::coord_cartesian(xlim = time_range, clip = "off") +
@@ -565,7 +567,7 @@ plot.event_model <- function(x,
   if (facet_by_block) {
     plt <- plt + ggplot2::facet_grid(cols = ggplot2::vars(.block), scales = "free_x",
                                      space = "free_x",
-                                     labeller = ggplot2::labeller(.block = function(b) paste("Run", b)))
+                                     labeller = ggplot2::labeller(.block = .fd_run_strip))
   }
   plt
 }

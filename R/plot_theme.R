@@ -282,6 +282,7 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
                 unit = "scan", TR = 1))
   }
   bl <- fmrihrf::blocklens(sframe)
+  if (sum(bl) != n_rows) return(.fd_timeline(NULL, n_rows))
   TR <- sframe$TR
   if (length(TR) == 1L) TR <- rep(TR, length(bl))
   run <- rep(seq_along(bl), bl)
@@ -295,9 +296,6 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
   runs <- data.frame(run = seq_along(bl), start = start, end = end, scans = bl,
                      TR = TR, first_scan = c(1L, utils::head(cumsum(bl), -1L) + 1L),
                      last_scan = cumsum(bl))
-  if (length(run) != n_rows) {
-    return(.fd_timeline(NULL, n_rows))
-  }
   list(run = run, time = time, runs = runs, unit = "s", TR = TR)
 }
 
