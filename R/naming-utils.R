@@ -291,8 +291,3 @@ make_column_names <- function(term_tag, cond_tags, nb) {
   }
 }
 
-# Null-coalescing operator (from rlang)
-# Avoids direct dependency if only used here, but rlang is needed for as_label anyway
-`%||%` <- function(x, y) {
-  if (is.null(x)) y else x
-} 

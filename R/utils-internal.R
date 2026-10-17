@@ -1,10 +1,3 @@
-#' Default value for NULL
-#' @param a Value to use if not NULL
-#' @param b Value to use if a is NULL
-#' @keywords internal
-#' @noRd
-`%||%` <- function(a, b) if (is.null(a)) b else a
-
 ###############################################################################
 ## Helper: how many *rows* (events) does an arbitrary value-object have?    ###
 ###############################################################################
