@@ -13,14 +13,15 @@
 #' @param x An `event_model` or a numeric matrix/data.frame design matrix.
 #' @param weights Optional contrast weights. May be a numeric vector (t-contrast),
 #'   a numeric matrix (F-contrast with columns as contrast vectors), or a named
-#'   list mapping names to vectors/matrices. If `NULL` and `x` is an `event_model`,
-#'   all attached t- and F-contrasts are validated.
+#'   list mapping names to vectors/matrices (unnamed entries are named
+#'   `contrast1`, `contrast2`, ... by position). If `NULL` and `x` is an
+#'   `event_model`, all attached t- and F-contrasts are validated.
 #' @param tol Numeric tolerance for zero checks. Default `1e-8`.
 #'
 #' @return A data.frame with one row per validated contrast column and the
 #'   following columns: `name`, `type` ("t" or "F"), `estimable`,
 #'   `sum_to_zero`, `orthogonal_to_intercept`, `full_rank` (F only), and
-#'   `nonzero_weights`.
+#'   `nonzero_weights`; it has zero rows when no contrast could be validated.
 #'
 #' @examples
 #' # Create a simple event model
@@ -99,6 +100,10 @@ validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
     }
   } else if (is.list(weights)) {
     wlist <- lapply(weights, as_weight_matrix)
+    nms <- names(wlist) %||% rep("", length(wlist))
+    unnamed <- is.na(nms) | !nzchar(nms)
+    nms[unnamed] <- paste0("contrast", which(unnamed))
+    names(wlist) <- nms
   } else if (is.numeric(weights)) {
     wlist[["contrast"]] <- as_weight_matrix(weights)
   } else {
@@ -106,8 +111,9 @@ validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
   }
 
   # Iterate and validate
-  res <- do.call(rbind, lapply(names(wlist), function(nm) {
-    W <- wlist[[nm]]
+  res <- do.call(rbind, lapply(seq_along(wlist), function(i) {
+    nm <- names(wlist)[i]
+    W <- wlist[[i]]
     if (nrow(W) != ncol(X)) {
       # Try to align by rownames if available
       if (!is.null(rownames(W)) && !is.null(colnames(X))) {
@@ -161,6 +167,12 @@ validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
     )
   }))
 
+  if (is.null(res)) {
+    return(data.frame(name = character(), type = character(), estimable = logical(),
+                      sum_to_zero = logical(), orthogonal_to_intercept = logical(),
+                      full_rank = logical(), nonzero_weights = numeric(),
+                      stringsAsFactors = FALSE))
+  }
   res[order(res$name), , drop = FALSE]
 }
 
