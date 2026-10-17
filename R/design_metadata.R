@@ -99,25 +99,67 @@
   list(modulation_type = "amplitude", modulation_id = NA_character_)
 }
 
-#' Human-friendly label for a basis component
+# Basis families fmridesign names in lower case, as in hrf(basis = ...)
+.hrf_basis_families <- c("spmg1", "spmg2", "spmg3", "gamma", "gaussian",
+                         "bspline", "tent", "fir", "fourier", "daguerre")
+
+#' Canonical basis name of an HRF
 #'
-#' @param basis_name Class name of the HRF basis (e.g. `"SPMG3"`, `"FIR"`).
+#' The value recorded as `basis_name` in column metadata. fmrihrf marks some
+#' bases with a subclass (`"SPMG3_HRF"`, `"FIR_HRF"`, `"BSpline_HRF"`, ...),
+#' but its lag / block / normalise decorators return plain `"HRF"` objects,
+#' and which bases carry a subclass varies between fmrihrf versions
+#' (`HRF_SPMG1` is `"SPMG1_HRF"` only after 0.4.0). Decorators do keep the
+#' base name in `attr(hrf, "name")`, with suffixes such as `"_lag(2)"`,
+#' `"_block(w=3)"` or `"_norm"`. So the name comes from the subclass when
+#' there is one, else from the `"name"` attribute with decorator suffixes
+#' removed. Known families are returned in lower case as spelled in
+#' `hrf(basis = ...)` (`"spmg1"`, `"spmg3"`, `"fir"`, ...); other names are
+#' returned as they are.
+#'
+#' @param hrf An HRF object, or `NULL`.
+#' @return Character scalar; `NA` when no name can be found.
+#' @keywords internal
+#' @noRd
+.hrf_basis_name <- function(hrf) {
+  if (is.null(hrf)) return(NA_character_)
+  subclass <- setdiff(class(hrf), c("HRF", "function"))
+  nm <- if (length(subclass) > 0L) {
+    sub("_HRF$", "", subclass[[1L]])
+  } else {
+    attr(hrf, "name", exact = TRUE)
+  }
+  if (!is.character(nm) || length(nm) != 1L || is.na(nm) || !nzchar(nm)) {
+    return(NA_character_)
+  }
+  nm <- sub("(_lag\\([^)]*\\)|_block\\([^)]*\\)|_norm)+$", "", nm)
+  if (tolower(nm) %in% .hrf_basis_families) tolower(nm) else nm
+}
+
+#' Human-friendly labels for basis components
+#'
+#' Vectorised over both arguments (recycled to a common length).
+#'
+#' @param basis_name Canonical basis name from `.hrf_basis_name()`
+#'   (e.g. `"spmg3"`, `"fir"`).
 #' @param basis_ix   1-based component index.
-#' @return Character scalar label.
+#' @return Character vector of labels; `NA` where either input is `NA`.
 #' @keywords internal
 #' @noRd
 .basis_label <- function(basis_name, basis_ix) {
-  if (is.na(basis_name) || is.na(basis_ix)) return(NA_character_)
-  if (grepl("SPMG3", basis_name, fixed = TRUE)) {
-    return(c("canonical", "derivative", "dispersion")[pmin(pmax(basis_ix, 1L), 3L)])
-  }
-  if (grepl("SPMG2", basis_name, fixed = TRUE)) {
-    return(c("canonical", "derivative")[pmin(pmax(basis_ix, 1L), 2L)])
-  }
-  if (grepl("FIR", basis_name, fixed = TRUE)) {
-    return(sprintf("lag_%02d", basis_ix - 1L))
-  }
-  sprintf("component_%02d", basis_ix)
+  if (length(basis_name) == 0L || length(basis_ix) == 0L) return(character(0))
+  n <- max(length(basis_name), length(basis_ix))
+  basis_name <- rep_len(as.character(basis_name), n)
+  basis_ix <- rep_len(as.integer(basis_ix), n)
+  out <- sprintf("component_%02d", basis_ix)
+  fir <- basis_name %in% "fir"
+  out[fir] <- sprintf("lag_%02d", basis_ix[fir] - 1L)
+  spmg2 <- basis_name %in% "spmg2"
+  out[spmg2] <- c("canonical", "derivative")[pmin(pmax(basis_ix[spmg2], 1L), 2L)]
+  spmg3 <- basis_name %in% "spmg3"
+  out[spmg3] <- c("canonical", "derivative", "dispersion")[pmin(pmax(basis_ix[spmg3], 1L), 3L)]
+  out[is.na(basis_name) | is.na(basis_ix)] <- NA_character_
+  out
 }
 
 #' Build column metadata for a single convolved event term
@@ -142,8 +184,7 @@
 
   cond_per_col  <- rep(base_cnames, each = nb)
   basis_per_col <- rep(seq_len(nb), times = n_cond)
-  basis_name    <- if (!is.null(hrf)) class(hrf)[[1L]] else NA_character_
-  if (length(basis_name) == 0L) basis_name <- NA_character_
+  basis_name    <- .hrf_basis_name(hrf)
   modu <- .event_term_modulation(term)
 
   .make_col_metadata(
@@ -153,9 +194,7 @@
     basis_name      = basis_name,
     basis_ix        = if (nb > 1L) basis_per_col else NA_integer_,
     basis_total     = if (nb > 1L) as.integer(nb) else NA_integer_,
-    basis_label     = if (nb > 1L) {
-      vapply(basis_per_col, function(j) .basis_label(basis_name, j), character(1))
-    } else NA_character_,
+    basis_label     = if (nb > 1L) .basis_label(basis_name, basis_per_col) else NA_character_,
     modulation_type = modu$modulation_type,
     modulation_id   = modu$modulation_id %||% NA_character_
   )

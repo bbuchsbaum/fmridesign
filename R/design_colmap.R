@@ -17,10 +17,21 @@
 #'   - `run` (integer): block/run id when the column is block-specific; `NA` if pooled
 #'   - `role` (character): e.g., "task", "drift", "intercept", "nuisance"
 #'   - `model_source` (character): "event" or "baseline"
-#'   - `basis_name` (character): HRF or baseline basis identifier when available
+#'   - `basis_name` (character): basis identifier. For event columns, the HRF
+#'     basis family as spelled in `hrf(basis = ...)` (`"spmg1"`, `"spmg2"`,
+#'     `"spmg3"`, `"gamma"`, `"gaussian"`, `"bspline"`, `"tent"`, `"fir"`,
+#'     `"fourier"`, `"daguerre"`), also when the HRF is lagged, blocked or
+#'     normalised; for other HRFs their own name (`attr(hrf, "name")`);
+#'     `NA` for covariates. For baseline columns, the drift basis (`"poly"`,
+#'     `"bs"`, `"ns"`, `"constant"`), `"constant"` for intercepts and
+#'     `"nuisance"` for nuisance regressors (`"baseline"` for other terms).
 #'   - `basis_ix` (integer): within-condition basis index (HRF component); `NA` if not applicable
 #'   - `basis_total` (integer): total number of basis components for the column's term; `NA` if not applicable
-#'   - `basis_label` (character): human-readable label for the basis component when known
+#'   - `basis_label` (character): human-readable label for the basis component when known:
+#'     `"canonical"`, `"derivative"`, `"dispersion"` for SPMG2/SPMG3, `"lag_00"`,
+#'     `"lag_01"`, ... for FIR, otherwise `"component_01"`, `"component_02"`, ...
+#'     (baseline columns: `"intercept"` for intercepts and the user's column
+#'     name for nuisance regressors)
 #'   - `pretty_name` (character): concise, human-friendly label for display (e.g., "RT" or "RT_lag_02")
 #'   - `is_block_diagonal` (logical): TRUE when the regressor is per-run/block
 #'   - `modulation_type` (character): "amplitude", "parametric", "covariate", or "feature"
@@ -104,12 +115,11 @@ design_colmap.event_model <- function(x, ...) {
       per_term_mod_type[i] <- "amplitude"
     }
 
-    # Basis info from the term's HRF (covariate terms have none); the primary
-    # class name serves as a compact basis identifier.
+    # Basis info from the term's HRF (covariate terms have none)
     hrf <- if (is_feature) ti$hrf else if (!is_cov) attr(ti, "hrfspec")$hrf
     if (!is.null(hrf)) {
       per_term_basis_total[i] <- tryCatch(fmrihrf::nbasis(hrf), error = function(...) NA_integer_)
-      per_term_basis_name[i] <- class(hrf)[[1]]
+      per_term_basis_name[i] <- .hrf_basis_name(hrf)
     }
   }
 
@@ -126,11 +136,7 @@ design_colmap.event_model <- function(x, ...) {
   to_strip <- !is.na(term_tag_by_col) & startsWith(base_no_basis, paste0(term_tag_by_col, "_"))
   condition[to_strip] <- substring(base_no_basis[to_strip], nchar(term_tag_by_col[to_strip]) + 2L)
 
-  basis_label <- vapply(seq_len(n_cols), function(i) {
-    bi <- term_index_by_col[i]
-    if (is.na(bi)) return(NA_character_)
-    .basis_label(per_term_basis_name[bi], basis_ix[i])
-  }, character(1))
+  basis_label <- .basis_label(per_term_basis_name[term_index_by_col], basis_ix)
 
   out <- tibble::tibble(
     col = seq_len(n_cols),

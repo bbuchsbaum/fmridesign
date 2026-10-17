@@ -23,10 +23,21 @@ A tibble with columns:
 \item \code{run} (integer): block/run id when the column is block-specific; \code{NA} if pooled
 \item \code{role} (character): e.g., "task", "drift", "intercept", "nuisance"
 \item \code{model_source} (character): "event" or "baseline"
-\item \code{basis_name} (character): HRF or baseline basis identifier when available
+\item \code{basis_name} (character): basis identifier. For event columns, the HRF
+basis family as spelled in \code{hrf(basis = ...)} (\code{"spmg1"}, \code{"spmg2"},
+\code{"spmg3"}, \code{"gamma"}, \code{"gaussian"}, \code{"bspline"}, \code{"tent"}, \code{"fir"},
+\code{"fourier"}, \code{"daguerre"}), also when the HRF is lagged, blocked or
+normalised; for other HRFs their own name (\code{attr(hrf, "name")});
+\code{NA} for covariates. For baseline columns, the drift basis (\code{"poly"},
+\code{"bs"}, \code{"ns"}, \code{"constant"}), \code{"constant"} for intercepts and
+\code{"nuisance"} for nuisance regressors (\code{"baseline"} for other terms).
 \item \code{basis_ix} (integer): within-condition basis index (HRF component); \code{NA} if not applicable
 \item \code{basis_total} (integer): total number of basis components for the column's term; \code{NA} if not applicable
-\item \code{basis_label} (character): human-readable label for the basis component when known
+\item \code{basis_label} (character): human-readable label for the basis component when known:
+\code{"canonical"}, \code{"derivative"}, \code{"dispersion"} for SPMG2/SPMG3, \code{"lag_00"},
+\code{"lag_01"}, ... for FIR, otherwise \code{"component_01"}, \code{"component_02"}, ...
+(baseline columns: \code{"intercept"} for intercepts and the user's column
+name for nuisance regressors)
 \item \code{pretty_name} (character): concise, human-friendly label for display (e.g., "RT" or "RT_lag_02")
 \item \code{is_block_diagonal} (logical): TRUE when the regressor is per-run/block
 \item \code{modulation_type} (character): "amplitude", "parametric", "covariate", or "feature"
