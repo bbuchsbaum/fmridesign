@@ -242,7 +242,7 @@ predict.Poly <- function(object,newdata,...) {
 #' @export
 sub_basis.Poly <- function(x, subset) {
   ret <- list(x=x$x[subset],
-       y=x$y[subset,],
+       y=x$y[subset, , drop = FALSE],
        fun=x$fun,
        argname=x$argname,
        degree=x$degree)

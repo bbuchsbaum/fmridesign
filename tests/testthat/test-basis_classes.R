@@ -394,6 +394,24 @@ test_that("sub_basis.Poly subsets correctly", {
   expect_equal(length(ss$x), 5)
 })
 
+test_that("sub_basis.Poly keeps a matrix for one column or one row", {
+  pb1 <- Poly(1:10, degree = 1)
+  ss1 <- sub_basis(pb1, 1:5)
+  expect_true(is.matrix(ss1$y))
+  expect_equal(dim(ss1$y), c(5L, 1L))
+  expect_equal(levels(ss1), "1")
+
+  ss_row <- sub_basis(Poly(1:10, degree = 2), 3)
+  expect_equal(dim(ss_row$y), c(1L, 2L))
+})
+
+test_that("hrf(Poly(x, 1)) builds a one-column event model", {
+  d <- data.frame(onset = seq(0, 90, by = 10), x = seq(-1, 1, length.out = 10), run = 1)
+  sf <- fmrihrf::sampling_frame(blocklens = 60, TR = 2)
+  em <- event_model(onset ~ hrf(Poly(x, 1)), data = d, block = ~run, sampling_frame = sf)
+  expect_equal(ncol(design_matrix(em)), 1L)
+})
+
 # ===========================================================================
 # BSpline
 # ===========================================================================
