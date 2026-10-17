@@ -302,11 +302,11 @@ Here are the main ways to specify the `basis`:
     *   `"bspline"` or `"bs"` (use `nbasis` to set number of splines)
     *   `"tent"` (use `nbasis` to set number of tent functions)
 
-2.  **Using Pre-defined `HRF` Objects:** Pass an exported `HRF` object directly. Examples include `HRF_SPMG1`, `HRF_GAUSSIAN`, `HRF_SPMG2`, `HRF_SPMG3`, `HRF_BSPLINE`, `HRF_DAGUERRE`, `HRF_DAGUERRE_BASIS`.
+2.  **Using Pre-defined `HRF` Objects:** Pass an exported `HRF` object directly. Examples include `HRF_SPMG1`, `HRF_SPMG2`, `HRF_SPMG3`, `HRF_GAMMA`, `HRF_GAUSSIAN`, `HRF_BSPLINE` and `HRF_FIR`.
 
 3.  **Using Custom Functions `f(t)`:** Provide your own function definition that accepts time `t` as the first argument.
 
-4.  **Using `gen_hrf()` Results:** Create a customized HRF using `gen_hrf()`, `hrf_blocked()`, `hrf_lagged()`, etc., and pass the resulting `HRF` object.
+4.  **Using `gen_hrf()` Results:** Create a customized HRF using `gen_hrf()` or the decorators `block_hrf()`, `lag_hrf()` and `normalise_hrf()`, and pass the resulting `HRF` object.
 
 **Discovering Available Options:** You can easily explore all available HRF types using the `list_available_hrfs()` function:
 
