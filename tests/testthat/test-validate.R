@@ -36,6 +36,38 @@ test_that("validate_contrasts with numeric vector weights (t-contrast)", {
   expect_equal(res$nonzero_weights, 2)
 })
 
+test_that("validate_contrasts accepts a named list of vectors and matrices", {
+  X <- cbind(a = c(1, 1, 0, 0), b = c(0, 0, 1, 1), c = c(1, 0, 1, 0))
+  res <- validate_contrasts(X, weights = list(
+    diff = c(1, -1, 0),
+    both = cbind(c(1, 0, 0), c(0, 1, 0))
+  ))
+  expect_equal(res$name, c("both#1", "both#2", "diff"))
+  expect_equal(res$type, c("F", "F", "t"))
+  expect_true(all(res$estimable))
+  expect_equal(res$sum_to_zero, c(FALSE, FALSE, TRUE))
+  # Same result as passing the vector on its own
+  single <- validate_contrasts(X, weights = c(1, -1, 0))
+  expect_equal(res[res$name == "diff", -1], single[, -1], ignore_attr = TRUE)
+})
+
+test_that("validate_contrasts names unnamed list entries and never returns NULL", {
+  X <- cbind(a = c(1, 1, 0, 0), b = c(0, 0, 1, 1), c = c(1, 0, 1, 0))
+  res <- validate_contrasts(X, weights = list(c(1, -1, 0), named = c(0, 1, -1), c(1, 0, 0)))
+  expect_equal(res$name, c("contrast1", "contrast3", "named"))
+  expect_equal(res$sum_to_zero, c(TRUE, FALSE, TRUE))
+  # Entries are taken by position, even when names repeat
+  dup <- validate_contrasts(X, weights = list(a = c(1, -1, 0), a = c(1, 0, 0)))
+  expect_equal(dup$sum_to_zero, c(TRUE, FALSE))
+
+  empty <- validate_contrasts(X, weights = list())
+  expect_s3_class(empty, "data.frame")
+  expect_equal(nrow(empty), 0L)
+  expect_equal(names(empty), names(res))
+  expect_warning(skipped <- validate_contrasts(X, weights = c(1, -1)), "Dimension mismatch")
+  expect_equal(nrow(skipped), 0L)
+})
+
 test_that("validate_contrasts with matrix weights (F-contrast)", {
   dm <- design_matrix(emod)
   nc <- ncol(dm)

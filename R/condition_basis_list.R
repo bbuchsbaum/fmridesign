@@ -47,22 +47,11 @@ condition_basis_list <- function(x, hrf, sampling_frame, ...,
   # attribute) produces unprefixed column names.
   term_tag <- attr(x, "term_tag")
 
-  cols_by_cond_matrix <- vapply(base_tags, function(ct) {
+  # Name by the condition tags themselves: vapply(USE.NAMES) silently drops
+  # the names when the tags carry attributes (single continuous variables).
+  cols_by_cond <- lapply(stats::setNames(nm = as.vector(base_tags)), function(ct) {
     make_column_names(term_tag, ct, nb)
-  }, character(nb))
-
-  # Convert matrix to list by column, with proper names
-  # Handle both vector (nb=1) and matrix (nb>1) cases
-  if (is.matrix(cols_by_cond_matrix)) {
-    cols_by_cond <- lapply(seq_len(ncol(cols_by_cond_matrix)), function(i) {
-      cols_by_cond_matrix[, i]
-    })
-    names(cols_by_cond) <- colnames(cols_by_cond_matrix)
-  } else {
-    # When nb=1, vapply returns a vector
-    cols_by_cond <- as.list(cols_by_cond_matrix)
-    names(cols_by_cond) <- names(cols_by_cond_matrix)
-  }
+  })
 
   # 3. Split into list, silently dropping incomplete sets -----------------------
   valid <- vapply(cols_by_cond, function(nms) all(nms %in% colnames(dm)), logical(1))

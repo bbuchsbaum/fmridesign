@@ -13,14 +13,15 @@
 #' @param x An `event_model` or a numeric matrix/data.frame design matrix.
 #' @param weights Optional contrast weights. May be a numeric vector (t-contrast),
 #'   a numeric matrix (F-contrast with columns as contrast vectors), or a named
-#'   list mapping names to vectors/matrices. If `NULL` and `x` is an `event_model`,
-#'   all attached t- and F-contrasts are validated.
+#'   list mapping names to vectors/matrices (unnamed entries are named
+#'   `contrast1`, `contrast2`, ... by position). If `NULL` and `x` is an
+#'   `event_model`, all attached t- and F-contrasts are validated.
 #' @param tol Numeric tolerance for zero checks. Default `1e-8`.
 #'
 #' @return A data.frame with one row per validated contrast column and the
 #'   following columns: `name`, `type` ("t" or "F"), `estimable`,
 #'   `sum_to_zero`, `orthogonal_to_intercept`, `full_rank` (F only), and
-#'   `nonzero_weights`.
+#'   `nonzero_weights`; it has zero rows when no contrast could be validated.
 #'
 #' @examples
 #' # Create a simple event model
@@ -55,20 +56,9 @@ validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
     }
   }
 
-  # Helper: intercept-like column indices
-  intercept_idx <- function(X) {
-    cn <- colnames(X) %||% character(0)
-    which(cn %in% c("(Intercept)", "Intercept", "constant", "const"))
-  }
-
-  # Helper: estimability of a single vector cvec
-  is_estimable_vec <- function(X, cvec, tol) {
-    if (length(cvec) != ncol(X)) return(FALSE)
-    # Check if cvec lies in row-space(X) by testing rank does not increase
-    # when appending it as an extra row.
-    rX  <- qr(X)$rank
-    rXa <- qr(rbind(X, cvec))$rank
-    abs(rXa - rX) < .Machine$double.eps^0.5 || rXa == rX
+  # Helper: a t-contrast vector becomes a one-column matrix
+  as_weight_matrix <- function(w) {
+    if (is.null(dim(w))) matrix(as.numeric(w), ncol = 1) else as.matrix(w)
   }
 
   # Helper: build a named list of contrast matrices to validate
@@ -76,23 +66,17 @@ validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
     out <- list()
     # t-contrasts via contrast_weights(model)
     cw <- try(contrast_weights(model), silent = TRUE)
-    if (!inherits(cw, "try-error") && length(cw) > 0) {
+    if (!inherits(cw, "try-error")) {
       for (nm in names(cw)) {
-        obj <- cw[[nm]]
-        W <- obj$offset_weights %||% obj$weights
-        if (is.null(W)) next
-        # Ensure matrix shape (#cols of X x k)
-        W <- as.matrix(W)
-        out[[nm]] <- W
+        W <- cw[[nm]]$offset_weights %||% cw[[nm]]$weights
+        if (!is.null(W)) out[[nm]] <- as.matrix(W)
       }
     }
     # F-contrasts via Fcontrasts(model)
     FC <- try(Fcontrasts(model), silent = TRUE)
-    if (!inherits(FC, "try-error") && length(FC) > 0) {
+    if (!inherits(FC, "try-error")) {
       for (nm in names(FC)) {
-        M <- FC[[nm]]
-        if (is.null(M)) next
-        out[[nm]] <- as.matrix(M)
+        if (!is.null(FC[[nm]])) out[[nm]] <- as.matrix(FC[[nm]])
       }
     }
     out
@@ -100,7 +84,11 @@ validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
 
   # Normalize inputs
   X <- as_X(x)
-  ic <- intercept_idx(X)
+  ic <- .intercept_like_columns(X)
+  # A contrast vector is estimable when it lies in the row space of X, i.e.
+  # appending it as an extra row does not increase the rank. rank(X) is
+  # computed once, on first use.
+  delayedAssign("rank_X", qr(X)$rank)
 
   # Build a list of weights to validate
   wlist <- list()
@@ -111,21 +99,21 @@ validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
       stop("validate_contrasts: when 'x' is a matrix, 'weights' must be provided.")
     }
   } else if (is.list(weights)) {
-    wlist <- weights
+    wlist <- lapply(weights, as_weight_matrix)
+    nms <- names(wlist) %||% rep("", length(wlist))
+    unnamed <- is.na(nms) | !nzchar(nms)
+    nms[unnamed] <- paste0("contrast", which(unnamed))
+    names(wlist) <- nms
   } else if (is.numeric(weights)) {
-    # vector or matrix
-    if (is.null(dim(weights))) {
-      wlist[["contrast"]] <- matrix(as.numeric(weights), ncol = 1)
-    } else {
-      wlist[["contrast"]] <- as.matrix(weights)
-    }
+    wlist[["contrast"]] <- as_weight_matrix(weights)
   } else {
     stop("validate_contrasts: 'weights' must be a numeric vector, matrix, or list of such.")
   }
 
   # Iterate and validate
-  res <- do.call(rbind, lapply(names(wlist), function(nm) {
-    W <- wlist[[nm]]
+  res <- do.call(rbind, lapply(seq_along(wlist), function(i) {
+    nm <- names(wlist)[i]
+    W <- wlist[[i]]
     if (nrow(W) != ncol(X)) {
       # Try to align by rownames if available
       if (!is.null(rownames(W)) && !is.null(colnames(X))) {
@@ -154,7 +142,7 @@ validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
     col_metrics <- lapply(seq_len(ncol(W)), function(j) {
       cvec <- as.numeric(W[, j])
       list(
-        estimable = is_estimable_vec(X, cvec, tol),
+        estimable = rank_X == qr(rbind(X, cvec))$rank,
         sum_to_zero = abs(sum(cvec)) < tol,
         orth_int = if (length(ic) > 0) all(abs(cvec[ic]) < tol) else TRUE,
         nonzero = sum(abs(cvec) > tol)
@@ -179,9 +167,22 @@ validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
     )
   }))
 
+  if (is.null(res)) {
+    return(data.frame(name = character(), type = character(), estimable = logical(),
+                      sum_to_zero = logical(), orthogonal_to_intercept = logical(),
+                      full_rank = logical(), nonzero_weights = numeric(),
+                      stringsAsFactors = FALSE))
+  }
   res[order(res$name), , drop = FALSE]
 }
 
+
+#' Indices of intercept-like columns, recognised by name
+#' @keywords internal
+#' @noRd
+.intercept_like_columns <- function(X) {
+  which((colnames(X) %||% character(0)) %in% c("(Intercept)", "Intercept", "constant", "const"))
+}
 
 #' Check design matrix for multicollinearity
 #'
@@ -219,10 +220,8 @@ check_collinearity <- function(X, threshold = 0.9) {
   if (!(is.matrix(X) || is.data.frame(X))) stop("check_collinearity: 'X' must be a matrix, data.frame or event_model.")
   X <- as.matrix(X)
 
-  # Drop constant columns (including intercept-like)
-  cn <- colnames(X) %||% character(0)
-  ic <- which(cn %in% c("(Intercept)", "Intercept", "constant", "const"))
-  keep <- setdiff(seq_len(ncol(X)), ic)
+  # Drop intercept-like columns (zero-variance columns are dropped below)
+  keep <- setdiff(seq_len(ncol(X)), .intercept_like_columns(X))
   if (length(keep) == 0) return(invisible(list(ok = TRUE, pairs = data.frame())))
   Xk <- X[, keep, drop = FALSE]
 

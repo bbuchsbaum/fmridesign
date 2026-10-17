@@ -210,3 +210,43 @@ test_that("check_nuisance and clean_nuisance honor na_action", {
   expect_equal(ncol(cleaned$nuisance_list[[1]]), 2)
   expect_equal(unname(cleaned$nuisance_list[[1]][1, "dvars"]), 0)
 })
+
+test_that("a run whose nuisance columns are all dropped leaves an empty block", {
+  sframe <- fmrihrf::sampling_frame(blocklens = c(10, 12), TR = 1)
+  set.seed(11)
+  nlist <- list(
+    cbind(flat = rep(1, 10)),
+    cbind(p = rnorm(12), q = rnorm(12))
+  )
+
+  expect_warning(
+    bmod <- baseline_model(basis = "poly", degree = 2, sframe = sframe,
+                           nuisance_list = nlist, nuisance_check = "drop"),
+    "Zero-variance columns: flat"
+  )
+  nuis <- terms(bmod)$nuisance
+  expect_equal(colnames(design_matrix(nuis)), c("nuis_p_block_2", "nuis_q_block_2"))
+  expect_equal(nuis$colind, list(integer(0), 1:2))
+  expect_equal(nuis$source_colnames, c("p", "q"))
+  expect_equal(ncol(design_matrix(bmod)), 2 * 2 + 2 + 2)
+  expect_equal(ncol(design_matrix(bmod, blockid = 1)), 2 + 1)
+})
+
+test_that("zero-column nuisance matrices are accepted", {
+  sframe <- fmrihrf::sampling_frame(blocklens = c(10, 12), TR = 1)
+  nlist <- list(matrix(numeric(0), 10, 0), cbind(p = seq_len(12)^2))
+
+  report <- check_nuisance(nlist, sframe, basis = "poly", degree = 1)
+  expect_true(report$ok)
+  expect_equal(ncol(report$nuisance_list[[1]]), 0L)
+
+  bmod <- baseline_model(basis = "poly", degree = 1, sframe = sframe,
+                         nuisance_list = nlist)
+  expect_equal(colnames(design_matrix(terms(bmod)$nuisance)), "nuis_p_block_2")
+
+  empty <- lapply(c(10, 12), function(n) matrix(numeric(0), n, 0))
+  bmod0 <- baseline_model(basis = "poly", degree = 1, sframe = sframe,
+                          nuisance_list = empty)
+  expect_equal(ncol(design_matrix(terms(bmod0)$nuisance)), 0L)
+  expect_equal(ncol(design_matrix(bmod0)), 2 + 2)
+})

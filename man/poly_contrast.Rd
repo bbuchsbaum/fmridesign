@@ -30,7 +30,8 @@ which basis function indices to include, or \code{"all"}. See \code{\link{pair_c
 for details on basis filtering.}
 
 \item{basis_weights}{NULL (default: equal weights), or a numeric vector of weights to apply
-to the selected basis functions. Must have the same length as \code{basis} selection and will
+to the selected basis functions. Must have one weight per selected basis function (all of
+them when \code{basis} is NULL or \code{"all"}) and will
 be normalized to sum to 1. See \code{\link{pair_contrast}} for details on basis weighting.}
 }
 \value{

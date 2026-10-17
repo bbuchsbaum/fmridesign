@@ -8,7 +8,7 @@
 #' @keywords internal
 #' @noRd
 .regex_escape <- function(x) {
-  gsub("([.+*?^$(){}|\\[\\]])", "\\\\\\1", x)
+  gsub("([][{}()+*^$|\\\\?.])", "\\\\\\1", x)
 }
 
 #' Expand and basis-filter a base contrast weights matrix
@@ -30,13 +30,7 @@
 #' @noRd
 .expand_and_filter_basis <- function(weights_out, term, contrast_name,
                                      basis_spec = NULL, basis_weights = NULL) {
-  hrfspec <- attr(term, "hrfspec")
-  nb_try <- if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
-    try(fmrihrf::nbasis(hrfspec$hrf), silent = TRUE)
-  } else NA
-  multi_basis <- !inherits(nb_try, "try-error") && is.numeric(nb_try) && nb_try > 1L
-
-  if (!multi_basis || nrow(weights_out) == 0L) {
+  if (.term_nbasis(term) <= 1L || nrow(weights_out) == 0L) {
     return(list(weights = weights_out, condnames = rownames(weights_out)))
   }
 
@@ -199,18 +193,8 @@ contrast_from_mask <- function(mask, spec, term, classes = character()) {
     condnames   <- expanded$condnames
   }
 
-  ret <- list(
-    term          = term,
-    name          = spec$name,
-    weights       = weights_out,
-    condnames     = condnames,
-    contrast_spec = spec
-  )
-  base_class <- if (!is.null(ncol(weights_out)) && ncol(weights_out) > 1L) {
-    c("Fcontrast", "cell_contrast", "contrast", "list")
-  } else {
-    c("cell_contrast", "contrast", "list")
-  }
-  class(ret) <- unique(c(classes, base_class))
-  ret
+  f_test <- !is.null(ncol(weights_out)) && ncol(weights_out) > 1L
+  .new_contrast(spec, term, weights_out, condnames,
+                unique(c(classes, if (f_test) "Fcontrast",
+                         "cell_contrast", "contrast", "list")))
 }

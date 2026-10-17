@@ -3,31 +3,6 @@
 library(testthat)
 
 # ===========================================================================
-# dctbasis
-# ===========================================================================
-
-test_that("dctbasis returns correct dimensions without constant", {
-  mat <- fmridesign:::dctbasis(10, p = 10, const = FALSE)
-  expect_true(is.matrix(mat))
-  # p-1 columns (indices 2:p) when const = FALSE
-
-  expect_equal(nrow(mat), 10)
-  expect_equal(ncol(mat), 9)
-})
-
-test_that("dctbasis returns correct dimensions with constant", {
-  mat <- fmridesign:::dctbasis(10, p = 10, const = TRUE)
-  expect_equal(ncol(mat), 10)  # 1 constant + 9 cosine columns
-  expect_equal(nrow(mat), 10)
-})
-
-test_that("dctbasis with small n", {
-  mat <- fmridesign:::dctbasis(3, p = 3, const = FALSE)
-  expect_equal(nrow(mat), 3)
-  expect_equal(ncol(mat), 2)
-})
-
-# ===========================================================================
 # Scale
 # ===========================================================================
 
@@ -419,6 +394,24 @@ test_that("sub_basis.Poly subsets correctly", {
   expect_equal(length(ss$x), 5)
 })
 
+test_that("sub_basis.Poly keeps a matrix for one column or one row", {
+  pb1 <- Poly(1:10, degree = 1)
+  ss1 <- sub_basis(pb1, 1:5)
+  expect_true(is.matrix(ss1$y))
+  expect_equal(dim(ss1$y), c(5L, 1L))
+  expect_equal(levels(ss1), "1")
+
+  ss_row <- sub_basis(Poly(1:10, degree = 2), 3)
+  expect_equal(dim(ss_row$y), c(1L, 2L))
+})
+
+test_that("hrf(Poly(x, 1)) builds a one-column event model", {
+  d <- data.frame(onset = seq(0, 90, by = 10), x = seq(-1, 1, length.out = 10), run = 1)
+  sf <- fmrihrf::sampling_frame(blocklens = 60, TR = 2)
+  em <- event_model(onset ~ hrf(Poly(x, 1)), data = d, block = ~run, sampling_frame = sf)
+  expect_equal(ncol(design_matrix(em)), 1L)
+})
+
 # ===========================================================================
 # BSpline
 # ===========================================================================
@@ -541,4 +534,24 @@ test_that("sub_basis.Ident subsets correctly", {
   ib <- Ident(x, y)
   ss <- sub_basis(ib, c(1, 3, 5))
   expect_equal(nrow(ss$y), 3)
+})
+
+test_that("parametric bases are named after their argument expression", {
+  d <- data.frame(x = c(1, 3, 2, 5), g = factor(c("a", "a", "b", "b")))
+  expect_equal(Poly(d$x, 2)$argname, "d$x")
+  expect_equal(Scale(d$x)$name, "z_d$x")
+  expect_equal(ScaleWithin(d$x, d$g)$name, "z_d$x_by_d$g")
+})
+
+test_that("subsetted Poly and BSpline bases keep their name and can predict", {
+  # sub_basis() used to drop `name` and the poly/bs attributes of `y`
+  x <- seq(0, 1, length.out = 10)
+  for (b in list(Poly(x, 3), BSpline(x, 3))) {
+    s <- sub_basis(b, 1:5)
+    expect_equal(s$name, b$name)
+    expect_equal(unclass(s$y)[, , drop = FALSE], unclass(b$y)[1:5, , drop = FALSE],
+                 ignore_attr = TRUE)
+    expect_equal(unclass(predict(s, c(0.25, 0.5))), unclass(predict(b, c(0.25, 0.5))),
+                 ignore_attr = TRUE)
+  }
 })

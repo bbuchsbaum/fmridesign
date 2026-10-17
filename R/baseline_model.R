@@ -1,17 +1,10 @@
 ###############################################################################
 ## BASELINE_MODEL.R
 ##
-## This file implements baseline model construction for fMRI analyses.
-## It includes helper routines for:
-##   - Extracting column indices from a list of matrices.
-##   - Constructing baseline models that account for drift, block-wise
-##     intercepts, and nuisance regressors.
-##   - Creating design matrices and terms for baseline models.
-##   - Specifying block and nuisance terms.
-##   - Printing and plotting baseline models.
-##
-## The file has been organized into sections with additional inline comments
-## for clarity. Functionality is preserved exactly as in the original file.
+## Baseline model construction for fMRI analyses: drift terms (constant, poly,
+## bs, ns), block-wise intercepts and nuisance regressors; the nuisance
+## diagnostics behind check_nuisance() / clean_nuisance(); and the
+## design-matrix, term and print methods for baseline models.
 ###############################################################################
 
 ## ============================================================================
@@ -26,7 +19,7 @@
 .nuisance_colnames <- function(mat) {
   cn <- colnames(mat)
   if (is.null(cn)) {
-    cn <- paste0("V", seq_len(ncol(mat)))
+    cn <- sprintf("V%d", seq_len(ncol(mat)))  # character(0) for no columns
   }
   missing <- is.na(cn) | cn == ""
   cn[missing] <- paste0("V", which(missing))
@@ -44,15 +37,13 @@
          call. = FALSE)
   }
 
-  nb <- length(fmrihrf::blocklens(sframe))
   bl_lens <- fmrihrf::blocklens(sframe)
-
-  if (length(nuisance_list) != nb) {
+  if (length(nuisance_list) != length(bl_lens)) {
     stop("length(nuisance_list) must equal number of blocks in sframe.",
          call. = FALSE)
   }
 
-  mats <- lapply(seq_along(nuisance_list), function(i) {
+  lapply(seq_along(nuisance_list), function(i) {
     mat <- as.matrix(nuisance_list[[i]])
     if (!(is.numeric(mat) || is.logical(mat))) {
       stop(sprintf("nuisance_list[[%d]] must contain only numeric, integer, or logical columns.", i),
@@ -73,8 +64,6 @@
     attr(mat, "nuisance_auto_index") <- as.integer(auto_index)
     mat
   })
-
-  mats
 }
 
 # Column labels for nuisance regressors in the design matrix. User-supplied
@@ -135,23 +124,40 @@
   split(seq_len(sum(fmrihrf::blocklens(sframe))), fmrihrf::blockids(sframe))
 }
 
-.baseline_matrix_for_block <- function(baseline_terms, rows, tol) {
-  if (length(baseline_terms) == 0) {
-    return(matrix(numeric(length(rows) * 0), nrow = length(rows)))
-  }
+# Consecutive integer index runs of the given lengths:
+# list(1:n1, n1 + 1:n2, ...), with integer(0) for a zero length.
+.index_runs <- function(lens) {
+  lens <- as.integer(lens)
+  offsets <- cumsum(lens) - lens
+  lapply(seq_along(lens), function(i) offsets[i] + seq_len(lens[i]))
+}
 
-  mats <- lapply(baseline_terms, function(term) {
-    if (is.null(term)) return(NULL)
-    mat <- as.matrix(design_matrix(term))[rows, , drop = FALSE]
+# Stack per-block matrices into one dense block-diagonal matrix: block i
+# occupies its own rows and its own columns, with zeros elsewhere.
+.block_diag <- function(mats) {
+  rows <- .index_runs(vapply(mats, nrow, integer(1)))
+  cols <- .index_runs(vapply(mats, ncol, integer(1)))
+  out <- matrix(0, sum(lengths(rows)), sum(lengths(cols)))
+  for (i in seq_along(mats)) {
+    out[rows[[i]], cols[[i]]] <- mats[[i]]
+  }
+  out
+}
+
+# The baseline columns active in one block: `baseline_mats` are the full
+# design matrices of the baseline terms; columns that are (numerically) zero
+# throughout `rows` belong to other blocks and are dropped.
+.baseline_matrix_for_block <- function(baseline_mats, rows, tol) {
+  mats <- lapply(baseline_mats, function(mat) {
+    mat <- mat[rows, , drop = FALSE]
     active <- vapply(seq_len(ncol(mat)), function(j) {
       any(is.finite(mat[, j]) & abs(mat[, j]) > tol)
     }, logical(1))
     mat[, active, drop = FALSE]
   })
-  mats <- purrr::compact(mats)
 
   if (length(mats) == 0) {
-    matrix(numeric(length(rows) * 0), nrow = length(rows))
+    matrix(numeric(0), nrow = length(rows), ncol = 0)
   } else {
     do.call(cbind, mats)
   }
@@ -168,25 +174,19 @@
 }
 
 .duplicate_pairs <- function(mat, zero_variance, duplicate_threshold) {
+  none <- data.frame(column = character(0),
+                     duplicates = character(0),
+                     correlation = numeric(0),
+                     stringsAsFactors = FALSE)
   keep <- which(!zero_variance)
-  if (length(keep) < 2) {
-    return(data.frame(column = character(0),
-                      duplicates = character(0),
-                      correlation = numeric(0),
-                      stringsAsFactors = FALSE))
-  }
+  if (length(keep) < 2) return(none)
 
   x <- mat[, keep, drop = FALSE]
   cc <- suppressWarnings(stats::cor(x))
   diag(cc) <- 0
   idx <- which(abs(cc) >= duplicate_threshold, arr.ind = TRUE)
   idx <- idx[idx[, 1] < idx[, 2], , drop = FALSE]
-  if (nrow(idx) == 0) {
-    return(data.frame(column = character(0),
-                      duplicates = character(0),
-                      correlation = numeric(0),
-                      stringsAsFactors = FALSE))
-  }
+  if (nrow(idx) == 0) return(none)
 
   data.frame(
     column = colnames(x)[idx[, 2]],
@@ -221,6 +221,15 @@
   keep
 }
 
+# "<column> duplicates <other> (r = ...)" for each row of a duplicate_pairs table
+.describe_duplicates <- function(dup_pairs) {
+  paste(sprintf("%s duplicates %s (r = %.6g)",
+                dup_pairs$column,
+                dup_pairs$duplicates,
+                dup_pairs$correlation),
+        collapse = "; ")
+}
+
 .problem_row <- function(block, issue, columns, detail) {
   data.frame(block = block,
              issue = issue,
@@ -238,13 +247,15 @@
   mats <- .as_nuisance_matrices(nuisance_list, sframe)
   mats <- .repair_nuisance_na(mats, na_action)
   rows_by_block <- .block_rows(sframe)
+  baseline_mats <- lapply(purrr::compact(baseline_terms),
+                          function(term) as.matrix(design_matrix(term)))
   by_block <- vector("list", length(mats))
   problems <- list()
 
   for (i in seq_along(mats)) {
     mat <- mats[[i]]
     cn <- colnames(mat)
-    baseline_mat <- .baseline_matrix_for_block(baseline_terms, rows_by_block[[i]], tol)
+    baseline_mat <- .baseline_matrix_for_block(baseline_mats, rows_by_block[[i]], tol)
 
     non_finite <- vapply(seq_len(ncol(mat)), function(j) any(!is.finite(mat[, j])), logical(1))
     finite_mat <- mat
@@ -259,47 +270,32 @@
     keep <- .incremental_rank_keep(finite_mat, baseline_mat, zero_variance, non_finite, tol)
     aliased <- cn[!keep & !zero_variance & !non_finite]
 
-    if (any(non_finite)) {
-      problems[[length(problems) + 1]] <- .problem_row(
+    problems <- c(problems, purrr::compact(list(
+      if (any(non_finite)) .problem_row(
         i, "non_finite", cn[non_finite],
         "contains NA, NaN, or infinite values"
-      )
-    }
-    if (any(zero_variance)) {
-      problems[[length(problems) + 1]] <- .problem_row(
+      ),
+      if (any(zero_variance)) .problem_row(
         i, "zero_variance", cn[zero_variance],
         "column has no within-run variance"
-      )
-    }
-    if (nrow(dup_pairs) > 0) {
-      detail <- paste(sprintf("%s duplicates %s (r = %.6g)",
-                              dup_pairs$column,
-                              dup_pairs$duplicates,
-                              dup_pairs$correlation),
-                      collapse = "; ")
-      problems[[length(problems) + 1]] <- .problem_row(
-        i, "duplicate", dup_pairs$column, detail
-      )
-    }
-    if (nuisance_rank < ncol(finite_mat)) {
-      problems[[length(problems) + 1]] <- .problem_row(
+      ),
+      if (nrow(dup_pairs) > 0) .problem_row(
+        i, "duplicate", dup_pairs$column, .describe_duplicates(dup_pairs)
+      ),
+      if (nuisance_rank < ncol(finite_mat)) .problem_row(
         i, "rank_deficient_nuisance", cn,
         sprintf("nuisance rank: %d < %d columns", nuisance_rank, ncol(finite_mat))
-      )
-    }
-    if (rank_with_baseline < n_with_baseline) {
-      problems[[length(problems) + 1]] <- .problem_row(
+      ),
+      if (rank_with_baseline < n_with_baseline) .problem_row(
         i, "rank_deficient_with_baseline", cn,
         sprintf("rank with baseline terms: %d < %d columns",
                 rank_with_baseline, n_with_baseline)
-      )
-    }
-    if (length(aliased) > 0) {
-      problems[[length(problems) + 1]] <- .problem_row(
+      ),
+      if (length(aliased) > 0) .problem_row(
         i, "aliased_columns", aliased,
         "columns do not increase rank after baseline and earlier nuisance columns"
       )
-    }
+    )))
 
     by_block[[i]] <- list(
       block = i,
@@ -354,13 +350,9 @@
                                paste(block$zero_variance, collapse = ", ")))
     }
     if (nrow(block$duplicate_pairs) > 0) {
-      dup <- paste(sprintf("%s duplicates %s (r = %.6g)",
-                           block$duplicate_pairs$column,
-                           block$duplicate_pairs$duplicates,
-                           block$duplicate_pairs$correlation),
-                   collapse = "; ")
       block_lines <- c(block_lines,
-                       sprintf("  Duplicate or near-duplicate columns: %s.", dup))
+                       sprintf("  Duplicate or near-duplicate columns: %s.",
+                               .describe_duplicates(block$duplicate_pairs)))
     }
     if (length(block$aliased_columns) > 0) {
       block_lines <- c(block_lines,
@@ -398,10 +390,19 @@
   })
 }
 
-.baseline_terms_for_nuisance_check <- function(basis, degree, sframe, intercept) {
-  drift_spec <- baseline(degree = degree, basis = basis, intercept = intercept)
+# The drift spec and the drift / block-intercept terms implied by the
+# baseline settings. Shared by baseline_model() and check_nuisance() so the
+# nuisance diagnostics run against exactly the terms the model contains.
+# `block` is NULL when there is no separate intercept term (intercept = "none",
+# or a constant basis, which already provides one).
+.baseline_drift_terms <- function(basis, degree, sframe, intercept) {
+  if (basis %in% c("bs", "ns")) {
+    assert_that(degree > 2, msg = "'bs' and 'ns' bases must have degree >= 3")
+  }
+  spec <- baseline(degree = degree, basis = basis, intercept = intercept)
   list(
-    drift = construct(drift_spec, sframe),
+    spec = spec,
+    drift = construct(spec, sframe),
     block = if (intercept != "none" && basis != "constant") {
       construct_block_term("constant", sframe, intercept)
     }
@@ -454,11 +455,8 @@ check_nuisance <- function(nuisance_list,
   basis <- match.arg(basis)
   intercept <- match.arg(intercept)
   na_action <- match.arg(na_action)
-  if (basis %in% c("bs", "ns")) {
-    assert_that(degree > 2, msg = "'bs' and 'ns' bases must have degree >= 3")
-  }
-  baseline_terms <- .baseline_terms_for_nuisance_check(basis, degree, sframe, intercept)
-  .check_nuisance_internal(nuisance_list, sframe, baseline_terms,
+  base <- .baseline_drift_terms(basis, degree, sframe, intercept)
+  .check_nuisance_internal(nuisance_list, sframe, base[c("drift", "block")],
                            tol = tol,
                            duplicate_threshold = duplicate_threshold,
                            na_action = na_action)
@@ -515,45 +513,6 @@ print.nuisance_check <- function(x, ...) {
   invisible(x)
 }
 
-#' Calculate column indices for a list of block matrices
-#'
-#' Given a list of matrices (e.g., one per block), this function calculates
-#' the corresponding column indices for each matrix as they would appear
-#' when combined into a block-diagonal structure.
-#'
-#' @param mat_list A list of matrices. Each element must be a matrix.
-#' @return A list where each element is an integer vector of column indices
-#'         corresponding to the matrix in the input list.
-#' @noRd
-#' @keywords internal
-get_col_inds <- function(mat_list) {
-  # mat_list must be a list containing only matrices
-  if (!is.list(mat_list)) {
-    stop("mat_list must be a list")
-  }
-  if (!all(vapply(mat_list, is.matrix, logical(1)))) {
-    stop("All elements of mat_list must be matrices")
-  }
-  ncols_per_block <- vapply(mat_list, ncol, integer(1))
-  if (any(ncols_per_block < 0)) {
-      stop("Matrices in mat_list must have non-negative number of columns.")
-  }
-  
-  # Cumulative sum of columns, starting from 0
-  cum_ncols <- c(0, cumsum(ncols_per_block))
-  
-  # Generate sequences of column indices for each block
-  lapply(seq_along(ncols_per_block), function(i) {
-    if (ncols_per_block[i] > 0) {
-      # Indices are from (cumulative cols before this block + 1) to (cumulative cols up to this block)
-      (cum_ncols[i] + 1):cum_ncols[i + 1]
-    } else {
-      # Return an empty integer vector if a block has 0 columns
-      integer(0)
-    }
-  })
-}
-
 #' Build a baseline_term from a list of block-wise nuisance matrices
 #'
 #' @param nuisance_list list of numeric matrices or data frames, **one per run/block**.
@@ -567,18 +526,7 @@ make_nuisance_term <- function(nuisance_list,
                                prefix = "nuis") {
 
   nuisance_list <- .as_nuisance_matrices(nuisance_list, sframe)
-
-  ## --- assemble block-diagonal matrix ------------------------------------
-  # Ensure all elements are plain matrices without special attributes
-  nuisance_mats <- lapply(nuisance_list, function(x) {
-    mat <- as.matrix(x)
-    # Remove any special class attributes that might interfere with bdiag
-    class(mat) <- "matrix"
-    attributes(mat) <- list(dim = dim(mat), dimnames = dimnames(mat))
-    mat
-  })
-  full_mat <- as.matrix(Matrix::bdiag(nuisance_mats))
-  ncols    <- ncol(full_mat)
+  full_mat <- .block_diag(nuisance_list)
 
   ## names: <prefix>_<label>_block_<block>, matching the drift columns
   ## (base_<basis><k>_block_<block>). <label> is the sanitised user column
@@ -588,14 +536,11 @@ make_nuisance_term <- function(nuisance_list,
       mat <- nuisance_list[[i]]
       lab <- .nuisance_labels(colnames(mat),
                               attr(mat, "nuisance_auto_index", exact = TRUE))
-      paste0(prefix, "_", lab, "_block_", i)
+      sprintf("%s_%s_block_%d", prefix, lab, i)  # character(0) for no columns
     }), use.names = FALSE)
 
-  ## bookkeeping lists
-  colind <- get_col_inds(lapply(nuisance_list, as.matrix))
-  rowind <- split(seq_len(nrow(full_mat)), fmrihrf::blockids(sframe))
-
-  term <- baseline_term("nuisance", full_mat, colind, rowind)
+  colind <- .index_runs(vapply(nuisance_list, ncol, integer(1)))
+  term <- baseline_term("nuisance", full_mat, colind, .block_rows(sframe))
   # The user's own column names (e.g. motion parameter names), unsanitised,
   # for display. Unnamed columns are labelled "<prefix> <index>".
   term$source_colnames <- unlist(lapply(nuisance_list, function(m) {
@@ -626,8 +571,10 @@ make_nuisance_term <- function(nuisance_list,
 #' @param degree Integer; degree of the spline/polynomial function.
 #' @param sframe A sampling_frame object.
 #' @param intercept Character; whether to include an intercept ("runwise", "global", or "none").
-#'   Ignored when \code{basis == "constant"} because the drift term already
-#'   provides the constant baseline.
+#'   With \code{basis = "constant"} no separate intercept term is added, because
+#'   the drift term is itself the constant baseline: \code{"global"} makes it a
+#'   single column shared by all runs, while \code{"runwise"} and \code{"none"}
+#'   give one constant column per run.
 #' @param nuisance_list Optional list of nuisance matrices or data frames (one per fMRI block).
 #' @param nuisance_check Character; how to handle nuisance diagnostics. `"warn"`
 #'   warns on construction-time problems, `"error"` stops, `"drop"` removes
@@ -664,16 +611,9 @@ baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1
   nuisance_check <- match.arg(nuisance_check)
   na_action <- match.arg(na_action)
 
-  if (basis %in% c("bs", "ns")) {
-    assert_that(degree > 2, msg ="'bs' and 'ns' bases must have degree >= 3")
-  }
-
-  # Construct the drift term specification
-  drift_spec <- baseline(degree = degree, basis = basis, intercept = intercept)
-  drift_term <- construct(drift_spec, sframe)
-  block_term <- if (intercept != "none" && basis != "constant") {
-    construct_block_term("constant", sframe, intercept)
-  }
+  # Drift term, plus a block intercept unless the basis is constant or
+  # intercept = "none"
+  base <- .baseline_drift_terms(basis, degree, sframe, intercept)
 
   # Normalize and repair NA values once, up front, so both the diagnostics and
   # make_nuisance_term() see the repaired matrices. Applying this even when
@@ -685,8 +625,8 @@ baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1
 
   nuisance_report <- NULL
   if (!is.null(nuisance_list) && nuisance_check != "none") {
-    baseline_terms <- purrr::compact(list(drift = drift_term, block = block_term))
-    nuisance_report <- .check_nuisance_internal(nuisance_list, sframe, baseline_terms)
+    nuisance_report <- .check_nuisance_internal(nuisance_list, sframe,
+                                                base[c("drift", "block")])
     if (!nuisance_report$ok) {
       if (nuisance_check == "error") {
         stop(.format_nuisance_check(nuisance_report), call. = FALSE)
@@ -699,27 +639,21 @@ baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1
     }
   }
   
-  # List potential terms, using compact later to remove NULLs
   terms_list <- list(
-    # Drift term always constructed based on spec
-    drift = drift_term,
-    # Block term constructed only if intercept is needed and basis isn't constant
-    block = block_term,
-    # Nuisance term constructed only if list provided
+    drift = base$drift,
+    block = base$block,
     nuisance = if (!is.null(nuisance_list)) {
-                 make_nuisance_term(nuisance_list, sframe)
-               }
+      make_nuisance_term(nuisance_list, sframe)
+    }
   )
 
-  # Remove NULL terms and store in the final list
   ret <- list(
     terms = purrr::compact(terms_list),
-    # Keep drift_spec for potential inspection? (Optional, but consistent with review example)
-    drift_spec = drift_spec, 
+    drift_spec = base$spec,
     sampling_frame = sframe,
     nuisance_check = nuisance_report
   )
-  
+
   class(ret) <- c("baseline_model", "list")
   ret
 }
@@ -784,17 +718,13 @@ baseline <- function(degree = 1, basis = c("constant", "poly", "bs", "ns"), name
 #' bmod <- baseline_model(sframe = sframe)
 #' head(design_matrix(bmod))
 design_matrix.baseline_model <- function(x, blockid = NULL, allrows = FALSE, ...) {
-  # Map design_matrix over the terms list, passing blockid and allrows
   mats <- purrr::map(x$terms, design_matrix, blockid = blockid, allrows = allrows)
-  # Combine the resulting matrices column-wise using bind_cols for safety and tibble output
   dplyr::bind_cols(mats)
 }
 
 #' @method terms baseline_model
 #' @export
-#' @importFrom purrr map_lgl
 terms.baseline_model <- function(x, ...) {
-  # Simply return the terms list
   x$terms
 }
 
@@ -807,66 +737,25 @@ baseline_terms.baseline_model <- function(x, ...) {
 
 #' @export
 term_matrices.baseline_model <- function(x, ...) {
-  # Get the design matrix and check for col_indices attribute
-  dm <- design_matrix(x)
-  col_indices <- attr(dm, "col_indices")
-
-  if (is.null(col_indices)) {
-    # Fallback: construct indices by computing design matrices for each term
-    result <- vector("list", length(x$terms))
-    names(result) <- names(x$terms)
-
-    for (i in seq_along(x$terms)) {
-      term_dm <- design_matrix(x$terms[[i]])
-      if (ncol(term_dm) > 0) {
-        result[[i]] <- term_dm
-      } else {
-        result[[i]] <- NULL
-      }
-    }
-    return(result)
-  }
-
-  # Use col_indices if available
-  result <- vector("list", length(col_indices))
-  names(result) <- names(col_indices)
-
-  for (i in seq_along(col_indices)) {
-    indices <- col_indices[[i]]
-    if (length(indices) > 0) {
-      result[[i]] <- dm[, indices, drop = FALSE]
-    } else {
-      result[[i]] <- NULL
-    }
-  }
-
-  result
+  # One design matrix per term, leaving out terms without columns
+  mats <- lapply(x$terms, design_matrix)
+  mats[vapply(mats, ncol, integer(1)) > 0L]
 }
 
 #' @method cells baseline_model
 #' @rdname cells
 #' @export
 #' @importFrom dplyr mutate tibble
-#' @importFrom stringr str_pad
 cells.baseline_model <- function(x, drop.empty = TRUE, ...) {
-  # Use lapply over x$terms
   cells_list <- lapply(x$terms, function(term) {
     conds <- conditions(term)
     ncond <- length(conds)
-    # Handle case with zero conditions gracefully
     if (ncond == 0) return(dplyr::tibble(term = character(0), level = character(0), basis = character(0)))
-    # Use str_pad for consistent zero-padding
-    basis_names <- stringr::str_pad(1:ncond, width = ceiling(log10(ncond + 1e-6)), pad = "0")
+    basis_names <- sprintf("%0*d", ceiling(log10(ncond + 1e-6)), seq_len(ncond))
     dplyr::tibble(term = term$varname, level = conds, basis = paste0("basis", basis_names))
   })
-  # Use do.call(rbind, ...) to combine
   combined_cells <- do.call(rbind, cells_list)
-  # Add index column if there are rows
-  if(nrow(combined_cells) > 0) {
-     dplyr::mutate(combined_cells, index = 1:dplyr::n())
-  } else {
-     dplyr::mutate(combined_cells, index = integer(0))
-  }
+  dplyr::mutate(combined_cells, index = seq_len(nrow(combined_cells)))
 }
 
 ## ============================================================================
@@ -899,72 +788,35 @@ block <- function(x) {
 construct.baselinespec <- function(x, model_spec, ...) {
   sampling_frame <- if (!is.null(model_spec$sampling_frame)) model_spec$sampling_frame else model_spec
   
-  bl <- fmrihrf::blocklens(sampling_frame) # Normalize block lengths usage
-  
-  # Validate block lengths
+  bl <- fmrihrf::blocklens(sampling_frame)
   if (length(bl) == 0 || any(bl <= 0)) {
     stop("Invalid block lengths: must have at least one block with positive length")
   }
-  
-  # Compute baseline covariates for each block, passing correct argument name
+  rowind <- .block_rows(sampling_frame)
+
+  # A global constant is a single column of ones shared by every block
+  if (x$basis == "constant" && x$intercept == "global") {
+    mat <- matrix(1, nrow = sum(bl), ncol = 1,
+                  dimnames = list(NULL, paste0("base_", x$basis)))
+    return(baseline_term(x$name, mat, rep(list(1L), length(rowind)), rowind))
+  }
+
+  # Otherwise one drift basis per block, assembled block-diagonally
   ret_list <- lapply(bl, function(block_len) {
     if (x$basis == "ns") {
       x$fun(seq(1, block_len), df = x$degree)
     } else if (x$basis %in% c("poly", "bs")) {
       x$fun(seq(1, block_len), degree = x$degree)
-    } else { 
+    } else {
       x$fun(seq(1, block_len))
     }
   })
-  
-  # Check that ret_list is not empty
-  if (length(ret_list) == 0) {
-    stop("No baseline terms could be constructed: ret_list is empty")
-  }
-  
-  # Simplified handling for global constant intercept
-  if (x$basis == "constant" && x$intercept == "global") {
-    mat <- matrix(1, nrow = sum(bl), ncol = 1)
-    cnames <- paste0("base_", x$basis)
-    colnames(mat) <- cnames
-    # The single column is shared by every block
-    rowind <- split(seq_len(nrow(mat)), fmrihrf::blockids(sampling_frame))
-    colind <- rep(list(1L), length(rowind))
-    return(baseline_term(x$name, mat, colind, rowind))
-  }
-  
-  # Standard block-wise construction
-  nc_per_block <- ncol(ret_list[[1]])
-  total_cols <- length(ret_list) * nc_per_block
-  mat <- matrix(0, sum(bl), total_cols)
-  
-  colind <- vector("list", length(ret_list))
-  rowind <- vector("list", length(ret_list))
-  all_cnames <- vector("character", total_cols)
-  
-  current_col <- 1
-  current_row <- 1
-  for (i in seq_along(ret_list)) {
-    rows_this_block <- bl[i]
-    cols_this_block <- nc_per_block
-    
-    row_indices <- current_row:(current_row + rows_this_block - 1)
-    col_indices <- current_col:(current_col + cols_this_block - 1)
-    
-    mat[row_indices, col_indices] <- ret_list[[i]]
-    colind[[i]] <- col_indices
-    rowind[[i]] <- row_indices
-    
-    # Generate column names for this block
-    cnames_block <- paste0("base_", x$basis, 1:cols_this_block, "_block_", i)
-    all_cnames[col_indices] <- cnames_block
-    
-    current_row <- current_row + rows_this_block
-    current_col <- current_col + cols_this_block
-  }
-  
-  colnames(mat) <- all_cnames
-  baseline_term(x$name, mat, colind, rowind)
+  ncols <- vapply(ret_list, ncol, integer(1))
+  mat <- .block_diag(ret_list)
+  colnames(mat) <- unlist(lapply(seq_along(ncols), function(i) {
+    paste0("base_", x$basis, seq_len(ncols[i]), "_block_", i)
+  }))
+  baseline_term(x$name, mat, .index_runs(ncols), unname(rowind))
 }
 
 #' Construct a Baseline Term
@@ -974,21 +826,12 @@ construct.baselinespec <- function(x, model_spec, ...) {
 #'
 #' @param varname The name of the term.
 #' @param mat A matrix (or data frame) of covariates.
-#' @param colind A list of column indices.
-#' @param rowind A list of row indices.
+#' @param colind A list of column indices (the columns active in each block).
+#' @param rowind A list of row indices (the rows of each block).
 #' @return A baseline_term object.
 #' @importFrom tibble as_tibble
 #' @noRd
 #' @keywords internal
-#' Construct a baseline term
-#' 
-#' @param varname Variable name for the term
-#' @param mat Design matrix
-#' @param colind Column indices
-#' @param rowind Row indices
-#' @return A baseline_term object
-#' @keywords internal
-#' @noRd
 baseline_term <- function(varname, mat, colind, rowind) {
   stopifnot(inherits(mat, "matrix") || is.data.frame(mat) || inherits(mat, "Matrix"))
   ret <- list(varname = varname, 
@@ -1063,31 +906,19 @@ construct_block_term <- function(vname, sframe, intercept = c("global", "runwise
   intercept <- match.arg(intercept)
   blockids_vec <- fmrihrf::blockids(sframe)
   blockord <- sort(unique(blockids_vec))
-  n_total_scans <- length(blockids_vec)
-  n_blocks <- length(blockord)
-  
-  if (n_blocks == 1 || intercept == "global") {
-    # Simple global intercept: single column of 1s
-    mat <- matrix(1, nrow = n_total_scans, ncol = 1)
-    cnames <- paste0(vname, "_global")
-    colnames(mat) <- cnames
-    # Even for global intercept, we need to respect block structure for row indices
-    colind <- rep(list(1), n_blocks)  # Same column for all blocks
-    rowind <- split(1:n_total_scans, blockids_vec)  # Split rows by block
+
+  if (length(blockord) == 1 || intercept == "global") {
+    # Global intercept: one column of 1s shared by every block
+    mat <- matrix(1, nrow = length(blockids_vec), ncol = 1,
+                  dimnames = list(NULL, paste0(vname, "_global")))
+    colind <- rep(list(1), length(blockord))
   } else {
-    # Runwise intercept: use model.matrix once
-    # Create the factor directly for model.matrix
-    expanded_blockids_fac <- factor(blockids_vec, levels = blockord) 
-    mat <- model.matrix(~ expanded_blockids_fac - 1)
-    cnames <- paste0(vname, "_", blockord)
-    colnames(mat) <- cnames
-    # colind and rowind reflect the block structure
-    colind <- as.list(1:n_blocks) 
-    rowind <- split(1:n_total_scans, blockids_vec)
+    # Runwise intercept: one indicator column per block
+    mat <- outer(blockids_vec, blockord, "==") + 0
+    colnames(mat) <- paste0(vname, "_", blockord)
+    colind <- as.list(seq_along(blockord))
   }
-  
-  # Use baseline_term constructor directly
-  baseline_term(vname, mat, colind, rowind) 
+  baseline_term(vname, mat, colind, .block_rows(sframe))
 }
 
 #' @export
@@ -1117,16 +948,18 @@ nuisance <- function(x) {
 # @keywords internal
 matrix_term <- function(varname, mat) {
   stopifnot(is.matrix(mat))
-  ret <- list(varname = varname, design_matrix = suppressMessages(tibble::as_tibble(mat)))
+  if (is.null(colnames(mat))) colnames(mat) <- paste0("V", seq_len(ncol(mat)))
+  ret <- list(varname = varname,
+              design_matrix = suppressMessages(tibble::as_tibble(mat, .name_repair = "unique")))
   class(ret) <- c("baseline_term", "matrix_term", "fmri_term", "list")
   ret
 }
 
 #' @export
 construct.nuisancespec <- function(x, model_spec, ...) {
-  expr <- rlang::parse_expr(as.character(x$varname))
-  mat <- rlang::eval_tidy(expr, data = model_spec$aux_data, env = parent.frame())
-  matrix_term(x$name, mat)
+  # x$name is the expression captured by nuisance()
+  mat <- rlang::eval_tidy(x$name, data = model_spec$aux_data, env = parent.frame())
+  matrix_term(rlang::as_label(x$name), mat)
 }
 
 #' @export
@@ -1136,7 +969,7 @@ construct.blockspec <- function(x, model_spec, ...) {
 
 
 ## ============================================================================
-## Section 4: Print and Plot Methods for Baseline Models
+## Section 5: Print and Plot Helpers for Baseline Models
 ## ============================================================================
 
 #' Print a Baseline Model
@@ -1154,61 +987,53 @@ construct.blockspec <- function(x, model_spec, ...) {
 #' @export
 #' @rdname print
 print.baseline_model <- function(x, ...) {
-  # Extract component information using helper
   drift_cols <- .nz(x$terms$drift)
   const_cols <- .nz(x$terms$block)
   nuis_cols  <- .nz(x$terms$nuisance)
-  total_cols <- sum(drift_cols, const_cols, nuis_cols) # Summing is safer now
-  
-  # Get drift spec details (assuming drift_spec is still stored, adjust if removed)
+  total_cols <- sum(drift_cols, const_cols, nuis_cols)
+
   basis_type <- if (!is.null(x$drift_spec)) x$drift_spec$basis else "N/A"
   degree     <- if (!is.null(x$drift_spec)) x$drift_spec$degree else "N/A"
   drift_name <- if (!is.null(x$terms$drift)) x$terms$drift$varname else "N/A"
-  
-  # Print header.
+  item <- function(...) cat(sprintf("    * %-35s\n", paste(...)))
+
   cat("================================================\n")
   cat("           Baseline Model                       \n")
   cat("================================================\n")
-  
-  # Drift term info.
+
   if (drift_cols > 0) {
-      cat("  Drift Components                           \n")
-      cat(sprintf("    * %-35s\n", paste("Name:", drift_name)))
-      cat(sprintf("    * %-35s\n", paste("Basis type:", basis_type)))
-      cat(sprintf("    * %-35s\n", paste("Degree:", degree)))
-      cat(sprintf("    * %-35s\n", paste("Drift columns:", drift_cols)))
+    cat("  Drift Components                           \n")
+    item("Name:", drift_name)
+    item("Basis type:", basis_type)
+    item("Degree:", degree)
+    item("Drift columns:", drift_cols)
   }
-  
-  # Additional components.
-  cat("\n") 
+
+  cat("\n")
   cat("  Additional Components                    \n")
-  cat(sprintf("    * %-35s\n", paste("Constant columns:", const_cols)))
-  cat(sprintf("    * %-35s\n", paste("Nuisance columns:", nuis_cols)))
-  
-  # Summary.
-  cat("\n") # Blank line
+  item("Constant columns:", const_cols)
+  item("Nuisance columns:", nuis_cols)
+
+  cat("\n")
   cat("  Model Summary                            \n")
-  cat(sprintf("    * %-35s\n", paste("Total columns:", total_cols)))
-  
-  # Preview design matrix.
-  cat("\n") # Blank line
+  item("Total columns:", total_cols)
+
+  # Preview of the first rows and columns of the design matrix
+  cat("\n")
   cat("  Design Matrix Preview                    \n")
   if (total_cols > 0) {
-      dm <- head(design_matrix(x), 3)
-      for (i in 1:min(3, nrow(dm))) {
-        row_preview <- paste(sprintf("%6.3f", as.numeric(dm[i, 1:min(4, ncol(dm))])), collapse = " ")
-        if (ncol(dm) > 4) row_preview <- paste0(row_preview, " ...")
-        # Adjust padding to 37 for design matrix preview lines
-        cat(sprintf("    %-37s\n", row_preview)) 
-      }
-      # Adjust padding for '...' line
-      if (nrow(dm) > 3) cat("    ...                                    \n") 
+    dm <- head(design_matrix(x), 3)
+    for (i in 1:min(3, nrow(dm))) {
+      row_preview <- paste(sprintf("%6.3f", as.numeric(dm[i, 1:min(4, ncol(dm))])), collapse = " ")
+      if (ncol(dm) > 4) row_preview <- paste0(row_preview, " ...")
+      cat(sprintf("    %-37s\n", row_preview))
+    }
   } else {
-      # Adjust padding for 'no terms' line
-      cat("    (No baseline terms in model)           \n") 
+    cat("    (No baseline terms in model)           \n")
   }
-  
+
   cat("================================================\n")
+  invisible(x)
 }
 
 # Identify intercept-like (constant) baseline terms by inspecting their design
@@ -1232,15 +1057,3 @@ print.baseline_model <- function(x, ...) {
   }
   TRUE
 }
-
-
-
-
-
-
-
-
-
-## ============================================================================
-## Section 5: End of File
-###############################################################################

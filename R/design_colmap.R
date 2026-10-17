@@ -17,10 +17,21 @@
 #'   - `run` (integer): block/run id when the column is block-specific; `NA` if pooled
 #'   - `role` (character): e.g., "task", "drift", "intercept", "nuisance"
 #'   - `model_source` (character): "event" or "baseline"
-#'   - `basis_name` (character): HRF or baseline basis identifier when available
+#'   - `basis_name` (character): basis identifier. For event columns, the HRF
+#'     basis family as spelled in `hrf(basis = ...)` (`"spmg1"`, `"spmg2"`,
+#'     `"spmg3"`, `"gamma"`, `"gaussian"`, `"bspline"`, `"tent"`, `"fir"`,
+#'     `"fourier"`, `"daguerre"`), also when the HRF is lagged, blocked or
+#'     normalised; for other HRFs their own name (`attr(hrf, "name")`);
+#'     `NA` for covariates. For baseline columns, the drift basis (`"poly"`,
+#'     `"bs"`, `"ns"`, `"constant"`), `"constant"` for intercepts and
+#'     `"nuisance"` for nuisance regressors (`"baseline"` for other terms).
 #'   - `basis_ix` (integer): within-condition basis index (HRF component); `NA` if not applicable
 #'   - `basis_total` (integer): total number of basis components for the column's term; `NA` if not applicable
-#'   - `basis_label` (character): human-readable label for the basis component when known
+#'   - `basis_label` (character): human-readable label for the basis component when known:
+#'     `"canonical"`, `"derivative"`, `"dispersion"` for SPMG2/SPMG3, `"lag_00"`,
+#'     `"lag_01"`, ... for FIR, otherwise `"component_01"`, `"component_02"`, ...
+#'     (baseline columns: `"intercept"` for intercepts and the user's column
+#'     name for nuisance regressors)
 #'   - `pretty_name` (character): concise, human-friendly label for display (e.g., "RT" or "RT_lag_02")
 #'   - `is_block_diagonal` (logical): TRUE when the regressor is per-run/block
 #'   - `modulation_type` (character): "amplitude", "parametric", "covariate", or "feature"
@@ -89,41 +100,26 @@ design_colmap.event_model <- function(x, ...) {
 
   for (i in seq_along(terms_list)) {
     ti <- terms_list[[i]]
+    is_cov <- inherits(ti, "covariate_convolved_term")
+    is_feature <- inherits(ti, "feature_term")
     # Default modulation classification from term tag
     ttag <- names(terms_list)[i]
     if (!is.null(ttag) && isTRUE(any(startsWith(ttag, known_param_prefix)))) {
       per_term_mod_type[i] <- "parametric"
       # Strip the first prefix and underscore to recover variable identifier
       per_term_mod_id[i] <- sub("^[^_]+_", "", ttag)
-    } else if (inherits(ti, "covariate_convolved_term")) {
-      per_term_mod_type[i] <- "covariate"
-      per_term_mod_id[i]   <- ti$varname %||% NA_character_
-    } else if (inherits(ti, "feature_term")) {
-      per_term_mod_type[i] <- "feature"
+    } else if (is_cov || is_feature) {
+      per_term_mod_type[i] <- if (is_cov) "covariate" else "feature"
       per_term_mod_id[i]   <- ti$varname %||% NA_character_
     } else {
       per_term_mod_type[i] <- "amplitude"
-      per_term_mod_id[i]   <- NA_character_
     }
 
-    if (inherits(ti, "covariate_convolved_term")) {
-      per_term_basis_name[i]  <- NA_character_
-      per_term_basis_total[i] <- NA_integer_
-    } else if (inherits(ti, "feature_term")) {
-      per_term_basis_total[i] <- tryCatch(fmrihrf::nbasis(ti$hrf), error = function(...) NA_integer_)
-      bname <- class(ti$hrf)
-      per_term_basis_name[i] <- if (length(bname)) as.character(bname[[1]]) else NA_character_
-    } else {
-      hrfspec <- attr(ti, "hrfspec")
-      if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
-        per_term_basis_total[i] <- tryCatch(fmrihrf::nbasis(hrfspec$hrf), error = function(...) NA_integer_)
-        # Use the primary class name as a compact basis identifier
-        bname <- class(hrfspec$hrf)
-        per_term_basis_name[i] <- if (length(bname)) as.character(bname[[1]]) else NA_character_
-      } else {
-        per_term_basis_name[i]  <- NA_character_
-        per_term_basis_total[i] <- NA_integer_
-      }
+    # Basis info from the term's HRF (covariate terms have none)
+    hrf <- if (is_feature) ti$hrf else if (!is_cov) attr(ti, "hrfspec")$hrf
+    if (!is.null(hrf)) {
+      per_term_basis_total[i] <- tryCatch(fmrihrf::nbasis(hrf), error = function(...) NA_integer_)
+      per_term_basis_name[i] <- .hrf_basis_name(hrf)
     }
   }
 
@@ -140,11 +136,7 @@ design_colmap.event_model <- function(x, ...) {
   to_strip <- !is.na(term_tag_by_col) & startsWith(base_no_basis, paste0(term_tag_by_col, "_"))
   condition[to_strip] <- substring(base_no_basis[to_strip], nchar(term_tag_by_col[to_strip]) + 2L)
 
-  basis_label <- vapply(seq_len(n_cols), function(i) {
-    bi <- term_index_by_col[i]
-    if (is.na(bi)) return(NA_character_)
-    .basis_label(per_term_basis_name[bi], basis_ix[i])
-  }, character(1))
+  basis_label <- .basis_label(per_term_basis_name[term_index_by_col], basis_ix)
 
   out <- tibble::tibble(
     col = seq_len(n_cols),
@@ -221,18 +213,18 @@ design_colmap.baseline_model <- function(x, ...) {
 
   cn <- colnames(dm)
 
-  # Iterate terms in order; bind_cols preserves order
+  # Iterate terms in order; bind_cols preserves order. Columns default to
+  # per-run (block-diagonal) with no run, basis index, total or label.
   tlist <- baseline_terms(x)
   term_tag_by_col <- character(n_cols)
   term_index_by_col <- integer(n_cols)
   role_by_col <- character(n_cols)
   basis_name_by_col <- character(n_cols)
   basis_ix <- rep(NA_integer_, n_cols)
-  basis_total_by_term <- rep(NA_integer_, length(tlist))
   basis_total_by_col <- rep(NA_integer_, n_cols)
   basis_label <- rep(NA_character_, n_cols)
   run_by_col <- rep(NA_integer_, n_cols)
-  is_block_diag <- rep(TRUE, n_cols) # most baseline columns are per-run
+  is_block_diag <- rep(TRUE, n_cols)
 
   col_cursor <- 1L
   for (i in seq_along(tlist)) {
@@ -240,6 +232,8 @@ design_colmap.baseline_model <- function(x, ...) {
     tcols <- ncol(term$design_matrix)
     if (tcols == 0L) next
     idx <- col_cursor:(col_cursor + tcols - 1L)
+    col_cursor <- col_cursor + tcols
+    nm <- colnames(term$design_matrix)
     termname <- names(tlist)[i] %||% term$varname %||% sprintf("baseline_term_%d", i)
     term_tag_by_col[idx] <- termname
     term_index_by_col[idx] <- i
@@ -247,14 +241,13 @@ design_colmap.baseline_model <- function(x, ...) {
     # Role: the term name is authoritative; column-name heuristics are only a
     # fallback for terms without one of the standard names. (Nuisance names
     # such as nuis_tx_block_1 would otherwise match the intercept pattern.)
-    first_nm <- colnames(term$design_matrix)[1]
     kind <- if (termname %in% c("drift", "block", "nuisance")) {
       termname
-    } else if (grepl("^base_", first_nm)) {
+    } else if (grepl("^base_", nm[1])) {
       "drift"
-    } else if (grepl("^nuis_|#", first_nm)) {
+    } else if (grepl("^nuis_|#", nm[1])) {
       "nuisance"
-    } else if (grepl("_global$|_[0-9]+$", first_nm)) {
+    } else if (grepl("_global$|_[0-9]+$", nm[1])) {
       "block"
     } else {
       "other"
@@ -264,39 +257,33 @@ design_colmap.baseline_model <- function(x, ...) {
       role_by_col[idx] <- "drift"
       basis_name_by_col[idx] <- if (!is.null(x$drift_spec)) x$drift_spec$basis else "baseline"
       # Parse component index (k) and run id from names like base_<basis><k>_block_<r>
-      nm <- colnames(term$design_matrix)
       k <- suppressWarnings(as.integer(sub("^.*?([0-9]+)_block_.*$", "\\1", nm)))
       r <- suppressWarnings(as.integer(sub("^.*_block_([0-9]+)$", "\\1", nm)))
       basis_ix[idx] <- k
       run_by_col[idx] <- r
-      if (any(is.finite(k))) basis_total_by_term[i] <- max(k, na.rm = TRUE)
-      is_block_diag[idx] <- TRUE
+      # A drift column without a run suffix (the global constant
+      # "base_constant") is shared by all runs
+      is_block_diag[idx] <- !is.na(r)
+      if (any(is.finite(k))) basis_total_by_col[idx] <- max(k, na.rm = TRUE)
       basis_label[idx] <- ifelse(is.na(k), NA_character_, sprintf("component_%02d", k))
     } else if (identical(kind, "block")) {
       role_by_col[idx] <- "intercept"
       basis_name_by_col[idx] <- "constant"
-      nm <- colnames(term$design_matrix)
+      basis_label[idx] <- "intercept"
       # global intercept ends with _global; runwise ends with _<run>
-      is_global <- grepl("_global$", nm)
-      if (all(is_global)) {
+      if (all(grepl("_global$", nm))) {
         is_block_diag[idx] <- FALSE
-        run_by_col[idx] <- NA_integer_
         basis_ix[idx] <- 1L
-        basis_label[idx] <- "intercept"
-        basis_total_by_term[i] <- 1L
+        basis_total_by_col[idx] <- 1L
       } else {
-        # parse run number from suffix
+        # run number from the suffix; basis_ix is not meaningful here
         r <- suppressWarnings(as.integer(sub("^.*_([0-9]+)$", "\\1", nm)))
         run_by_col[idx] <- r
-        is_block_diag[idx] <- TRUE
-        # basis_ix not meaningful here; leave NA
-        basis_label[idx] <- "intercept"
-        basis_total_by_term[i] <- length(unique(stats::na.omit(r)))
+        basis_total_by_col[idx] <- length(unique(stats::na.omit(r)))
       }
     } else if (identical(kind, "nuisance")) {
       role_by_col[idx] <- "nuisance"
       basis_name_by_col[idx] <- "nuisance"
-      nm <- colnames(term$design_matrix)
       ci <- term$colind
       if (is.list(ci) && sum(lengths(ci)) == tcols) {
         # Run membership comes from the block-diagonal bookkeeping, not names
@@ -312,7 +299,6 @@ design_colmap.baseline_model <- function(x, ...) {
       }
       run_by_col[idx] <- r
       basis_ix[idx] <- k
-      is_block_diag[idx] <- TRUE
       src <- term$source_colnames
       basis_label[idx] <- if (length(src) == tcols) {
         src
@@ -324,20 +310,12 @@ design_colmap.baseline_model <- function(x, ...) {
       # Fallback: treat as baseline component, per-run if name suggests block
       role_by_col[idx] <- "baseline"
       basis_name_by_col[idx] <- "baseline"
-      nm <- colnames(term$design_matrix)
       if (any(grepl("block", nm, fixed = TRUE))) {
-        r <- suppressWarnings(as.integer(sub("^.*_block_([0-9]+)$", "\\1", nm)))
-        run_by_col[idx] <- r
-        is_block_diag[idx] <- TRUE
+        run_by_col[idx] <- suppressWarnings(as.integer(sub("^.*_block_([0-9]+)$", "\\1", nm)))
       } else {
-        run_by_col[idx] <- NA_integer_
         is_block_diag[idx] <- FALSE
       }
-      basis_label[idx] <- NA_character_
     }
-
-    basis_total_by_col[idx] <- basis_total_by_term[i]
-    col_cursor <- col_cursor + tcols
   }
 
   tibble::tibble(

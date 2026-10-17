@@ -32,5 +32,5 @@ term_names(emod)  # Returns "cond"
 
 # Baseline model example
 bmod <- baseline_model(basis = "poly", degree = 3, sframe = sframe)
-term_names(bmod)  # Returns c("constant", "baseline_poly_3")
+term_names(bmod)  # c(drift = "baseline_poly_3", block = "constant")
 }

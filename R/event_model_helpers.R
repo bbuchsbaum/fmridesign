@@ -1,26 +1,23 @@
 # Internal Helper Functions for Event Model Construction
 
 #' @importFrom tibble tibble
-#' @importFrom rlang is_formula f_rhs f_lhs f_env eval_tidy syms sym is_list is_call call_name call_args %||% empty_env %||% is_expression as_label expr quo_get_expr env_bury
+#' @importFrom rlang %||%
 #' @import assertthat
-#' @importFrom purrr map map_dfr
-#' @importFrom cli cli_progress_bar cli_progress_update cli_progress_done
-#' @importFrom stats setNames approxfun quantile dnorm dgamma poly model.matrix terms reformulate
-#' @importFrom utils head combn modifyList
+#' @importFrom stats poly model.matrix terms reformulate
+#' @importFrom utils head combn
 
 # Helper to recursively find and evaluate hrf/trialwise calls in formula RHS
 #' @keywords internal
 #' @noRd
-find_and_eval_hrf_calls <- function(expr, data, f_env) {
+find_and_eval_hrf_calls <- function(expr, data, f_env,
+                                    targets = c("hrf", "trialwise", "covariate", "feature",
+                                                get_all_external_hrf_functions())) {
   
   if (rlang::is_call(expr)) {
     fun_name <- rlang::call_name(expr)
     
-    # Get list of external HRF functions from registry
-    external_funcs <- get_all_external_hrf_functions()
-    
     # Base case: Found a target function call (built-in or external)
-    if (fun_name %in% c("hrf", "trialwise", "covariate", "feature", external_funcs)) {
+    if (fun_name %in% targets) {
       # Evaluate the call in the formula env, using data as a mask
       data_mask <- if (is.null(data)) list() else data
       eval_env <- rlang::env_bury(f_env %||% rlang::empty_env(), !!!data_mask)
@@ -40,7 +37,7 @@ find_and_eval_hrf_calls <- function(expr, data, f_env) {
     # Recursive case: Traverse arguments of other calls (like + or *)
     # Collect results from each argument and concatenate while preserving
     # list structure (so each hrfspec remains intact)
-    results_list <- lapply(rlang::call_args(expr), find_and_eval_hrf_calls, data, f_env)
+    results_list <- lapply(rlang::call_args(expr), find_and_eval_hrf_calls, data, f_env, targets)
     results <- do.call(c, results_list)
     return(results)
     
@@ -65,9 +62,7 @@ canonicalize_blockids <- function(blockids_raw, n_events) {
     blockids_raw <- as.character(blockids_raw)
   }
 
-  if (length(blockids_raw) != n_events || any(is.na(blockids_raw))) {
-    stopifnot(length(blockids_raw) == n_events, all(!is.na(blockids_raw)))
-  }
+  stopifnot(length(blockids_raw) == n_events, all(!is.na(blockids_raw)))
 
   blockids <- as.integer(match(blockids_raw, unique(blockids_raw)))
 
@@ -243,8 +238,6 @@ construct_event_term <- function(hrfspec, model_spec) {
     }
     attr(et, "original_data") <- original_data
   }
-
-  # TODO (EM-19): Add check here
 
   et
 }

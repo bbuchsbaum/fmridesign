@@ -12,6 +12,7 @@
 #'
 #' Holds registration data for external HRF specification classes.
 #' @keywords internal
+#' @noRd
 #' @return An environment used internally as a registry.
 .fmridesign_extensions <- new.env(parent = emptyenv())
 
@@ -23,6 +24,7 @@
 #' External packages can register their own basis classes via
 #' [register_basis()].
 #' @keywords internal
+#' @noRd
 #' @return An environment used internally as a registry.
 .fmridesign_basis_registry <- new.env(parent = emptyenv())
 
@@ -249,14 +251,13 @@ list_external_hrfspecs <- function() {
 #' )
 #' requires_external_processing("demo_hrfspec")
 requires_external_processing <- function(x) {
-  # Check if it's a registered external spec
-  if (is_external_hrfspec(x)) {
-    # Get the info for the first matching class
-    for (cls in class(x)) {
-      info <- get_external_hrfspec_info(cls)
-      if (!is.null(info)) {
-        return(info$requires_external_processing)
-      }
+  # A registered external spec, given as an object or (as for
+  # is_external_hrfspec()) as a class name: use the first registered class
+  classes <- if (is.character(x)) x else class(x)
+  for (cls in classes) {
+    info <- get_external_hrfspec_info(cls)
+    if (!is.null(info)) {
+      return(info$requires_external_processing)
     }
   }
 
@@ -323,11 +324,6 @@ get_external_hrfspec_functions <- function(spec_class) {
 #' )
 #' get_all_external_hrf_functions()
 get_all_external_hrf_functions <- function() {
-  spec_classes <- list_external_hrfspecs()
-  if (length(spec_classes) == 0) {
-    return(character(0))
-  }
-
-  funcs <- unlist(lapply(spec_classes, get_external_hrfspec_functions))
-  unique(funcs[!is.null(funcs)])
+  funcs <- unlist(lapply(list_external_hrfspecs(), get_external_hrfspec_functions))
+  unique(as.character(funcs))
 }

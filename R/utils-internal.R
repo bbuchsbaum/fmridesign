@@ -1,10 +1,3 @@
-#' Default value for NULL
-#' @param a Value to use if not NULL
-#' @param b Value to use if a is NULL
-#' @keywords internal
-#' @noRd
-`%||%` <- function(a, b) if (is.null(a)) b else a
-
 ###############################################################################
 ## Helper: how many *rows* (events) does an arbitrary value-object have?    ###
 ###############################################################################
@@ -60,62 +53,31 @@ recycle_or_error <- function(x, target, label) {
   sanitized
 }
 
-###############################################################################
-## Helpers for Consistent Naming (Conditions/Levels)                       ###
-###############################################################################
-
-#' Generate a formatted label component for an event and specific level/index
-#' 
-#' @param ev An event object.
-#' @param level Optional: The factor level (character) or column index (integer) to use. If NULL, assumes single column.
-#' @return A character string label (e.g., "VarName\\[LevelName\\]" or "VarName\\[1\\]").
-#' @keywords internal
-#' @noRd
-.label_component <- function(ev, level = NULL) {
-  base_name <- ev$varname # Use original name before potential sanitization
-  if (is.null(level)) {
-    base_name
-  } else {
-    # Revert to sprintf format causing invalid names, but descriptive
-    sprintf("%s[%s]", base_name, level)
-    # Original change using paste:
-    # paste(base_name, level, sep = ".")
-  }
-}
-
 #' Internal helper to get a vector of formatted labels for a single event
 #'
-#' Returns `Variable[Level]` for each level of a categorical event, 
-#' `Variable[Index]` for each column of a multi-column continuous event, 
+#' Returns `Variable[Level]` for each level of a categorical event,
+#' `Variable[Column]` for each column of a multi-column continuous event,
 #' `Variable` for a single-column continuous event, or `character(0)`.
-#' Relies on `levels.event`, `is_categorical`, `.label_component`.
 #'
 #' @param ev An `event` object.
 #' @return A character vector of formatted labels.
 #' @keywords internal
 #' @noRd
 .level_vector <- function(ev) {
-  lvls <- levels(ev) # Get levels/colnames via levels.event
-  
-  if (is_categorical(ev)) {
-    # Categorical: Use actual levels
-    vapply(lvls, \(l) .label_component(ev, l), character(1))
-  } else if (is_continuous(ev) && length(lvls) > 1) {
-    # Continuous multi-column (matrix/basis): Use feature names
-    vapply(lvls, \(l) .label_component(ev, l), character(1))
-  } else if (is_continuous(ev) && length(lvls) == 1) {
-    # Single continuous variable (vector): Just the variable name
-    .label_component(ev) # level = NULL implicit
+  lvls <- levels(ev) # factor levels, or column names for continuous events
+  if (is_categorical(ev) || length(lvls) > 1) {
+    vapply(lvls, function(l) sprintf("%s[%s]", ev$varname, l), character(1))
+  } else if (length(lvls) == 1) {
+    ev$varname
   } else {
-    # Fallback (e.g., categorical with no levels?) -> empty
     character(0)
   }
 }
 
 ###############################################################################
-## The new .checkEVArgs                                                     ###
+## .checkEVArgs                                                             ###
 ###############################################################################
-#' Validate event arguments using new helpers.
+#' Validate event arguments.
 #'
 #' @param name The name of the event.
 #' @param value The event values.

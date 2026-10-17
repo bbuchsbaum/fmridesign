@@ -67,3 +67,17 @@ test_that("condition_basis_list handles multi-basis FIR HRF", {
     expect_equal(res[[cond_name]], dm[, expected_cols, drop = FALSE])
   }
 })
+
+test_that("condition_basis_list names the list for a single continuous variable", {
+  term <- event_term(list(rt = c(0.5, 1.2, 0.8)), onsets = c(0, 30, 60),
+                     blockids = c(1, 1, 1))
+  sf <- fmrihrf::sampling_frame(blocklens = 90, TR = 1)
+
+  res <- condition_basis_list(term, fmrihrf::HRF_SPMG1, sf)
+  expect_named(res, "rt")
+  expect_equal(ncol(res$rt), 1L)
+
+  res3 <- condition_basis_list(term, fmrihrf::HRF_SPMG3, sf)
+  expect_named(res3, "rt")
+  expect_equal(ncol(res3$rt), 3L)
+})

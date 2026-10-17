@@ -118,3 +118,13 @@ test_that("faceted boundary data is keyed by block for per-panel rules", {
   expect_true(".block" %in% colnames(bd))
   expect_equal(nrow(bd), 4L)  # start + end for each of 2 blocks
 })
+
+test_that("run boundary rules do not trigger ignored-parameter warnings", {
+  emod <- make_pm_model()
+  for (args in list(list(), list(facet_by_block = TRUE), list(style = "heatmap"),
+                    list(style = "overlay"))) {
+    expect_no_warning(p <- do.call(plot, c(list(emod), args)))
+    expect_true("GeomVline" %in% plot_geoms(p))
+    expect_no_warning(ggplot2::ggplot_build(p))
+  }
+})

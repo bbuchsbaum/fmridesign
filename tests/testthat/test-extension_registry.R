@@ -199,24 +199,25 @@ test_that("requires_external_processing() returns FALSE for unregistered class",
   expect_false(requires_external_processing(obj))
 })
 
-test_that("requires_external_processing() with character input falls through to FALSE", {
-  # Note: requires_external_processing() uses class(x) internally, so a bare
-
-  # character string "test_hrfspec_J" has class "character", not "test_hrfspec_J".
-  # Even though is_external_hrfspec("test_hrfspec_J") is TRUE, the for-loop
-  # over class(x) won't find the registered class. This is expected behavior:
-  # the function is designed for objects, not class-name strings.
-  local_clean_registry("test_hrfspec_J")
+test_that("requires_external_processing() accepts a class name", {
+  # Regression: a class name (as in the documented example, and as accepted
+  # by is_external_hrfspec()) used to return FALSE even when registered with
+  # requires_external_processing = TRUE.
+  local_clean_registry(c("test_hrfspec_J", "test_hrfspec_K"))
 
   register_hrfspec_extension(
     spec_class = "test_hrfspec_J",
     package = "testPkg",
     requires_external_processing = TRUE
   )
+  register_hrfspec_extension(
+    spec_class = "test_hrfspec_K",
+    package = "testPkg",
+    requires_external_processing = FALSE
+  )
 
-  # Character input: is_external_hrfspec detects it, but requires_external_processing
-  # cannot resolve via class() dispatch, so it returns FALSE
-  expect_false(requires_external_processing("test_hrfspec_J"))
+  expect_true(requires_external_processing("test_hrfspec_J"))
+  expect_false(requires_external_processing("test_hrfspec_K"))
   expect_false(requires_external_processing("unregistered"))
 
   # Object input works correctly
@@ -291,6 +292,24 @@ test_that("get_all_external_hrf_functions() aggregates from all registrations", 
   expect_true("hrf_m1" %in% all_funcs)
   expect_true("hrf_m2" %in% all_funcs)
   expect_true("hrf_n1" %in% all_funcs)
+})
+
+test_that("get_all_external_hrf_functions() always returns a character vector", {
+  # Regression: registrations without formula functions gave NULL.
+  reg <- fmridesign:::.fmridesign_extensions
+  saved <- as.list(reg)
+  rm(list = ls(reg), envir = reg)
+  withr::defer({
+    rm(list = ls(reg), envir = reg)
+    list2env(saved, envir = reg)
+  })
+
+  expect_identical(get_all_external_hrf_functions(), character(0))
+  register_hrfspec_extension(spec_class = "test_hrfspec_Q", package = "testPkg")
+  expect_identical(get_all_external_hrf_functions(), character(0))
+  register_hrfspec_extension(spec_class = "test_hrfspec_R", package = "testPkg",
+                             formula_functions = c("f_r", "f_r"))
+  expect_identical(get_all_external_hrf_functions(), "f_r")
 })
 
 test_that("get_all_external_hrf_functions() returns unique values", {

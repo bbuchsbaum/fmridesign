@@ -1,8 +1,6 @@
 #' @keywords internal
 #' @noRd
 parse_term <- function(vars, ttype) {
-  nvars <- length(vars) # number of variables
-
   term <- vapply(vars, function(v) {
     parsed <- deparse(v, backtick = TRUE)
     attr(terms(reformulate(parsed)), "term.labels")
@@ -255,11 +253,7 @@ construct.covariatespec <- function(x, model_spec, sampling_frame = NULL, ...) {
 
   cterm <- covariate_term(term_tag, mat, condition_tags, source_map)
 
-  sframe <- if (is.null(sampling_frame)) {
-    model_spec$sampling_frame
-  } else {
-    sampling_frame
-  }
+  sframe <- sampling_frame %||% model_spec$sampling_frame
 
   ## Validate that the covariate matrix matches the sampling frame length
   expected_rows <- sum(fmrihrf::blocklens(sframe))
