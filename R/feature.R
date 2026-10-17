@@ -495,7 +495,7 @@ construct.featurespec <- function(x, model_spec, ...) {
   }
   cond_per_col <- rep(base_cnames, each = nb)
   basis_per_col <- rep(seq_len(nb), times = n_cond)
-  basis_name <- if (!is.null(hrf)) class(hrf)[[1L]] else NA_character_
+  basis_name <- .hrf_basis_name(hrf)
 
   .make_col_metadata(
     name = colnames_final,
