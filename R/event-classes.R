@@ -53,67 +53,46 @@ event <- function(value, name, onsets, blockids, durations = 0, subset = NULL) {
       subset <- rep(TRUE, n_initial)
   }
   
-  # --------------------------------------------
-  # 1. Validate / recycle / pre-process with the existing helper
-  # TODO: Review/refactor/integrate .checkEVArgs itself later (Ticket EV-4)
-  meta_checked <- .checkEVArgs(name, value, onsets, blockids, durations)
+  # Validate lengths/ordering, sanitize the name and recycle durations
+  checked   <- .checkEVArgs(name, value, onsets, blockids, durations)
+  name      <- checked$varname
+  durations <- checked$durations
   
-  # Overwrite with validated/processed objects from the helper
-  name      <- meta_checked$varname # Use sanitized name
-  value     <- meta_checked$value
-  onsets    <- meta_checked$onsets
-  blockids  <- meta_checked$blockids
-  durations <- meta_checked$durations # Recycled by helper
-  # --------------------------------------------
-  
-  # Apply subsetting safely AFTER validation and recycling
+  # Apply subsetting AFTER validation and recycling
   keep_indices <- which(subset)
   onsets_sub    <- onsets[keep_indices]
   blockids_sub  <- blockids[keep_indices]
   durations_sub <- durations[keep_indices]
   n_final <- length(onsets_sub)
   
-  # Determine continuous flag based on *original* input type
   # Basis, numeric, matrix are continuous; factor, character are not.
   is_continuous <- !(is.factor(value) || is.character(value))
   
-  # Process value based on type, applying subsetting.
-  # Use if/else if/else for conditional logic
-  
+  # Standardize the payload to a numeric matrix (subsetted) plus metadata
+  meta_list <- NULL
   if (inherits(value, "ParametricBasis")) {
       basis_subset <- sub_basis(value, subset)
-      switch_result <- list(value = basis_subset$y, meta = list(basis = basis_subset))
+      val_mat   <- basis_subset$y
+      meta_list <- list(basis = basis_subset)
   } else if (is.factor(value) || is.character(value)) {
-      # Store original levels - handle both factors and character vectors
-      original_levels <- if (is.factor(value)) {
-          levels(value)
-      } else {
-          # For character vectors, get unique values as levels
-          unique(as.character(value))
-      }
-      # Create factor 'f' using subsetted values BUT preserving original levels
+      # Keep the ORIGINAL levels (unique values for character input), even
+      # those that no retained event uses
+      original_levels <- if (is.factor(value)) levels(value) else unique(as.character(value))
       f <- factor(as.character(value)[keep_indices], levels = original_levels)
-      if (length(f) == 0) {
-          val_payload <- matrix(numeric(0), nrow = 0, ncol = 1L)
+      val_mat <- if (length(f) == 0) {
+          matrix(numeric(0), nrow = 0, ncol = 1L)
       } else {
-          val_payload <- matrix(as.integer(f), ncol = 1L)
+          matrix(as.integer(f), ncol = 1L)
       }
-      # Store the ORIGINAL levels in meta$levels
-      switch_result <- list(value = val_payload, meta = list(levels = original_levels))
+      meta_list <- list(levels = original_levels)
   } else if (is.matrix(value)) {
-      switch_result <- list(value = value[keep_indices, , drop = FALSE], meta = NULL)
+      val_mat <- value[keep_indices, , drop = FALSE]
   } else if (is.numeric(value) && (is.vector(value) || length(dim(value)) == 1)) {
-      switch_result <- list(value = matrix(value[keep_indices], ncol = 1L), meta = NULL)
+      val_mat <- matrix(value[keep_indices], ncol = 1L)
   } else {
-      # Default case (should be caught by .checkEVArgs, but defensive)
       stop(paste("Unsupported `value` type:", class(value)[1], "for variable:", name))
   }
-  
-  # Assign results from the conditional logic
-  val_mat   <- switch_result$value
-  meta_list <- switch_result$meta
 
-  # Ensure payload is a matrix
   if (!is.matrix(val_mat)) {
       stop("Internal error: Processed event value is not a matrix.") 
   }

@@ -1371,62 +1371,43 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
 
   # --- Special case: term contains only one continuous event --- 
   # This includes single numeric variables and multi-column basis functions.
-  # Bypass model.matrix and return the value matrix directly.
+  # Bypass model.matrix and return the value matrix directly, named by the
+  # intermediate condition tags from columns() (e.g. "01", "02" for Poly).
   if (is_continuous(x) && length(x$events) == 1) {
     ev      <- x$events[[1]]
-    # Directly use the value matrix (N x K)
-    out_mat <- ev$value 
-    # Ensure it's a data frame before naming
-    out_df <- as.data.frame(out_mat) # Convert matrix to data frame
-    
-    # Use columns() to get the base condition tags for naming intermediate matrix
-    # These tags represent the *parts* of the final name (e.g., "01", "02" for Poly)
-    # Do NOT sanitize with make.names here, as these are intermediate component names.
+    out_df <- as.data.frame(ev$value)
     intermediate_cond_tags <- try(columns(ev), silent = TRUE)
 
     if (inherits(intermediate_cond_tags, "try-error") || length(intermediate_cond_tags) != ncol(out_df)) {
       warning(sprintf("Failed to get valid condition tags via columns() or column count mismatch for event term '%s' (varname: '%s'). Using generic V# names for intermediate matrix.", 
                       x$varname %||% "UnnamedTerm", ev$varname %||% "UnnamedEventVar"), call. = FALSE)
-      # Fallback to generic, sanitized names if columns() fails or gives wrong number
       cnames <- make.names(paste0("V", seq_len(ncol(out_df))), unique = TRUE) 
     } else {
-      # Use the raw condition tags (e.g., "01", "02") directly as intermediate names.
-      # These are not necessarily valid full R names yet but are components.
       cnames <- intermediate_cond_tags 
     }
     
     names(out_df) <- cnames
-    # Return as a tibble
     return(tibble::as_tibble(out_df, .name_repair = "minimal"))
   }
   
   ## ----------------------------------------------------------------
   ## 1. Build the "data" data-frame that model.matrix() needs
   ## ----------------------------------------------------------------
-  #   * For categorical events -> factor column (1 per event)
-  #   * For continuous events  -> numeric column(s) (one per matrix column)
-  
-  # Helper to extract appropriate column(s) from an event object
+  #   * categorical events -> one factor column named ev$varname
+  #   * continuous events  -> one matrix column (I()) named ev$varname
   build_cols <- function(ev) {
-    if (is_categorical(ev)) {
-      # Categorical: return data frame with factor column named ev$varname
-      fac <- factor(ev$value[, 1L],
-                    levels = seq_along(ev$meta$levels),
-                    labels = ev$meta$levels)
-      df_out <- data.frame(fac, check.names=FALSE)
-      colnames(df_out) <- ev$varname 
-      df_out
+    df_out <- if (is_categorical(ev)) {
+      data.frame(factor(ev$value[, 1L],
+                        levels = seq_along(ev$meta$levels),
+                        labels = ev$meta$levels),
+                 check.names = FALSE)
     } else {
-      # Continuous/Basis: return data frame with a single matrix column named ev$varname
-      mat_col <- ev$value # This is the N x K matrix
-      df_out <- data.frame(I(mat_col)) # Use I() to store matrix in one column
-      colnames(df_out) <- ev$varname # Name the column containing the matrix
-      df_out
+      data.frame(I(ev$value))
     }
+    colnames(df_out) <- ev$varname
+    df_out
   }
   
-  # Combine columns from all events into a single data frame
-  # cbind should now handle the mix of factor columns and matrix columns
   df_list <- lapply(x$events, build_cols)
   df <- try(do.call(cbind, df_list), silent=TRUE)
   if (inherits(df, "try-error")) {
@@ -1434,37 +1415,20 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
            "\n  Original error: ", attr(df, "condition")$message)
   }
   
-  # === DEBUG PRINT ===
-  #message(sprintf("Term: %s, nrow(df): %d, length(x$onsets): %d", x$varname, nrow(df), length(x$onsets)))
-  # === END DEBUG ===
-  
   if (nrow(df) != length(x$onsets)) {
       stop("Internal error: Row mismatch when building data frame for event term: ", x$varname)
   }
 
   ## ----------------------------------------------------------------
-  ## 2. model.matrix() with the term's formula
+  ## 2. model.matrix() with the term's formula, named by conditions()
   ## ----------------------------------------------------------------
-  # Get the formula (e.g., ~ Condition:Modulator - 1)
-  form <- formula(x)
-  
-  # Special case: Check for single-level factors which cause model.matrix to fail
-  # If any factor column has only one level, handle it specially
-  has_single_level_factor <- FALSE
-  for (col_name in colnames(df)) {
-    col_data <- df[[col_name]]
-    if (is.factor(col_data) && nlevels(col_data) <= 1) {
-      has_single_level_factor <- TRUE
-      break
-    }
-  }
+  # model.matrix() fails on single-level factors; such a term is a single
+  # constant column.
+  has_single_level_factor <- any(vapply(df, function(col) is.factor(col) && nlevels(col) <= 1,
+                                        logical(1)))
   
   if (has_single_level_factor) {
-    # For single-level factors, create a simple matrix of ones
-    # This represents the constant effect of that single level
-    n_rows <- nrow(df)
-    mm <- matrix(1, nrow = n_rows, ncol = 1)
-    # Use the condition name from conditions() for naming
+    mm <- matrix(1, nrow = nrow(df), ncol = 1)
     expected_colnames_raw <- conditions(x, drop.empty = FALSE)
     if (length(expected_colnames_raw) > 0) {
       colnames(mm) <- make.names(expected_colnames_raw[1], unique = TRUE)
@@ -1472,11 +1436,7 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
       colnames(mm) <- make.names(x$varname, unique = TRUE)
     }
   } else {
-    # Normal case: use model.matrix
-    # Ensure the data frame column names match what the formula expects
-    # (formula uses original names, df uses sanitized/numbered names)
-    # model.matrix should handle this via the data=df argument.
-    
+    form <- formula(x)
     mm <- try(model.matrix(form, data = df), silent=TRUE)
     if (inherits(mm, "try-error")) {
          stop("Failed to create model matrix for event term: ", x$varname, 
@@ -1485,33 +1445,14 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
               "\n  Original error: ", attr(mm, "condition")$message)
     }
     
-    # --- SET COLNAMES using conditions() as the single source of truth --- 
-    # Get potentially *all* condition names first (before drop.empty)
+    # conditions() is the single source of truth for column names. Columns
+    # are named positionally, which assumes model.matrix() and conditions()
+    # enumerate cells in the same order (true for full-rank designs).
     expected_colnames_raw <- conditions(x, drop.empty = FALSE)
-    
-    # Sanitize the raw names using make.names
     expected_colnames <- make.names(expected_colnames_raw, unique = TRUE)
-    
-    # Basic check: Does the number of columns match?
-    # model.matrix might produce fewer columns if rank-deficient, 
-    # but conditions() should produce the full set based on expand.grid.
-    # This mismatch needs careful handling. For now, assume model.matrix is correct
-    # in terms of *which* columns are estimable, and use conditions() to name them.
-    # If ncol(mm) < length(expected_colnames), it implies model.matrix dropped some.
-    
-    # TODO: How to robustly map expected_colnames to the columns present in mm?
-    # This is tricky. model.matrix column names (e.g., ConditionB:Modulator1)
-    # don't directly map to conditions() output (e.g., Condition[B]:Modulator[1]).
-    # For now, we ASSUME the order is the same and the number of columns matches 
-    # *if the design is full rank*. If not, this naming will be wrong.
-    # A more robust solution might involve parsing model.matrix colnames or attributes.
-    # Let's proceed with the direct assignment as per the reviewer's suggestion, 
-    # but acknowledge this fragility.
     if (ncol(mm) != length(expected_colnames)) {
         warning(sprintf("Column count mismatch for '%s': model.matrix (%d) vs conditions (%d). Naming may be incorrect due to rank deficiency.",
                         x$varname, ncol(mm), length(expected_colnames_raw)), call. = FALSE)
-        # Attempt to name the existing columns anyway, hoping the order matches
-        # This might fail if length(expected_colnames) is shorter, though unlikely.
         colnames(mm) <- expected_colnames[1:ncol(mm)] 
     } else {
         colnames(mm) <- expected_colnames
@@ -1519,10 +1460,8 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
   }
   
   ## ----------------------------------------------------------------
-  ## 3. Drop empty columns if requested (optional)
+  ## 3. Drop empty columns if requested
   ## ----------------------------------------------------------------
-  # model.matrix might return fewer columns than expected if interactions 
-  # lead to rank deficiency. drop.empty applies to the *output* matrix.
   if (isTRUE(drop.empty)) {
       # A zero-event term deliberately retains its declared zero columns (and
       # emits fmridesign_zero_events above). For one or more events, drop only
@@ -1540,13 +1479,9 @@ design_matrix.event_term <- function(x, drop.empty = TRUE, ...) {
       }
       
       if (length(keep_cols) < ncol(mm)){
-          # message("Dropping empty columns: ", paste(colnames(mm)[! (1:ncol(mm)) %in% keep_cols], collapse=", "))
           mm <- mm[, sort(keep_cols), drop = FALSE]
       }
   }
-  
-  # Optional: Handle NAs by zero-filling (historical behavior)
-  # mm[is.na(mm)] <- 0 
 
   tibble::as_tibble(mm, .name_repair = "check_unique")
 }
