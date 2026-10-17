@@ -11,8 +11,9 @@ validate_contrasts(x, weights = NULL, tol = 1e-08)
 
 \item{weights}{Optional contrast weights. May be a numeric vector (t-contrast),
 a numeric matrix (F-contrast with columns as contrast vectors), or a named
-list mapping names to vectors/matrices. If \code{NULL} and \code{x} is an \code{event_model},
-all attached t- and F-contrasts are validated.}
+list mapping names to vectors/matrices (unnamed entries are named
+\code{contrast1}, \code{contrast2}, ... by position). If \code{NULL} and \code{x} is an
+\code{event_model}, all attached t- and F-contrasts are validated.}
 
 \item{tol}{Numeric tolerance for zero checks. Default \code{1e-8}.}
 }
@@ -20,7 +21,7 @@ all attached t- and F-contrasts are validated.}
 A data.frame with one row per validated contrast column and the
 following columns: \code{name}, \code{type} ("t" or "F"), \code{estimable},
 \code{sum_to_zero}, \code{orthogonal_to_intercept}, \code{full_rank} (F only), and
-\code{nonzero_weights}.
+\code{nonzero_weights}; it has zero rows when no contrast could be validated.
 }
 \description{
 Provides basic diagnostics for t- and F-contrasts once the design matrix
