@@ -748,8 +748,10 @@ design_map.baseline_model <- function(x,
                                    method = c("pearson", "spearman"),
                                    half_matrix = TRUE,
                                    limits = c("fixed", "data"),
+                                   absolute_limits = NULL,
                                    rotate_x_text = TRUE,
                                    annotate = NULL,
+                                   label_values = NULL,
                                    flag_threshold = 0.5,
                                    vif_threshold = 5,
                                    title = "Regressor correlations",
@@ -757,8 +759,9 @@ design_map.baseline_model <- function(x,
                                    within_run = FALSE,
                                    annotate_max = 20L,
                                    ...) {
+  limits <- if (isFALSE(absolute_limits)) "data" else match.arg(limits)
+  annotate <- .fd_hm_label_alias(annotate, label_values)
   method <- match.arg(method)
-  limits <- match.arg(limits)
   .fd_hm_check_tile_args(...)
   DM <- as.matrix(design_matrix(x))
   ci <- .fd_hm_columns(x)
@@ -1029,11 +1032,10 @@ correlation_map.event_model <- function(x,
                                         within_run = FALSE,
                                         label_values = NULL,
                                         ...) {
-  limits <- if (isFALSE(absolute_limits)) "data" else match.arg(limits)
-  annotate <- .fd_hm_label_alias(annotate, label_values)
   .fd_hm_correlation_map(x, method = method, half_matrix = half_matrix,
-                         limits = limits, rotate_x_text = rotate_x_text,
-                         annotate = annotate, flag_threshold = flag_threshold,
+                         limits = limits, absolute_limits = absolute_limits,
+                         rotate_x_text = rotate_x_text, annotate = annotate,
+                         label_values = label_values, flag_threshold = flag_threshold,
                          vif_threshold = vif_threshold,
                          title = title, subtitle = subtitle,
                          within_run = within_run, ...)
@@ -1060,11 +1062,10 @@ correlation_map.baseline_model <- function(x,
                                            within_run = TRUE,
                                            label_values = NULL,
                                            ...) {
-  limits <- if (isFALSE(absolute_limits)) "data" else match.arg(limits)
-  annotate <- .fd_hm_label_alias(annotate, label_values)
   .fd_hm_correlation_map(x, method = method, half_matrix = half_matrix,
-                         limits = limits, rotate_x_text = rotate_x_text,
-                         annotate = annotate, flag_threshold = flag_threshold,
+                         limits = limits, absolute_limits = absolute_limits,
+                         rotate_x_text = rotate_x_text, annotate = annotate,
+                         label_values = label_values, flag_threshold = flag_threshold,
                          vif_threshold = vif_threshold,
                          title = title, subtitle = subtitle,
                          within_run = within_run, annotate_max = 12L, ...)
