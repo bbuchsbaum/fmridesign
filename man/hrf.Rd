@@ -53,7 +53,8 @@ Can be used to disambiguate two \code{hrf} terms with the same variable(s) but d
 
 \item{precision}{sampling precision in seconds.}
 
-\item{nbasis}{number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.}
+\item{nbasis}{number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.
+If omitted, such a basis set uses its standard size (12 bins for "fir", 5 functions otherwise).}
 
 \item{contrasts}{one or more \code{contrast_spec} objects created with the \code{contrast}, \code{pair_contrast} etc. functions.
 Must be NULL, a single contrast spec, or a \emph{named} list of contrast specs.}

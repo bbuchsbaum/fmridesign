@@ -461,6 +461,24 @@ test_that("basis = 'fir' with a non-default nbasis is a true FIR basis", {
   expect_equal(spec$hrf(c(1, 3)), fmrihrf::hrf_fir_generator(nbasis = 10, span = 24)(c(1, 3)))
 })
 
+test_that("basis sets use their standard size when nbasis is omitted", {
+  # Regression: hrf()'s nbasis = 1 default used to give a 1-column "fir" or
+  # "fourier" basis and a "bspline" basis that failed to evaluate.
+  expect_identical(hrf(cond, basis = "fir")$hrf, fmrihrf::HRF_FIR)
+  expect_identical(hrf(cond, basis = "bspline")$hrf, fmrihrf::HRF_BSPLINE)
+  expect_equal(nbasis(hrf(cond, basis = "fourier")), 5L)
+  expect_equal(dim(hrf(cond, basis = "bspline")$hrf(0:30)), c(31L, 5L))
+  expect_equal(nbasis(trialwise(basis = "fir")), 12L)
+  rms <- abs(sin(seq(0, 20, by = 0.5)))
+  expect_equal(nbasis(feature(rms, dt = 0.5, basis = "fir")$hrf), 12L)
+
+  # An explicit nbasis is still honoured, and fixed bases ignore it
+  expect_equal(nbasis(hrf(cond, basis = "fir", nbasis = 1)), 1L)
+  expect_equal(nbasis(trialwise(basis = "fir", nbasis = 4)), 4L)
+  expect_equal(nbasis(hrf(cond, basis = "spmg3")), 3L)
+  expect_identical(fmridesign:::make_hrf("spmg1", lag = 0), fmrihrf::HRF_SPMG1)
+})
+
 test_that("make_hrf() from HRF object", {
   hrf_obj <- fmridesign:::make_hrf(fmrihrf::HRF_SPMG1, lag = 0)
   expect_true(inherits(hrf_obj, "HRF"))

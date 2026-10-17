@@ -4,7 +4,7 @@
 
 #' @keywords internal
 #' @noRd
-make_hrf <- function(basis, lag, nbasis=1) {
+make_hrf <- function(basis, lag, nbasis = NULL) {
   if (!is.numeric(lag) || length(lag) > 1) {
     stop("hrf: 'lag' must be a numeric scalar")
   }
@@ -22,9 +22,10 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #' Resolve a basis name to an HRF object
 #'
 #' Fixed bases are fmrihrf's constants. "bspline", "fir" and "fourier" are
-#' basis sets sized by `nbasis`; the fmrihrf constant is reused only when it
-#' already has that size. (fmrihrf::getHRF() is not used for the fixed bases
-#' because it renames them, e.g. "SPMG1" to "spmg1".)
+#' basis sets sized by `nbasis` (`NULL`: their standard size, 5 or 12 for
+#' "fir"); the fmrihrf constant is reused when it already has that size.
+#' (fmrihrf::getHRF() is not used for the fixed bases because it renames
+#' them, e.g. "SPMG1" to "spmg1".)
 #' @keywords internal
 #' @noRd
 .hrf_from_name <- function(basis, nbasis) {
@@ -44,8 +45,11 @@ make_hrf <- function(basis, lag, nbasis=1) {
   }
 
   base <- hrf_map[[basis]]
-  if (!basis %in% c("bspline", "fir", "fourier") ||
-      (!is.null(base) && nbasis == fmrihrf::nbasis(base))) {
+  if (!basis %in% c("bspline", "fir", "fourier")) {
+    return(base)
+  }
+  nbasis <- nbasis %||% if (is.null(base)) 5L else fmrihrf::nbasis(base)
+  if (!is.null(base) && nbasis == fmrihrf::nbasis(base)) {
     return(base)
   }
 
@@ -93,6 +97,7 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #' @param subset an expression indicating the subset of 'onsets' to keep.
 #' @param precision sampling precision in seconds.
 #' @param nbasis number of basis functions -- only used for hemodynamic response functions (e.g. bspline) that take a variable number of bases.
+#'        If omitted, such a basis set uses its standard size (12 bins for "fir", 5 functions otherwise).
 #' @param contrasts one or more \code{contrast_spec} objects created with the \code{contrast}, `pair_contrast` etc. functions.
 #'                  Must be NULL, a single contrast spec, or a *named* list of contrast specs.
 #' @param id a unique \code{character} identifier used to refer to term, otherwise will be determined from variable names.
@@ -201,7 +206,8 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
   }
   # -----------------------------
 
-  basis_obj <- make_hrf(basis, lag, nbasis=nbasis)
+  # An omitted nbasis lets basis sets ("fir", "bspline", ...) use their own size
+  basis_obj <- make_hrf(basis, lag, nbasis = if (missing(nbasis)) NULL else nbasis)
 
   # Call the internal constructor, passing quosures directly
   ret <- hrfspec(
@@ -415,7 +421,7 @@ trialwise <- function(basis   = "spmg1",
   term <- hrf(!!trial_expr,  # Use !! to inject the expression
               basis = basis,
               lag   = lag,
-              nbasis = nbasis,
+              nbasis = if (missing(nbasis)) NULL else nbasis,
               durations = durations,
               normalize = normalize,
               id     = label) # Use id argument for naming

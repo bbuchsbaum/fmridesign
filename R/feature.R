@@ -102,7 +102,7 @@ feature <- function(x,
     final_id <- sanitize(final_id, allow_dot = FALSE)
   }
 
-  hrf_obj <- make_hrf(basis, lag, nbasis = nbasis)
+  hrf_obj <- make_hrf(basis, lag, nbasis = if (missing(nbasis)) NULL else nbasis)
 
   ret <- list(
     name = final_id,
