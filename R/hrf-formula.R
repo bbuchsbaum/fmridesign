@@ -9,68 +9,57 @@ make_hrf <- function(basis, lag, nbasis=1) {
   if (!is.numeric(lag) || length(lag) > 1) {
     stop("hrf: 'lag' must be a numeric scalar")
   }
-  
+
   if (is.character(basis)) {
-    # Map character names to HRF constants
-    hrf_map <- list(
-      "spmg1" = fmrihrf::HRF_SPMG1,
-      "spmg2" = fmrihrf::HRF_SPMG2,
-      "spmg3" = fmrihrf::HRF_SPMG3,
-      "gamma" = fmrihrf::HRF_GAMMA,
-      "gaussian" = fmrihrf::HRF_GAUSSIAN,
-      "bspline" = fmrihrf::HRF_BSPLINE,
-      "fir" = fmrihrf::HRF_FIR
-    )
-    
-    if (basis %in% names(hrf_map)) {
-      base_hrf_obj <- hrf_map[[basis]]
-      # Check if nbasis needs to be customized for bases that support it
-      if (basis == "bspline" && nbasis != fmrihrf::nbasis(base_hrf_obj)) {
-        # Create custom bspline HRF function with specified nbasis
-        span <- attr(base_hrf_obj, "span")
-        if (is.null(span)) span <- 24
-        degree <- attr(base_hrf_obj, "params")$degree
-        if (is.null(degree)) degree <- 3
-        custom_bspline_fn <- function(t) {
-          fmrihrf::hrf_bspline(t, span = span, N = nbasis, degree = degree)
-        }
-        base_hrf_obj <- fmrihrf::as_hrf(custom_bspline_fn, name = "bspline", nbasis = nbasis, span = span)
-      } else if (basis == "fir" && nbasis != fmrihrf::nbasis(base_hrf_obj)) {
-        # Create custom FIR HRF with specified nbasis using bspline degree=1 (tent basis)
-        span <- attr(base_hrf_obj, "span")
-        if (is.null(span)) span <- 24
-        custom_fir_fn <- function(t) {
-          fmrihrf::hrf_bspline(t, span = span, N = nbasis, degree = 1)
-        }
-        base_hrf_obj <- fmrihrf::as_hrf(custom_fir_fn, name = "fir", nbasis = nbasis, span = span)
-      }
-    } else if (basis == "fourier") {
-      # Create Fourier HRF with specified nbasis
-      span <- 24  # Default span for Fourier
-      custom_fourier_fn <- function(t) {
-        fmrihrf::hrf_fourier(t, span = span, nbasis = nbasis)
-      }
-      base_hrf_obj <- fmrihrf::as_hrf(custom_fourier_fn, name = "fourier", nbasis = nbasis, span = span)
-    } else {
-      # For unknown basis names, just use the default (this will likely fail, but matches old behavior)
-      stop("Unknown HRF basis name: ", basis, ". Available options: ", paste(c(names(hrf_map), "fourier"), collapse = ", "))
-    }
-    # Apply lag using gen_hrf
-    final_hrf <- fmrihrf::gen_hrf(base_hrf_obj, lag = lag)
-
-  } else if (inherits(basis, "HRF")) {
-    # If it's already an HRF object, apply lag using gen_hrf
-    final_hrf <- fmrihrf::gen_hrf(basis, lag = lag)
-    
-  } else if (is.function(basis)) {
-    # If it's a raw function, gen_hrf will handle conversion via as_hrf and apply lag
-    final_hrf <- fmrihrf::gen_hrf(basis, lag = lag)
-
-  } else {
+    basis <- .hrf_from_name(basis, nbasis)
+  } else if (!inherits(basis, "HRF") && !is.function(basis)) {
     stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
   }
-  
-  return(final_hrf)
+
+  # gen_hrf() wraps a plain function with as_hrf() and applies the lag
+  fmrihrf::gen_hrf(basis, lag = lag)
+}
+
+#' Resolve a basis name to an HRF object
+#'
+#' Fixed bases are fmrihrf's constants. "bspline", "fir" and "fourier" are
+#' basis sets sized by `nbasis`; the fmrihrf constant is reused only when it
+#' already has that size. A resized "fir" is a tent (degree-1 B-spline) basis.
+#' This deliberately differs from fmrihrf::getHRF() (names, FIR family).
+#' @keywords internal
+#' @noRd
+.hrf_from_name <- function(basis, nbasis) {
+  hrf_map <- list(
+    "spmg1" = fmrihrf::HRF_SPMG1,
+    "spmg2" = fmrihrf::HRF_SPMG2,
+    "spmg3" = fmrihrf::HRF_SPMG3,
+    "gamma" = fmrihrf::HRF_GAMMA,
+    "gaussian" = fmrihrf::HRF_GAUSSIAN,
+    "bspline" = fmrihrf::HRF_BSPLINE,
+    "fir" = fmrihrf::HRF_FIR
+  )
+  known <- c(names(hrf_map), "fourier")
+  if (!basis %in% known) {
+    stop("Unknown HRF basis name: ", basis, ". Available options: ",
+         paste(known, collapse = ", "))
+  }
+
+  base <- hrf_map[[basis]]
+  if (!basis %in% c("bspline", "fir", "fourier") ||
+      (!is.null(base) && nbasis == fmrihrf::nbasis(base))) {
+    return(base)
+  }
+
+  span <- attr(base, "span") %||% 24
+  fn <- switch(basis,
+    bspline = {
+      degree <- attr(base, "params")$degree %||% 3
+      function(t) fmrihrf::hrf_bspline(t, span = span, N = nbasis, degree = degree)
+    },
+    fir = function(t) fmrihrf::hrf_bspline(t, span = span, N = nbasis, degree = 1),
+    fourier = function(t) fmrihrf::hrf_fourier(t, span = span, nbasis = nbasis)
+  )
+  fmrihrf::as_hrf(fn, name = basis, nbasis = nbasis, span = span)
 }
 
 #### TODO character variables need an "as.factor"

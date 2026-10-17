@@ -407,6 +407,30 @@ test_that("lagged bases and HRF generators construct without warnings", {
   expect_no_warning(weighted_hrf_gen(relative = TRUE)(ev))
 })
 
+test_that("make_hrf() resolves basis names to fmridesign's basis sets", {
+  t <- seq(0, 30, by = 0.5)
+  # Fixed bases are fmrihrf's constants, whatever nbasis is
+  expect_identical(fmridesign:::make_hrf("spmg3", lag = 0, nbasis = 7), fmrihrf::HRF_SPMG3)
+  # Resizable bases reuse the constant only at its own size
+  expect_identical(fmridesign:::make_hrf("bspline", lag = 0, nbasis = 5), fmrihrf::HRF_BSPLINE)
+  expect_identical(fmridesign:::make_hrf("fir", lag = 0, nbasis = 12), fmrihrf::HRF_FIR)
+
+  bs6 <- fmridesign:::make_hrf("bspline", lag = 0, nbasis = 6)
+  expect_equal(attr(bs6, "name"), "bspline")
+  expect_equal(fmrihrf::nbasis(bs6), 6L)
+  expect_equal(bs6(t), fmrihrf::hrf_bspline(t, span = 24, N = 6, degree = 3))
+
+  # A resized "fir" is a tent (degree-1 B-spline) basis
+  fir6 <- fmridesign:::make_hrf("fir", lag = 0, nbasis = 6)
+  expect_equal(attr(fir6, "name"), "fir")
+  expect_equal(fmrihrf::nbasis(fir6), 6L)
+  expect_equal(fir6(t), fmrihrf::hrf_bspline(t, span = 24, N = 6, degree = 1))
+
+  four <- fmridesign:::make_hrf("fourier", lag = 2, nbasis = 4)
+  expect_equal(fmrihrf::nbasis(four), 4L)
+  expect_equal(four(t), fmrihrf::hrf_fourier(t - 2, span = 24, nbasis = 4))
+})
+
 test_that("make_hrf() from HRF object", {
   hrf_obj <- fmridesign:::make_hrf(fmrihrf::HRF_SPMG1, lag = 0)
   expect_true(inherits(hrf_obj, "HRF"))
