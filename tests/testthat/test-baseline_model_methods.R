@@ -116,6 +116,20 @@ test_that("term_matrices returns a list of matrices for baseline_model", {
   }
 })
 
+test_that("term_matrices skips empty terms without shifting the others", {
+  bmod <- baseline_model(basis = "poly", degree = 2, sframe = make_sframe_2())
+  # Insert a term without columns between drift and block
+  empty <- bmod$terms$block
+  empty$design_matrix <- empty$design_matrix[, 0]
+  bmod$terms <- list(drift = bmod$terms$drift, empty = empty,
+                     block = bmod$terms$block)
+
+  tmats <- term_matrices(bmod)
+  expect_named(tmats, c("drift", "block"))
+  expect_identical(tmats$drift, design_matrix(bmod$terms$drift))
+  expect_identical(tmats$block, design_matrix(bmod$terms$block))
+})
+
 # =========================================================================
 # Section 4: term_names() method
 # =========================================================================

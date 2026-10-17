@@ -735,20 +735,9 @@ baseline_terms.baseline_model <- function(x, ...) {
 
 #' @export
 term_matrices.baseline_model <- function(x, ...) {
-  # (A baseline design matrix never carries a "col_indices" attribute, so the
-  # per-term matrices are always taken from the terms themselves.)
-  result <- vector("list", length(x$terms))
-  names(result) <- names(x$terms)
-
-  for (i in seq_along(x$terms)) {
-    term_dm <- design_matrix(x$terms[[i]])
-    if (ncol(term_dm) > 0) {
-      result[[i]] <- term_dm
-    } else {
-      result[[i]] <- NULL
-    }
-  }
-  result
+  # One design matrix per term, leaving out terms without columns
+  mats <- lapply(x$terms, design_matrix)
+  mats[vapply(mats, ncol, integer(1)) > 0L]
 }
 
 #' @method cells baseline_model
