@@ -116,3 +116,15 @@ test_that("plot_contrasts reports the SE multiplier for each row", {
   }))
   expect_true(fmridesign:::.fd_num(hand, 2) %in% grobs_text)
 })
+
+test_that("correlation_map draws one-cell tiles when only some pairs are shown", {
+  # Within runs only (poly1, poly2) of each run are paired, so the drawn
+  # cells sit at x = 1 and 3: tiles must still be one cell wide and tall.
+  bmod <- baseline_model(basis = "poly", degree = 2,
+                         sframe = fmrihrf::sampling_frame(c(40, 40), TR = 1))
+  p <- correlation_map(bmod)
+  tiles <- ggplot2::ggplot_build(p)$data[[1]]
+  expect_equal(nrow(tiles), 2L)
+  expect_equal(tiles$xmax - tiles$xmin, c(1, 1))
+  expect_equal(tiles$ymax - tiles$ymin, c(1, 1))
+})

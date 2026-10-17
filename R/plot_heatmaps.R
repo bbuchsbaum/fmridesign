@@ -882,8 +882,11 @@ design_map.baseline_model <- function(x,
     .fd_u("r ({pm}max abs r)")
   }
   plt <- ggplot2::ggplot(df, ggplot2::aes(x = x, y = y)) +
+    # Explicit cell size: with within-run maps the drawn cells can be sparse,
+    # and geom_tile() would otherwise size them by the gaps between them.
     ggplot2::geom_tile(ggplot2::aes(fill = r), colour = "#FFFFFF",
-                       linewidth = if (p <= 30L) 0.5 else 0.1, ...) +
+                       linewidth = if (p <= 30L) 0.5 else 0.1, width = 1, height = 1,
+                       ...) +
     .fd_hm_fill_signed(limit, legend_name,
                        breaks = if (limit == 1) c(-1, -0.5, 0, 0.5, 1)
                                 else ggplot2::waiver())
