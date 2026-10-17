@@ -299,6 +299,11 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
   list(run = run, time = time, runs = runs, unit = "s", TR = TR)
 }
 
+# The run TRs as "2 s" or "2.00/1.77 s".
+.fd_fmt_tr <- function(TR) {
+  paste0(paste(format(unique(TR), trim = TRUE), collapse = "/"), " s")
+}
+
 # Format seconds as m:ss for axis labels.
 .fd_mmss <- function(x) {
   x <- round(x)

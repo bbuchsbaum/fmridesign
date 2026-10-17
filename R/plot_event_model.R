@@ -469,10 +469,6 @@ plot.event_model <- function(x,
          if (dur) "; bars show event durations" else "", ".")
 }
 
-.fd_fmt_tr <- function(TR) {
-  paste0(paste(format(unique(TR)), collapse = "/"), " s")
-}
-
 # Strip labels for run facets.
 .fd_run_strip <- function(b) paste("Run", b)
 

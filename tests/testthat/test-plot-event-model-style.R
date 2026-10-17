@@ -156,3 +156,11 @@ test_that("trialwise heatmap reports each trial's max correlation with others", 
   cn <- colnames(design_matrix(emt))
   expect_gt(min(r_by[cn[1:2]]), 3 * max(r_by[cn[3:4]]))
 })
+
+test_that("subtitles list per-run TRs without padding", {
+  ev <- data.frame(onset = c(5, 5), run = c(1, 2), cond = factor("a"))
+  sf <- fmrihrf::sampling_frame(blocklens = c(10, 100), TR = c(10, 2.5))
+  em <- event_model(onset ~ hrf(cond), data = ev, block = ~run, sampling_frame = sf)
+  expect_match(plot(em)$labels$subtitle, "(TR 10.0/2.5 s)", fixed = TRUE)
+  expect_match(design_map(em)$labels$subtitle, "(TR 10.0/2.5 s)", fixed = TRUE)
+})

@@ -336,10 +336,7 @@ makeContent.fd_hm_spanner <- function(x) {
 # ---------------------------------------------------------------------------
 
 .fd_hm_design_subtitle <- function(p, tl, n_scans) {
-  tr_txt <- if (identical(tl$unit, "s")) {
-    tr <- unique(tl$runs$TR)
-    paste0(" (TR ", paste(format(tr, trim = TRUE), collapse = "/"), " s)")
-  } else ""
+  tr_txt <- if (identical(tl$unit, "s")) paste0(" (TR ", .fd_fmt_tr(tl$runs$TR), ")") else ""
   paste0(.fd_hm_plural(p, "regressor"), .fd_hm_sep(),
          .fd_hm_plural(nrow(tl$runs), "run"), .fd_hm_sep(),
          .fd_hm_plural(n_scans, "scan"), tr_txt)
