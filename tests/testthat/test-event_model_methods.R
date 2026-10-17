@@ -86,6 +86,19 @@ test_that("term_matrices returns list of matrices matching term count", {
   expect_equal(total_cols, ncol(design_matrix(emod)))
 })
 
+test_that("term_matrices keeps one (NULL) slot per column-less term", {
+  # Terms without design columns (e.g. externally processed terms) must not
+  # shift later matrices onto the wrong term name.
+  em <- emod
+  ci <- attr(em$design_matrix, "col_indices")
+  attr(em$design_matrix, "col_indices") <- c(list(external = integer(0)), ci)
+  tmats <- term_matrices(em)
+
+  expect_equal(names(tmats), c("external", names(ci)))
+  expect_null(tmats$external)
+  expect_equal(ncol(tmats[[names(ci)[1]]]), length(ci[[1]]))
+})
+
 # =========================================================================
 # Section 4: conditions.event_model
 # =========================================================================

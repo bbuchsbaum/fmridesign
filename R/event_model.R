@@ -243,21 +243,10 @@ term_matrices.event_model <- function(x, ...) {
     stop("Design matrix missing 'col_indices' attribute")
   }
 
-  term_names <- names(col_indices)
-  result <- vector("list", length(col_indices))
-  names(result) <- term_names
-
-  for (i in seq_along(col_indices)) {
-    indices <- col_indices[[i]]
-    if (length(indices) > 0) {
-      result[[i]] <- dm[, indices, drop = FALSE]
-    } else {
-      # For terms with no columns (e.g., external terms)
-      result[[i]] <- NULL
-    }
-  }
-
-  result
+  # One entry per term; terms with no columns (e.g. external terms) get NULL
+  lapply(col_indices, function(indices) {
+    if (length(indices) > 0) dm[, indices, drop = FALSE] else NULL
+  })
 }
 
 #' @export
