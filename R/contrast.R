@@ -77,10 +77,8 @@
                  contrast_name, nbasis), call. = FALSE)
   }
 
-  # Convert basis indices to expected suffix patterns
-  # For nbasis = 5, basis indices are 1-based, so basis = 2 means "_b02"
-  pad <- max(2, ceiling(log10(nbasis + 1)))
-  basis_suffixes <- sprintf(paste0("_b%0", pad, "d"), basis)
+  # Convert basis indices to the expected suffixes, e.g. basis = 2 -> "_b02"
+  basis_suffixes <- basis_suffix(basis, nbasis)
 
   # Build regex pattern to match any of the requested basis suffixes
   # Pattern: (condition_name)(_b01|_b03)$
@@ -95,6 +93,20 @@
   }
 
   return(matched_names)
+}
+
+#' Number of basis functions of a term's HRF
+#'
+#' @param term An event_term, possibly carrying an `hrfspec` attribute.
+#' @return `fmrihrf::nbasis()` of the term's HRF when it is greater than one;
+#'   otherwise (single-basis, no HRF, or an error) `1L`.
+#' @keywords internal
+#' @noRd
+.term_nbasis <- function(term) {
+  hrf <- attr(term, "hrfspec")$hrf
+  if (is.null(hrf)) return(1L)
+  nb <- try(fmrihrf::nbasis(hrf), silent = TRUE)
+  if (!inherits(nb, "try-error") && is.numeric(nb) && nb > 1) nb else 1L
 }
 
 #' Apply basis filtering and weighting to contrast weights
@@ -117,38 +129,18 @@
 #' @noRd
 .apply_basis_filter <- function(weights_mat, term, basis_spec, contrast_name,
                                  expanded_condnames = NULL, basis_weights_spec = NULL) {
-  # Detect nbasis from term's hrfspec attribute
-  nbasis <- 1L
-  expand_basis <- FALSE
-  hrfspec <- attr(term, "hrfspec")
-  if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) {
-    hrf_fun <- hrfspec$hrf
-    # Check nbasis using the nbasis generic
-    if (!inherits(try(fmrihrf::nbasis(hrf_fun), silent=TRUE), "try-error") &&
-        fmrihrf::nbasis(hrf_fun) > 1) {
-      nbasis <- fmrihrf::nbasis(hrf_fun)
-      expand_basis <- TRUE
-    }
-  }
+  nbasis <- .term_nbasis(term)
+  no_filter <- is.null(basis_spec) || identical(basis_spec, "all")
 
-  # If no multi-basis HRF, no filtering needed
-  if (!expand_basis || nbasis <= 1) {
-    if (!is.null(basis_spec) && !identical(basis_spec, "all")) {
+  # Nothing to do without a multi-basis HRF or a basis selection
+  if (nbasis <= 1 || no_filter) {
+    if (nbasis <= 1 && !no_filter) {
       warning(sprintf("Contrast '%s': basis filtering requested but term has no multi-basis HRF (nbasis = %d). Ignoring basis filter.",
                       contrast_name, nbasis), call. = FALSE)
     }
     return(list(
       weights = weights_mat,
-      condnames = if (is.null(expanded_condnames)) rownames(weights_mat) else expanded_condnames,
-      nbasis = nbasis
-    ))
-  }
-
-  # If no basis filtering requested, return as-is
-  if (is.null(basis_spec) || identical(basis_spec, "all")) {
-    return(list(
-      weights = weights_mat,
-      condnames = if (is.null(expanded_condnames)) rownames(weights_mat) else expanded_condnames,
+      condnames = expanded_condnames %||% rownames(weights_mat),
       nbasis = nbasis
     ))
   }
@@ -177,12 +169,7 @@
 
   # Apply basis_weights if specified
   if (!is.null(basis_weights_spec)) {
-    # Determine number of selected bases
-    num_selected_bases <- if (is.null(basis_spec) || identical(basis_spec, "all")) {
-      nbasis
-    } else {
-      length(basis_spec)
-    }
+    num_selected_bases <- length(basis_spec)
 
     # Validate length
     if (length(basis_weights_spec) != num_selected_bases) {
