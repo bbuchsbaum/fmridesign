@@ -155,23 +155,20 @@
   out
 }
 
-.baseline_matrix_for_block <- function(baseline_terms, rows, tol) {
-  if (length(baseline_terms) == 0) {
-    return(matrix(numeric(length(rows) * 0), nrow = length(rows)))
-  }
-
-  mats <- lapply(baseline_terms, function(term) {
-    if (is.null(term)) return(NULL)
-    mat <- as.matrix(design_matrix(term))[rows, , drop = FALSE]
+# The baseline columns active in one block: `baseline_mats` are the full
+# design matrices of the baseline terms; columns that are (numerically) zero
+# throughout `rows` belong to other blocks and are dropped.
+.baseline_matrix_for_block <- function(baseline_mats, rows, tol) {
+  mats <- lapply(baseline_mats, function(mat) {
+    mat <- mat[rows, , drop = FALSE]
     active <- vapply(seq_len(ncol(mat)), function(j) {
       any(is.finite(mat[, j]) & abs(mat[, j]) > tol)
     }, logical(1))
     mat[, active, drop = FALSE]
   })
-  mats <- purrr::compact(mats)
 
   if (length(mats) == 0) {
-    matrix(numeric(length(rows) * 0), nrow = length(rows))
+    matrix(numeric(0), nrow = length(rows), ncol = 0)
   } else {
     do.call(cbind, mats)
   }
@@ -188,25 +185,19 @@
 }
 
 .duplicate_pairs <- function(mat, zero_variance, duplicate_threshold) {
+  none <- data.frame(column = character(0),
+                     duplicates = character(0),
+                     correlation = numeric(0),
+                     stringsAsFactors = FALSE)
   keep <- which(!zero_variance)
-  if (length(keep) < 2) {
-    return(data.frame(column = character(0),
-                      duplicates = character(0),
-                      correlation = numeric(0),
-                      stringsAsFactors = FALSE))
-  }
+  if (length(keep) < 2) return(none)
 
   x <- mat[, keep, drop = FALSE]
   cc <- suppressWarnings(stats::cor(x))
   diag(cc) <- 0
   idx <- which(abs(cc) >= duplicate_threshold, arr.ind = TRUE)
   idx <- idx[idx[, 1] < idx[, 2], , drop = FALSE]
-  if (nrow(idx) == 0) {
-    return(data.frame(column = character(0),
-                      duplicates = character(0),
-                      correlation = numeric(0),
-                      stringsAsFactors = FALSE))
-  }
+  if (nrow(idx) == 0) return(none)
 
   data.frame(
     column = colnames(x)[idx[, 2]],
@@ -241,6 +232,15 @@
   keep
 }
 
+# "<column> duplicates <other> (r = ...)" for each row of a duplicate_pairs table
+.describe_duplicates <- function(dup_pairs) {
+  paste(sprintf("%s duplicates %s (r = %.6g)",
+                dup_pairs$column,
+                dup_pairs$duplicates,
+                dup_pairs$correlation),
+        collapse = "; ")
+}
+
 .problem_row <- function(block, issue, columns, detail) {
   data.frame(block = block,
              issue = issue,
@@ -258,13 +258,15 @@
   mats <- .as_nuisance_matrices(nuisance_list, sframe)
   mats <- .repair_nuisance_na(mats, na_action)
   rows_by_block <- .block_rows(sframe)
+  baseline_mats <- lapply(purrr::compact(baseline_terms),
+                          function(term) as.matrix(design_matrix(term)))
   by_block <- vector("list", length(mats))
   problems <- list()
 
   for (i in seq_along(mats)) {
     mat <- mats[[i]]
     cn <- colnames(mat)
-    baseline_mat <- .baseline_matrix_for_block(baseline_terms, rows_by_block[[i]], tol)
+    baseline_mat <- .baseline_matrix_for_block(baseline_mats, rows_by_block[[i]], tol)
 
     non_finite <- vapply(seq_len(ncol(mat)), function(j) any(!is.finite(mat[, j])), logical(1))
     finite_mat <- mat
@@ -279,47 +281,32 @@
     keep <- .incremental_rank_keep(finite_mat, baseline_mat, zero_variance, non_finite, tol)
     aliased <- cn[!keep & !zero_variance & !non_finite]
 
-    if (any(non_finite)) {
-      problems[[length(problems) + 1]] <- .problem_row(
+    problems <- c(problems, purrr::compact(list(
+      if (any(non_finite)) .problem_row(
         i, "non_finite", cn[non_finite],
         "contains NA, NaN, or infinite values"
-      )
-    }
-    if (any(zero_variance)) {
-      problems[[length(problems) + 1]] <- .problem_row(
+      ),
+      if (any(zero_variance)) .problem_row(
         i, "zero_variance", cn[zero_variance],
         "column has no within-run variance"
-      )
-    }
-    if (nrow(dup_pairs) > 0) {
-      detail <- paste(sprintf("%s duplicates %s (r = %.6g)",
-                              dup_pairs$column,
-                              dup_pairs$duplicates,
-                              dup_pairs$correlation),
-                      collapse = "; ")
-      problems[[length(problems) + 1]] <- .problem_row(
-        i, "duplicate", dup_pairs$column, detail
-      )
-    }
-    if (nuisance_rank < ncol(finite_mat)) {
-      problems[[length(problems) + 1]] <- .problem_row(
+      ),
+      if (nrow(dup_pairs) > 0) .problem_row(
+        i, "duplicate", dup_pairs$column, .describe_duplicates(dup_pairs)
+      ),
+      if (nuisance_rank < ncol(finite_mat)) .problem_row(
         i, "rank_deficient_nuisance", cn,
         sprintf("nuisance rank: %d < %d columns", nuisance_rank, ncol(finite_mat))
-      )
-    }
-    if (rank_with_baseline < n_with_baseline) {
-      problems[[length(problems) + 1]] <- .problem_row(
+      ),
+      if (rank_with_baseline < n_with_baseline) .problem_row(
         i, "rank_deficient_with_baseline", cn,
         sprintf("rank with baseline terms: %d < %d columns",
                 rank_with_baseline, n_with_baseline)
-      )
-    }
-    if (length(aliased) > 0) {
-      problems[[length(problems) + 1]] <- .problem_row(
+      ),
+      if (length(aliased) > 0) .problem_row(
         i, "aliased_columns", aliased,
         "columns do not increase rank after baseline and earlier nuisance columns"
       )
-    }
+    )))
 
     by_block[[i]] <- list(
       block = i,
@@ -374,13 +361,9 @@
                                paste(block$zero_variance, collapse = ", ")))
     }
     if (nrow(block$duplicate_pairs) > 0) {
-      dup <- paste(sprintf("%s duplicates %s (r = %.6g)",
-                           block$duplicate_pairs$column,
-                           block$duplicate_pairs$duplicates,
-                           block$duplicate_pairs$correlation),
-                   collapse = "; ")
       block_lines <- c(block_lines,
-                       sprintf("  Duplicate or near-duplicate columns: %s.", dup))
+                       sprintf("  Duplicate or near-duplicate columns: %s.",
+                               .describe_duplicates(block$duplicate_pairs)))
     }
     if (length(block$aliased_columns) > 0) {
       block_lines <- c(block_lines,
@@ -418,10 +401,19 @@
   })
 }
 
-.baseline_terms_for_nuisance_check <- function(basis, degree, sframe, intercept) {
-  drift_spec <- baseline(degree = degree, basis = basis, intercept = intercept)
+# The drift spec and the drift / block-intercept terms implied by the
+# baseline settings. Shared by baseline_model() and check_nuisance() so the
+# nuisance diagnostics run against exactly the terms the model contains.
+# `block` is NULL when there is no separate intercept term (intercept = "none",
+# or a constant basis, which already provides one).
+.baseline_drift_terms <- function(basis, degree, sframe, intercept) {
+  if (basis %in% c("bs", "ns")) {
+    assert_that(degree > 2, msg = "'bs' and 'ns' bases must have degree >= 3")
+  }
+  spec <- baseline(degree = degree, basis = basis, intercept = intercept)
   list(
-    drift = construct(drift_spec, sframe),
+    spec = spec,
+    drift = construct(spec, sframe),
     block = if (intercept != "none" && basis != "constant") {
       construct_block_term("constant", sframe, intercept)
     }
@@ -474,11 +466,8 @@ check_nuisance <- function(nuisance_list,
   basis <- match.arg(basis)
   intercept <- match.arg(intercept)
   na_action <- match.arg(na_action)
-  if (basis %in% c("bs", "ns")) {
-    assert_that(degree > 2, msg = "'bs' and 'ns' bases must have degree >= 3")
-  }
-  baseline_terms <- .baseline_terms_for_nuisance_check(basis, degree, sframe, intercept)
-  .check_nuisance_internal(nuisance_list, sframe, baseline_terms,
+  base <- .baseline_drift_terms(basis, degree, sframe, intercept)
+  .check_nuisance_internal(nuisance_list, sframe, base[c("drift", "block")],
                            tol = tol,
                            duplicate_threshold = duplicate_threshold,
                            na_action = na_action)
@@ -631,16 +620,9 @@ baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1
   nuisance_check <- match.arg(nuisance_check)
   na_action <- match.arg(na_action)
 
-  if (basis %in% c("bs", "ns")) {
-    assert_that(degree > 2, msg ="'bs' and 'ns' bases must have degree >= 3")
-  }
-
-  # Construct the drift term specification
-  drift_spec <- baseline(degree = degree, basis = basis, intercept = intercept)
-  drift_term <- construct(drift_spec, sframe)
-  block_term <- if (intercept != "none" && basis != "constant") {
-    construct_block_term("constant", sframe, intercept)
-  }
+  # Drift term, plus a block intercept unless the basis is constant or
+  # intercept = "none"
+  base <- .baseline_drift_terms(basis, degree, sframe, intercept)
 
   # Normalize and repair NA values once, up front, so both the diagnostics and
   # make_nuisance_term() see the repaired matrices. Applying this even when
@@ -652,8 +634,8 @@ baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1
 
   nuisance_report <- NULL
   if (!is.null(nuisance_list) && nuisance_check != "none") {
-    baseline_terms <- purrr::compact(list(drift = drift_term, block = block_term))
-    nuisance_report <- .check_nuisance_internal(nuisance_list, sframe, baseline_terms)
+    nuisance_report <- .check_nuisance_internal(nuisance_list, sframe,
+                                                base[c("drift", "block")])
     if (!nuisance_report$ok) {
       if (nuisance_check == "error") {
         stop(.format_nuisance_check(nuisance_report), call. = FALSE)
@@ -666,27 +648,21 @@ baseline_model <- function(basis = c("constant", "poly", "bs", "ns"), degree = 1
     }
   }
   
-  # List potential terms, using compact later to remove NULLs
   terms_list <- list(
-    # Drift term always constructed based on spec
-    drift = drift_term,
-    # Block term constructed only if intercept is needed and basis isn't constant
-    block = block_term,
-    # Nuisance term constructed only if list provided
+    drift = base$drift,
+    block = base$block,
     nuisance = if (!is.null(nuisance_list)) {
-                 make_nuisance_term(nuisance_list, sframe)
-               }
+      make_nuisance_term(nuisance_list, sframe)
+    }
   )
 
-  # Remove NULL terms and store in the final list
   ret <- list(
     terms = purrr::compact(terms_list),
-    # Keep drift_spec for potential inspection? (Optional, but consistent with review example)
-    drift_spec = drift_spec, 
+    drift_spec = base$spec,
     sampling_frame = sframe,
     nuisance_check = nuisance_report
   )
-  
+
   class(ret) <- c("baseline_model", "list")
   ret
 }
