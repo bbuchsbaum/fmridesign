@@ -4,19 +4,28 @@
 
 #' @keywords internal
 #' @noRd
-make_hrf <- function(basis, lag, nbasis = NULL) {
+make_hrf <- function(basis, lag, nbasis = NULL, label = NULL) {
   if (!is.numeric(lag) || length(lag) > 1) {
     stop("hrf: 'lag' must be a numeric scalar")
   }
 
   if (is.character(basis)) {
     basis <- .hrf_from_name(basis, nbasis)
-  } else if (!inherits(basis, "HRF") && !is.function(basis)) {
+  } else if (is.function(basis) && !inherits(basis, "HRF")) {
+    # gen_hrf() wraps a plain function with as_hrf(); name it after the
+    # caller's `basis` expression (`label`) rather than its own argument.
+    basis <- fmrihrf::gen_hrf(basis, name = label %||% "custom")
+  } else if (!inherits(basis, "HRF")) {
     stop("invalid basis function: must be 1) character string indicating hrf type, e.g. 'gamma' 2) a function or 3) an object of class 'HRF': ", basis)
   }
 
-  # gen_hrf() wraps a plain function with as_hrf() and applies the lag
   fmrihrf::gen_hrf(basis, lag = lag)
+}
+
+# Label for a plain-function `basis` argument: the symbol it was passed as,
+# or "custom" for an inline function.
+.basis_arg_label <- function(expr) {
+  if (is.symbol(expr)) as.character(expr) else "custom"
 }
 
 #' Resolve a basis name to an HRF object
@@ -212,7 +221,8 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
   # -----------------------------
 
   # An omitted nbasis lets basis sets ("fir", "bspline", ...) use their own size
-  basis_obj <- make_hrf(basis, lag, nbasis = if (missing(nbasis)) NULL else nbasis)
+  basis_obj <- make_hrf(basis, lag, nbasis = if (missing(nbasis)) NULL else nbasis,
+                        label = .basis_arg_label(substitute(basis)))
 
   # Call the internal constructor, passing quosures directly
   ret <- hrfspec(
@@ -422,6 +432,11 @@ trialwise <- function(basis   = "spmg1",
   # Create an expression that will evaluate .trial_factor(length(onsets)) 
   # when the onsets variable is available at evaluation time
   trial_expr <- rlang::expr(.trial_factor(length(onsets)))
+
+  # Name a plain-function basis here, where its expression is still visible
+  if (is.function(basis) && !inherits(basis, "HRF")) {
+    basis <- fmrihrf::gen_hrf(basis, name = .basis_arg_label(substitute(basis)))
+  }
 
   term <- hrf(!!trial_expr,  # Use !! to inject the expression
               basis = basis,

@@ -209,3 +209,18 @@ test_that(".basis_label is vectorised", {
                    c("lag_00", "component_02", NA, NA))
   expect_identical(bl("spmg1", integer(0)), character(0))
 })
+
+test_that("plain-function bases are named after the basis argument", {
+  # gen_hrf() used to name them after its own argument ("basis")
+  my_ramp <- function(t) ifelse(t >= 0 & t < 10, t / 10, 0)
+  sf <- sampling_frame(blocklens = 60, TR = 2)
+  d <- data.frame(onset = c(5, 30, 70), cond = factor(c("a", "b", "a")), run = 1)
+  basis_of <- function(form) {
+    em <- event_model(form, data = d, block = ~run, sampling_frame = sf)
+    unique(design_colmap(em)$basis_name)
+  }
+  expect_equal(basis_of(onset ~ hrf(cond, basis = my_ramp)), "my_ramp")
+  expect_equal(basis_of(onset ~ hrf(cond, basis = my_ramp, lag = 2)), "my_ramp")
+  expect_equal(basis_of(onset ~ hrf(cond, basis = function(t) dnorm(t, 5, 2))), "custom")
+  expect_equal(basis_of(onset ~ trialwise(basis = my_ramp)), "my_ramp")
+})
