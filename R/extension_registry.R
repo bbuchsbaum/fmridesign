@@ -328,6 +328,5 @@ get_all_external_hrf_functions <- function() {
     return(character(0))
   }
 
-  funcs <- unlist(lapply(spec_classes, get_external_hrfspec_functions))
-  unique(funcs[!is.null(funcs)])
+  unique(unlist(lapply(spec_classes, get_external_hrfspec_functions)))
 }
