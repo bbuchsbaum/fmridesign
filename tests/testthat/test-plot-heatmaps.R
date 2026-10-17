@@ -138,3 +138,16 @@ test_that("correlation_map(annotate = FALSE) handles a design with nothing to co
   expect_match(p$labels$subtitle, "Only one regressor")
   expect_equal(nrow(p$data), 0L)
 })
+
+test_that("correlation_map with more than 10 columns can be drawn", {
+  # The in-panel legend uses ggplot2 >= 3.5.0 theme elements; older ggplot2
+  # failed when the plot was drawn.
+  sf <- fmrihrf::sampling_frame(blocklens = c(60, 60), TR = 2)
+  bm12 <- baseline_model(basis = "poly", degree = 6, sframe = sf)
+  grDevices::pdf(NULL)
+  g <- tryCatch({
+    p <- correlation_map(bm12)
+    ggplot2::ggplotGrob(p)
+  }, error = function(e) e, finally = grDevices::dev.off())
+  expect_s3_class(g, "gtable")
+})

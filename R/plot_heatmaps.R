@@ -937,8 +937,9 @@ design_map.baseline_model <- function(x,
     theme_fmridesign() +
     .fd_hm_theme(.fd_hm_x_text(labs_full[shown], rotate_x_text,
                                panel_in = min(4.5, p * cell_in))) +
-    if (p <= 10L) {
-      # Small capped panels leave no room inside; put the legend underneath.
+    if (p <= 10L || utils::packageVersion("ggplot2") < "3.5.0") {
+      # Small capped panels leave no room inside; put the legend underneath
+      # (also before ggplot2 3.5.0, which has no inside legend position).
       ggplot2::theme(legend.position = "bottom", legend.justification = "right")
     } else {
       ggplot2::theme(
