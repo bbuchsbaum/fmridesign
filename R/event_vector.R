@@ -8,15 +8,6 @@
 ###############################################################################
 
 ## ============================================================================
-## Section 1: Helper Functions (Moved to R/utils-internal.R)
-## ============================================================================
-
-# Removed .sanitizeName
-# Removed is.increasing
-# Removed is.strictly.increasing
-# Removed .checkEVArgs
-
-## ============================================================================
 ## Section 2: Event Term Construction
 ## ============================================================================
 
@@ -78,20 +69,12 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
   }
   
   # Ensure blockids are non-decreasing.
-  # Use base R equivalent of is.increasing
   assert_that(!is.unsorted(blockids), msg = "'blockids' must consist of non-decreasing integers")
   
-  # NOTE: subset handling is now primarily inside event(), 
-  # but event_term might still need its own subset logic if it uses it before calling EV?
-  # Currently, it passes subset down to EV.
+  # Subsetting and duration recycling are applied inside event().
   if (is.null(subset)) { 
     subset <- rep(TRUE, length(onsets)) 
   }
-  
-  # Duration recycling is handled inside event() via .checkEVArgs
-  # if (length(durations) == 1) {
-  #   durations <- rep(durations, length(onsets))
-  # }
   
   vnames <- names(evlist)
   onlen <- length(onsets)
@@ -108,13 +91,15 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
                   msg=sprintf("Length mismatch between onsets (%d) and variable '%s' (%d)", 
                               onlen, vnames[i], getlen(evlist[[i]])))
   }
+  if (length(evlist) == 0L) {
+    stop("`evlist` must contain at least one variable.", call. = FALSE)
+  }
   
   # Create event objects by dispatching to the appropriate public wrapper
   evs <- lapply(seq_along(evlist), function(i) {
     vals <- evlist[[i]]
     vname_i <- vnames[i]
     
-    # Type checking and dispatching (replaces EV factory logic)
     if (inherits(vals, "event")) {
         # If it's already an event object, just use it as-is
         # TODO: Consider whether to re-apply subset/durations/etc from current call
@@ -124,8 +109,6 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
     } else if (is.factor(vals) || is.character(vals)) {
         event_factor(fac = vals, name = vname_i, onsets = onsets, blockids = blockids, durations = durations, subset = subset)
     } else if (is.matrix(vals)) {
-        # Handle single-column matrices as vectors for event_variable?
-        # No, event_matrix handles matrices directly now.
         event_matrix(mat = vals, name = vname_i, onsets = onsets, blockids = blockids, durations = durations, subset = subset)
     } else if (is.numeric(vals) && (is.vector(vals) || length(dim(vals)) <= 1)) {
          # Check specifically for numeric vectors (or 1D arrays)
@@ -136,15 +119,12 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
   })
   
   names(evs) <- sapply(evs, function(ev) ev$varname)
-  pterms <- unlist(lapply(evs, function(ev) ev$varname))
   
   # Check if any event object creation resulted in zero events after subsetting
-  if (length(evs) > 0 && length(evs[[1]]$onsets) == 0) {
+  if (length(evs[[1]]$onsets) == 0) {
       term_label <- paste(vnames, collapse = ":")
-      n_in <- length(onsets)
-      n_keep <- if (is.null(subset)) n_in else sum(isTRUE(subset))
-      subset_note <- if (!is.null(subset)) paste0(" (kept ", n_keep, "/", n_in, ")") else ""
-      msg <- sprintf("Event term '%s' has zero realized events after processing%s.", term_label, subset_note)
+      msg <- sprintf("Event term '%s' has zero realized events after processing (kept %d/%d).",
+                     term_label, sum(subset), length(onsets))
 
       warn_enabled <- getOption("fmridesign.warn_zero_events", TRUE)
       if (isTRUE(warn_enabled)) {
@@ -154,34 +134,22 @@ event_term <- function(evlist, onsets, blockids, durations = 0, subset = NULL) {
       }
       # Proceed with empty structures; downstream code will handle gracefully
   }
-  
-  # Rebuild event_table based on the *actual* content of the event objects
-  # event() now handles the internal structure, so we use elements()
-  # This relies on elements.event(..., values=FALSE) returning the appropriate factor levels/names
-  
-  # Get descriptive elements (levels/names) for each event
-  descriptive_elements <- elements(evs[[1]], values = FALSE) # Need a way to call elements on list 'evs'? 
-  # No, elements.event_term works on the term object after it's built.
-  # Let's reconstruct the table *after* building the initial list. 
 
   varname <- paste(sapply(evs, function(x) x$varname), collapse = ":")
   
-  # Create the list structure first
   ret <- list(varname = varname, 
               events = evs, 
-              subset = subset, # Keep original subset for reference?
-              # Placeholder for event_table, rebuild below
-              event_table = NULL, 
-              # Use onsets/blockids/durations from the *first* processed event object
-              # Assumes they are consistent across all events after processing (checked by event())
-              onsets = if(length(evs) > 0) evs[[1]]$onsets else numeric(0), 
-              blockids = if(length(evs) > 0) evs[[1]]$blockids else numeric(0), 
-              durations = if(length(evs) > 0) evs[[1]]$durations else numeric(0))
+              subset = subset,
+              event_table = NULL, # filled in below
+              # Timing comes from the first processed event; event() applies the
+              # same onsets/blockids/durations/subset to every variable.
+              onsets = evs[[1]]$onsets, 
+              blockids = evs[[1]]$blockids, 
+              durations = evs[[1]]$durations)
   
   class(ret) <- c("event_term", "event_seq")
   
-  # Now build the event_table using elements()
-  # Get descriptive elements (levels/names) for the term
+  # Build the event_table from the descriptive labels of each event
   descriptive_elements_list <- elements(ret, what = "labels") # Explicitly request labels
   # Combine into a tibble directly from the list
   etab <- try(tibble::as_tibble(descriptive_elements_list), silent = TRUE)
@@ -291,44 +259,13 @@ event_table.event_term <- function(x, ...) x$event_table
 }
 
 ## ============================================================================
-## Section 3: EV Factory and Event Constructors (REMOVE EV Factory)
-## ============================================================================
-
-# Removed EV factory function. Logic is now inlined in event_term.
-
-# Removed event_factor, event_variable, event_matrix, event_basis wrappers.
-# They are now located in R/event-classes.R
-
-## ============================================================================
 ## Section 4: Levels and Formula Methods
 ## ============================================================================
 
 #' @method formula event_term
 #' @export
 formula.event_term <- function(x, ...) {
-  # NOTE: This uses parent_terms.event_term which still exists below
-  #       It might need adjustment if parent_terms logic changes.
   as.formula(paste("~ (", paste(parent_terms(x), collapse = ":"), "-1)"))
-}
-
-#' @noRd
-.vector_of_labels <- function(ev) {
-  # Helper to generate the vector of condition labels for a single event.
-  # Uses levels.event() for the actual levels/column names.
-  lvls <- levels(ev) # Get levels/colnames from levels.event
-  
-  if (is_continuous(ev) && length(lvls) > 1) {
-    # Continuous multi-column (matrix/basis): Use index 1:ncol
-    vapply(seq_along(lvls), 
-           \(k) .label_component(ev, k), 
-           character(1))
-  } else if (is_categorical(ev)) {
-    # Categorical: Use actual levels
-    vapply(lvls, \(lvl) .label_component(ev, lvl), character(1))
-  } else {
-    # Single continuous variable (vector): Just the variable name
-    .label_component(ev)
-  }
 }
 
 ## ============================================================================
@@ -339,102 +276,50 @@ formula.event_term <- function(x, ...) {
 #' @rdname cells
 #' @export
 cells.event_term <- function(x, drop.empty = TRUE, ...) {
-  ## ----------------------------------------------------------------
-  ## 0. fast cache ---------------------------------------------------
-  # Use fixed name as levels rarely change post-construction
-  cache_attr_name <- "..cells" 
-  if (!is.null(cached <- attr(x, cache_attr_name))) {
-    cnt <- attr(cached, "count")
-    # Need to handle potential NULL count if cache is invalid
-    if(is.null(cnt)) {
-        warning("Invalid cache detected for cells.event_term, recomputing.")
-    } else {
-        return(if (drop.empty) cached[cnt > 0, , drop = FALSE] else cached)
-    }
-  }
-
-  ## ----------------------------------------------------------------
   ## 1. categorical events only -------------------------------------
-  # Use Filter and Negate for conciseness
   cats <- Filter(Negate(is_continuous), x$events)
 
   if (length(cats) == 0) {                  # no factors => one big cell
-    # Use a more descriptive name if needed, maybe based on varname
     # Consistent with cells.event: use the (first/only) varname
     var_name_cont <- if (length(x$events) > 0) x$events[[1]]$varname else "all_events"
-    out <- tibble::tibble(!!var_name_cont := var_name_cont) # Use varname for column
-    count_val <- length(x$onsets)
-    attr(out, "count") <- count_val
-    # Assign name to the count attribute
-    names(attr(out, "count")) <- var_name_cont 
-    
-    attr(x, cache_attr_name) <- out # Cache the result
+    out <- tibble::tibble(!!var_name_cont := var_name_cont)
+    attr(out, "count") <- stats::setNames(length(x$onsets), var_name_cont)
     return(out)
   }
 
-  ## ----------------------------------------------------------------
   ## 2. observed combination counts ---------------------------------
   # Reconstruct factors from internal representation
   obs_list <- lapply(cats, \(ev) {
-      # Add checks for valid meta$levels and value structure
       if (is.null(ev$meta$levels) || !is.matrix(ev$value) || ncol(ev$value) != 1) {
            stop(paste("Invalid internal structure for categorical event:", ev$varname), call.=FALSE)
       }
       factor(ev$value[, 1L], levels = seq_along(ev$meta$levels), labels = ev$meta$levels)
   })
-  # Create data frame of observed factor combinations
   obs <- do.call(data.frame, c(obs_list, stringsAsFactors = FALSE))
-  
-  # Use table() for efficient contingency counting (if few factors)
-  # For many factors, alternative might be needed 
-  # tbl <- as.data.frame.matrix(table(obs)) # This creates wide format, not needed directly
-  
-  # Generate the grid of all possible level combinations
+
+  # Grid of all possible level combinations, as factors matching obs_list
   levels_list <- lapply(cats, levels)
-  grid <- expand.grid(levels_list, stringsAsFactors = FALSE) # Use FALSE then convert relevant columns
-  # Ensure column names match original variable names
+  grid <- expand.grid(levels_list, stringsAsFactors = FALSE)
   colnames(grid) <- names(cats)
-  # Convert grid columns to factors matching the levels in obs_list
   for(i in seq_along(grid)){
       grid[[i]] <- factor(grid[[i]], levels=levels(obs_list[[i]]))
   }
 
-  ## match() much faster than join for simple cases ------------------
-  # Create unique string keys for observed and grid rows
-  # Use sep that's unlikely to appear in levels
-  key_obs  <- do.call(paste, c(obs, sep = "\001")) 
+  # Count observed rows per grid cell by matching string keys
+  key_obs  <- do.call(paste, c(obs, sep = "\001"))
   key_grid <- do.call(paste, c(grid, sep = "\001"))
-  # Count occurrences by matching observed keys to grid keys
   count    <- tabulate(match(key_obs, key_grid), nbins = nrow(grid))
 
-  ## ----------------------------------------------------------------
   ## 3. assemble result ---------------------------------------------
-  out <- tibble::as_tibble(grid) # Convert final grid to tibble
-
-  # --- Add names to the count vector ---
-  # Generate names for the counts based on the grid rows (factor level combinations)
+  out <- tibble::as_tibble(grid)
   if (nrow(grid) > 0) {
-      # Use a separator consistent with how interactions might be named elsewhere
-      cell_names <- apply(grid, 1, paste, collapse = ":")
-      # Ensure counts has names before attaching
-      if (length(count) == length(cell_names)) {
-         names(count) <- cell_names
-      } else {
-         # This shouldn't happen if logic above is correct, but add a warning
-         warning("Mismatch between number of cells and counts calculated in cells.event_term")
-      }
-  } # Else count is likely integer(0) and doesn't need names
-  # --- End adding names ---
+      names(count) <- apply(grid, 1, paste, collapse = ":")
+  }
+  attr(out, "count") <- count
 
-  attr(out, "count") <- count # Attach the now named count vector
-
-  attr(x, cache_attr_name) <- out # Cache the result (with named counts)
-
-  # Filter based on drop.empty
   if (drop.empty) {
       keep_idx <- count > 0
       filtered_out <- out[keep_idx, , drop = FALSE]
-      # Ensure the count attribute on the filtered output is also correct
       attr(filtered_out, "count") <- count[keep_idx]
       filtered_out
   } else {
@@ -444,9 +329,7 @@ cells.event_term <- function(x, drop.empty = TRUE, ...) {
 
 #' @noRd
 .event_set <- function(x, exclude_basis = FALSE) {
-  evtab <- event_table(x)
-  
-  evset <- if (fmrihrf::nbasis(x) > 1 & !exclude_basis) {
+  if (fmrihrf::nbasis(x) > 1 & !exclude_basis) {
     ncond <- fmrihrf::nbasis(x)
     # Construct a zero-padded string for basis labels.
     zstr <- paste0(rep("0", ceiling(log10(ncond + 1e-6))), collapse = "")
@@ -473,10 +356,7 @@ cells.convolved_term <- function(x, ...) {
   exclude_basis <- list(...)$exclude_basis
   if (is.null(exclude_basis)) exclude_basis <- FALSE
   
-  evtab <- event_table(x)
   evset <- .event_set(x, exclude_basis = exclude_basis)
-  
-  strels <- apply(apply(evtab, 2, stringr::str_trim), 1, paste, collapse = ":")
   
   strlevs <- if (nrow(evset) > 1) {
     apply(apply(evset, 2, stringr::str_trim), 1, paste, collapse = ":")
@@ -1172,14 +1052,8 @@ convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE, hrf_l
 #' @export
 regressors.event_term <- function(x, hrf, sampling_frame, summate = FALSE, drop.empty = TRUE, ...) {
   globons <- fmrihrf::global_onsets(sampling_frame, x$onsets, x$blockids)
-  durations <- x$durations
-  blockids <- x$blockids
-  nimages <- sum(fmrihrf::blocklens(sampling_frame))
-  cnames <- conditions(x)
   dmat <- design_matrix(x, drop.empty)
-  ncond <- ncol(dmat)
-  
-  reg <- convolve_design(hrf, dmat, globons, durations, summate = summate)
+  reg <- convolve_design(hrf, dmat, globons, x$durations, summate = summate)
   names(reg) <- colnames(dmat)
   reg
 }
@@ -1405,15 +1279,6 @@ convolve.event_term <- function(x, hrf, sampling_frame, drop.empty = TRUE,
       length(cn), ncol(cmat), term_tag
     ), call. = FALSE)
     colnames(cmat) <- make.names(paste0("col_", seq_len(ncol(cmat))), unique = TRUE)
-  }
-
-  if (getOption("fmrireg.debug", FALSE)) {
-    fn <- get0("is_valid_heading", mode = "function")
-    if (!is.null(fn)) {
-      stopifnot(all(fn(colnames(cmat))))
-    } else {
-      warning("fmrireg.debug=TRUE: is_valid_heading helper not found for validation.")
-    }
   }
 
   base_meta <- .term_col_metadata(

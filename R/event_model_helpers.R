@@ -65,9 +65,7 @@ canonicalize_blockids <- function(blockids_raw, n_events) {
     blockids_raw <- as.character(blockids_raw)
   }
 
-  if (length(blockids_raw) != n_events || any(is.na(blockids_raw))) {
-    stopifnot(length(blockids_raw) == n_events, all(!is.na(blockids_raw)))
-  }
+  stopifnot(length(blockids_raw) == n_events, all(!is.na(blockids_raw)))
 
   blockids <- as.integer(match(blockids_raw, unique(blockids_raw)))
 
@@ -243,8 +241,6 @@ construct_event_term <- function(hrfspec, model_spec) {
     }
     attr(et, "original_data") <- original_data
   }
-
-  # TODO (EM-19): Add check here
 
   et
 }

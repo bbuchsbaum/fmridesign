@@ -131,15 +131,6 @@ event_model <- function(formula_or_list, data = NULL, block = NULL, sampling_fra
   ret
 }
 
-## ============================================================================
-## Section 1.5: Deprecated Constructors (REMOVED)
-## ============================================================================
-
-# Deprecated event_model.formula removed.
-# Deprecated event_model.list removed.
-# Deprecated create_event_model removed.
-
-
 #' @export
 #' @rdname split_by_block
 split_by_block.event_model <- function(x, ...) {

@@ -470,64 +470,42 @@ cells.event <- function(x, drop.empty = TRUE, ...) {
 elements.event <- function(x, what = c("values", "labels"), transformed = TRUE, ...) {
   
   what <- match.arg(what)
-  var_name_sanitized <- .sanitizeName(x$varname)
-  
-  element_data <- NULL
   
   if (what == "values") {
-      # --- Handle VALUES --- 
-      
-      # Check cache first
-      cache_val_attr <- paste0("_elements_cache_", what) # Unique cache attribute name
-      cached_data <- attr(x, cache_val_attr)
-      if (!is.null(cached_data)) {
-          # Return cached data wrapped in a named list
-          return(stats::setNames(list(cached_data), var_name_sanitized))
-      }
-      
-      # Handle basis 'transformed' case (although !transformed is tricky)
+      # The payload is always an N x K matrix (or 0 x K)
       if (!is.null(x$meta$basis) && !transformed) {
           warning("'transformed = FALSE' for basis elements is not reliably supported, returning the transformed basis matrix.")
-          element_data <- x$value
-      } else {
-           element_data <- x$value # This is always an N x K matrix (or 0xK)
       }
-      
-      # Store in cache before returning
-      attr(x, cache_val_attr) <- element_data
-      
-  } else {
-      # --- Handle LABELS --- 
-      # Return descriptive names/levels for EACH event instance
-      n_events <- length(x$onsets)
-      lvls <- levels.event(x) # Get the names/levels (length K)
-      
-      if (n_events == 0) {
-          # Handle empty event sequence consistently
-          if (!x$continuous && !is.null(x$meta$levels)) {
-              element_data <- factor(character(0), levels = lvls)
-          } else if (length(lvls) <= 1) { # Single name/level
-              element_data <- character(0)
-          } else { # Multi-column name/level
-              element_data <- matrix(character(0), nrow=0, ncol=length(lvls), dimnames=list(NULL, lvls))
-          }
-      } else if (!x$continuous && !is.null(x$meta$levels)) {
-          # Categorical: Reconstruct factor values as a factor vector (length = n_events)
-          element_data <- factor(x$value[, 1L], levels = seq_along(lvls), labels = lvls)
-      } else if (length(lvls) == 1) {
-          # Single continuous variable or basis: repeat name n_events times (length = n_events)
-          element_data <- rep(lvls, n_events)
-      } else {
-          # Multi-column continuous (matrix/basis): create matrix repeating colnames (N x K)
-          element_data <- matrix(rep(lvls, each = n_events), 
-                                 nrow = n_events, 
-                                 ncol = length(lvls), 
-                                 dimnames = list(NULL, lvls))
-      } 
+      return(x$value)
   }
-  
-  # Return the data directly, not wrapped in a list
-  element_data
+
+  # --- LABELS: descriptive names/levels for EACH event instance ---
+  n_events <- length(x$onsets)
+  lvls <- levels.event(x) # Get the names/levels (length K)
+  is_fac <- !x$continuous && !is.null(x$meta$levels)
+
+  if (n_events == 0) {
+      # Handle empty event sequence consistently
+      if (is_fac) {
+          factor(character(0), levels = lvls)
+      } else if (length(lvls) <= 1) { # Single name/level
+          character(0)
+      } else { # Multi-column name/level
+          matrix(character(0), nrow=0, ncol=length(lvls), dimnames=list(NULL, lvls))
+      }
+  } else if (is_fac) {
+      # Categorical: Reconstruct factor values as a factor vector (length = n_events)
+      factor(x$value[, 1L], levels = seq_along(lvls), labels = lvls)
+  } else if (length(lvls) == 1) {
+      # Single continuous variable or basis: repeat name n_events times (length = n_events)
+      rep(lvls, n_events)
+  } else {
+      # Multi-column continuous (matrix/basis): create matrix repeating colnames (N x K)
+      matrix(rep(lvls, each = n_events), 
+             nrow = n_events, 
+             ncol = length(lvls), 
+             dimnames = list(NULL, lvls))
+  }
 }
 
 #' Print event objects
@@ -629,8 +607,6 @@ print.event <- function(x, ...) {
 #' labels(ev_mat) # Should return c("MatrixVar[1]", "MatrixVar[2]") 
 #' @export
 labels.event <- function(object, ...) {
-  # Directly call the internal helper (now in utils-internal.R)
-  # Assumes utils-internal.R functions are available in package namespace
   .level_vector(object)
 }
 
