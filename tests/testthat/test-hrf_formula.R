@@ -140,6 +140,13 @@ test_that("hrf() with hrf_fun as formula stores formula", {
   expect_true(rlang::is_formula(spec$hrf_fun))
 })
 
+test_that("hrf() warns when hrf_fun overrides a non-default basis", {
+  gen <- boxcar_hrf_gen()
+  expect_warning(hrf(cond, basis = "spmg3", hrf_fun = gen), "takes precedence")
+  expect_warning(hrf(cond, basis = fmrihrf::HRF_GAMMA, hrf_fun = gen), "takes precedence")
+  expect_no_warning(hrf(cond, basis = "spmg1", hrf_fun = gen))
+})
+
 test_that("hrf() errors on invalid hrf_fun type", {
   expect_error(hrf(cond, hrf_fun = 42), "function or formula")
 })

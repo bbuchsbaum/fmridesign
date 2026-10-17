@@ -192,7 +192,7 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
     }
 
     # Warn if both basis (non-default) and hrf_fun specified
-    if (!missing(basis) && basis != "spmg1") {
+    if (!missing(basis) && !identical(basis, "spmg1")) {
       warning("Both `basis` and `hrf_fun` specified; `hrf_fun` takes precedence.", call. = FALSE)
     }
   }
