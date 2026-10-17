@@ -1569,33 +1569,7 @@ print.event_term <- function(x, ...) {
   }
   
   if (nevents > 0) {
-    cli::cli_h2("Timing")
-    onset_range <- range(x$onsets, na.rm = TRUE)
-    dur_range <- range(x$durations, na.rm = TRUE)
-    # Evaluate sprintf outside cli::cli_text to avoid interpolation issues
-    onset_range_str <- sprintf("%.2f - %.2f sec", onset_range[1], onset_range[2])
-    dur_range_str <- sprintf("%.2f - %.2f sec", dur_range[1], dur_range[2])
-    cli::cli_text("{.info * Onset Range:} {onset_range_str}")
-    cli::cli_text("{.info * Duration Range:} {dur_range_str}")
-    
-    cli::cli_h2("Blocks")
-    blocks_table <- table(x$blockids)
-    nblocks <- length(blocks_table)
-    cli::cli_text("{.info * Number of Blocks:} {nblocks}")
-    # Truncate long block lists
-    max_show_blocks <- 10
-    blocks_display <- if(nblocks > max_show_blocks) {
-                          paste(c(names(blocks_table)[1:max_show_blocks], "..."), collapse = ", ")
-                      } else {
-                          paste(names(blocks_table), collapse = ", ")
-                      }
-    cli::cli_text("{.info * Block IDs:} {blocks_display}")
-    events_per_block_display <- if(nblocks > max_show_blocks) {
-                                     paste(c(blocks_table[1:max_show_blocks], "..."), collapse = ", ")
-                                 } else {
-                                     paste(blocks_table, collapse = ", ")
-                                 }
-    cli::cli_text("{.info * Events per Block:} {events_per_block_display}")
+    .cli_timing_and_blocks(x, per_block = TRUE)
   } else {
       cli::cli_alert_info("Event term is empty.")
   }

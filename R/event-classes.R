@@ -516,25 +516,7 @@ print.event <- function(x, ...) {
   cli::cli_text("{.info * Events:} {nevents}")
   
   if (nevents > 0) {
-    cli::cli_h2("Timing")
-    onset_range <- range(x$onsets, na.rm = TRUE)
-    dur_range <- range(x$durations, na.rm = TRUE)
-    onset_range_str <- sprintf("%.2f - %.2f sec", onset_range[1], onset_range[2])
-    dur_range_str <- sprintf("%.2f - %.2f sec", dur_range[1], dur_range[2])
-    cli::cli_text("{.info * Onset Range:} {onset_range_str}")
-    cli::cli_text("{.info * Duration Range:} {dur_range_str}")
-    
-    cli::cli_h2("Blocks")
-    blocks_table <- table(x$blockids)
-    nblocks <- length(blocks_table)
-    cli::cli_text("{.info * Number of Blocks:} {nblocks}")
-    max_show_blocks <- 10
-    blocks_display <- if(nblocks > max_show_blocks) {
-                          paste(c(names(blocks_table)[1:max_show_blocks], "..."), collapse = ", ")
-                      } else {
-                          paste(names(blocks_table), collapse = ", ")
-                      }
-    cli::cli_text("{.info * Block IDs:} {blocks_display}")
+    .cli_timing_and_blocks(x)
   } else {
       cli::cli_alert_info("Event sequence is empty.")
   }
@@ -550,6 +532,43 @@ print.event <- function(x, ...) {
   cli::cli_end()
   
   invisible(x)
+}
+
+#' Print the Timing and Blocks sections shared by event and event_term printers
+#'
+#' Must be called inside the caller's `cli_div()` (it uses the `.info` span).
+#'
+#' @param x An `event` or `event_term` with `onsets`, `durations`, `blockids`.
+#' @param per_block Logical; also list the number of events in each block.
+#' @keywords internal
+#' @noRd
+.cli_timing_and_blocks <- function(x, per_block = FALSE) {
+  max_show_blocks <- 10
+  show <- function(v) {
+    paste(if (length(v) > max_show_blocks) c(v[1:max_show_blocks], "...") else v,
+          collapse = ", ")
+  }
+
+  cli::cli_h2("Timing")
+  onset_range <- range(x$onsets, na.rm = TRUE)
+  dur_range <- range(x$durations, na.rm = TRUE)
+  # Evaluate sprintf outside cli::cli_text to avoid interpolation issues
+  onset_range_str <- sprintf("%.2f - %.2f sec", onset_range[1], onset_range[2])
+  dur_range_str <- sprintf("%.2f - %.2f sec", dur_range[1], dur_range[2])
+  cli::cli_text("{.info * Onset Range:} {onset_range_str}")
+  cli::cli_text("{.info * Duration Range:} {dur_range_str}")
+
+  cli::cli_h2("Blocks")
+  blocks_table <- table(x$blockids)
+  nblocks <- length(blocks_table)
+  blocks_display <- show(names(blocks_table))
+  cli::cli_text("{.info * Number of Blocks:} {nblocks}")
+  cli::cli_text("{.info * Block IDs:} {blocks_display}")
+  if (per_block) {
+    events_per_block_display <- show(blocks_table)
+    cli::cli_text("{.info * Events per Block:} {events_per_block_display}")
+  }
+  invisible(NULL)
 }
 
 ## ============================================================================
