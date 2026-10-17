@@ -245,9 +245,11 @@ plot.event_model <- function(x,
                                      inherit.aes = FALSE)
   }
   if (!is.null(bound_df)) {
+    # geom_vline() never inherits the plot's aesthetics (and has no
+    # `inherit.aes` argument).
     plt <- plt + ggplot2::geom_vline(
       data = bound_df, ggplot2::aes(xintercept = xintercept),
-      inherit.aes = FALSE, colour = .fd_ink$zero, linewidth = 0.3)
+      colour = .fd_ink$zero, linewidth = 0.3)
   }
   plt <- plt + ggplot2::geom_hline(yintercept = 0, colour = .fd_ink$rule, linewidth = 0.3)
 
@@ -508,7 +510,7 @@ plot.event_model <- function(x,
   }
   if (!is.null(bound_df)) {
     plt <- plt + ggplot2::geom_vline(data = bound_df, ggplot2::aes(xintercept = xintercept),
-                                     inherit.aes = FALSE, colour = .fd_ink$muted, linewidth = 0.3)
+                                     colour = .fd_ink$muted, linewidth = 0.3)
   }
   if (!is.null(ev)) {
     ev$Regressor <- factor(ci$name[match(as.character(ev$.row), row_key)],
