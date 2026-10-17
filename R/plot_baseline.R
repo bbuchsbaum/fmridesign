@@ -133,14 +133,19 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   long$facet <- factor(long$lane, levels = lane_levels)
   long$run_lab <- factor(paste("Run", long$run), levels = paste("Run", runs$run))
 
-  # Colours: drift bases get an ordered ramp keyed by basis index; other
-  # lanes use the categorical palette in column order, so a regressor keeps
-  # its colour in every run (and x/y/z match across motion lanes).
+  # Colours: the categorical palette in column order, so a regressor keeps
+  # its colour in every run (and x/y/z match across motion lanes). Past 7
+  # series, drift bases get an ordered ramp from dark indigo through blue and
+  # teal to green, keyed by basis index.
   long$colour <- NA_character_
   for (ln in lane_levels) {
     sel <- long$lane == ln
     keys <- unique(long$label[sel])
-    cmap <- if (all(long$term[sel] == "drift")) .fd_bl_ramp(keys) else .fd_colour_map(keys)
+    cmap <- if (all(long$term[sel] == "drift")) {
+      .fd_colour_map(keys, ramp = c("#1B2A5E", "#1F6FB2", "#3A9FA8", "#86B84F"))
+    } else {
+      .fd_colour_map(keys)
+    }
     long$colour[sel] <- cmap[long$label[sel]]
   }
 
@@ -350,19 +355,6 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   c(before, intersect(motion, lanes), setdiff(rest, before))
 }
 
-# Colours for drift bases: the categorical palette in basis order while it
-# lasts (every basis clearly distinct), otherwise an ordered ramp from dark
-# indigo through blue and teal to green.
-.fd_bl_ramp <- function(keys) {
-  keys <- unique(as.character(keys))
-  n <- length(keys)
-  cols <- if (n <= length(.fd_cat)) .fd_cat[seq_len(n)] else {
-    grDevices::colorRampPalette(c("#1B2A5E", "#1F6FB2", "#3A9FA8", "#86B84F"),
-                                space = "Lab")(n)
-  }
-  stats::setNames(cols, keys)
-}
-
 # In-panel keys at the right edge of each lane, listed top-down in column
 # order (like a legend) rather than by end value. Lanes with more than 7
 # series (too many to stack legibly in one panel) get no key and are listed
@@ -568,6 +560,7 @@ plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),
 
   ev <- if (!is.null(events)) .fd_sf_events(events, runs) else NULL
   ev_note <- if (!is.null(ev)) attr(ev, "note")
+  has_ev <- !is.null(ev) && nrow(ev) > 0L
 
   # Run 1 at the top (timeline and grid).
   runs$y <- n_runs - runs$run + 1
@@ -580,6 +573,19 @@ plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),
   # a panel about 8 in wide).
   char_w <- total / 115
   pad <- total * 0.008
+  # Event onset ticks under each run's bar (timeline and grid), at `ev_x`.
+  run_ticks <- function(ev_x) {
+    ev$x <- ev_x
+    ev$y <- runs$y[ev$run]
+    ggplot2::geom_segment(
+      data = ev,
+      ggplot2::aes(x = .data$x, xend = .data$x, y = .data$y - half - 0.04,
+                   yend = .data$y - half - 0.16),
+      colour = .fd_ink$text, linewidth = 0.3)
+  }
+  default_title <- "Acquisition timeline"
+  x_lab <- .fd_time_label("global")
+  concat_note <- if (n_runs > 1L) "Runs are concatenated on one time axis."
 
   if (style == "timeline") {
     # One placement for every label: inside the bars when all fit, else
@@ -608,15 +614,7 @@ plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),
           colour = "#FFFFFF", linewidth = 0.3, alpha = 0.85)
       }
     }
-    if (!is.null(ev) && nrow(ev)) {
-      ev$x <- runs$start[ev$run] + ev$onset
-      ev$y <- runs$y[ev$run]
-      p <- p + ggplot2::geom_segment(
-        data = ev,
-        ggplot2::aes(x = .data$x, xend = .data$x, y = .data$y - half - 0.04,
-                     yend = .data$y - half - 0.16),
-        colour = .fd_ink$text, linewidth = 0.3)
-    }
+    if (has_ev) p <- p + run_ticks(runs$start[ev$run] + ev$onset)
     p <- p +
       ggplot2::geom_text(ggplot2::aes(x = .data$lx, y = .data$y, label = .data$lab,
                                       fontface = .data$face),
@@ -624,14 +622,9 @@ plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),
       ggplot2::scale_x_continuous(
         breaks = .fd_sf_breaks(runs, total), labels = .fd_mmss,
         expand = ggplot2::expansion(add = c(0.01 * total, right_room))) +
-      y_scale +
-      ggplot2::labs(title = title %||% "Acquisition timeline",
-                    subtitle = subtitle %||% sub_default,
-                    x = .fd_time_label("global"), y = NULL,
-                    caption = .fd_sf_caption(c(
-                      if (n_runs > 1L) "Runs are concatenated on one time axis.",
-                      if (isTRUE(show_ticks)) sprintf("Ticks every %d scans.", tick_every),
-                      ev_note, odd_note)))
+      y_scale
+    notes <- c(concat_note,
+               if (isTRUE(show_ticks)) sprintf("Ticks every %d scans.", tick_every))
   } else if (style == "lane") {
     # One lane of adjacent run segments, annotated above each segment.
     # Annotations that would collide are stacked on further rows, with a
@@ -653,17 +646,16 @@ plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),
       runs$row <- .fd_sf_stack(runs$lx - w / 2, runs$lx + w / 2, gap = total * 0.01)
       runs$ly <- 1.55 + runs$row * 0.55
     }
-    stagger <- !two_line
     p <- ggplot2::ggplot(runs) +
       ggplot2::geom_rect(ggplot2::aes(xmin = .data$start, xmax = .data$end,
                                       ymin = 0.6, ymax = 1.4),
                          fill = .fd_cat[1], colour = "#FFFFFF", linewidth = 0.8)
-    if (stagger) {
+    if (!two_line) {
       p <- p + ggplot2::geom_segment(
         ggplot2::aes(x = .data$mid, xend = .data$lx, y = 1.42, yend = .data$ly - 0.05),
         colour = .fd_ink$rule, linewidth = 0.3)
     }
-    if (!is.null(ev) && nrow(ev)) {
+    if (has_ev) {
       ev$x <- runs$start[ev$run] + ev$onset
       p <- p + ggplot2::geom_segment(
         data = ev, ggplot2::aes(x = .data$x, xend = .data$x, y = 0.55, yend = 0.35),
@@ -689,13 +681,8 @@ plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),
       ggplot2::scale_y_continuous(breaks = NULL,
                                   limits = c(if (is.null(ev)) 0.5 else 0.3,
                                              max(runs$ly) + if (two_line) 0.95 else 0.5),
-                                  expand = c(0, 0)) +
-      ggplot2::labs(title = title %||% "Acquisition timeline",
-                    subtitle = subtitle %||% sub_default,
-                    x = .fd_time_label("global"), y = NULL,
-                    caption = .fd_sf_caption(c(
-                      if (n_runs > 1L) "Runs are concatenated on one time axis.",
-                      ev_note, odd_note)))
+                                  expand = c(0, 0))
+    notes <- concat_note
   } else {
     # Grid: one cell per scan on a run-relative scan index; cells alternate
     # shade in groups of `tick_every` scans so counts read like a ruler.
@@ -714,16 +701,8 @@ plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),
                          colour = if (fine) "#FFFFFF" else NA,
                          linewidth = if (fine) 0.4 else 0) +
       ggplot2::scale_fill_identity()
-    if (!is.null(ev) && nrow(ev)) {
-      # Scan k covers [(k - 1) TR, k TR) within its run.
-      ev$x <- ev$onset / runs$TR[ev$run] + 0.5
-      ev$y <- runs$y[ev$run]
-      p <- p + ggplot2::geom_segment(
-        data = ev,
-        ggplot2::aes(x = .data$x, xend = .data$x, y = .data$y - half - 0.04,
-                     yend = .data$y - half - 0.16),
-        colour = .fd_ink$text, linewidth = 0.3)
-    }
+    # Scan k covers [(k - 1) TR, k TR) within its run.
+    if (has_ev) p <- p + run_ticks(ev$onset / runs$TR[ev$run] + 0.5)
     p <- p +
       ggplot2::geom_text(data = runs,
                          ggplot2::aes(x = .data$lx, y = .data$y, label = .data$lab,
@@ -735,16 +714,16 @@ plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),
           b[b >= 1 & b <= n_max]
         },
         expand = ggplot2::expansion(mult = c(0.005, 0.2))) +
-      y_scale +
-      ggplot2::labs(title = title %||% "Scans per run",
-                    subtitle = subtitle %||% sub_default,
-                    x = "Scan (within run)", y = NULL,
-                    caption = .fd_sf_caption(c(
-                      sprintf("Shading alternates every %d scans.", tick_every),
-                      ev_note, odd_note)))
+      y_scale
+    default_title <- "Scans per run"
+    x_lab <- "Scan (within run)"
+    notes <- sprintf("Shading alternates every %d scans.", tick_every)
   }
 
   p +
+    ggplot2::labs(title = title %||% default_title, subtitle = subtitle %||% sub_default,
+                  x = x_lab, y = NULL,
+                  caption = .fd_sf_caption(c(notes, ev_note, odd_note))) +
     theme_fmridesign() +
     ggplot2::theme(
       panel.grid.major.y = ggplot2::element_blank(),
@@ -789,18 +768,15 @@ plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),
     }))
     if (is.null(ev)) stop("Could not find event onsets in the event_model.", call. = FALSE)
     ev <- unique(ev)
-  } else if (is.data.frame(events)) {
-    run_col <- intersect(c("run", "block"), names(events))[1]
-    if (!"onset" %in% names(events) || is.na(run_col)) {
+  } else {
+    run_col <- if (is.data.frame(events)) intersect(c("run", "block"), names(events))[1]
+    if (!is.data.frame(events) || !"onset" %in% names(events) || is.na(run_col)) {
       stop("`events` must be an event_model or a data frame with `onset` and ",
            "`run` (or `block`) columns.", call. = FALSE)
     }
+    run <- events[[run_col]]
     ev <- data.frame(onset = as.numeric(events$onset),
-                     run = as.integer(factor(events[[run_col]])))
-    if (is.numeric(events[[run_col]])) ev$run <- as.integer(events[[run_col]])
-  } else {
-    stop("`events` must be an event_model or a data frame with `onset` and ",
-         "`run` (or `block`) columns.", call. = FALSE)
+                     run = as.integer(if (is.numeric(run)) run else factor(run)))
   }
   ev <- ev[is.finite(ev$onset) & !is.na(ev$run), , drop = FALSE]
   known <- ev$run %in% runs$run

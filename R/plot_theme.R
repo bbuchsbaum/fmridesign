@@ -73,16 +73,16 @@ fmridesign_palette <- function(type = c("categorical", "diverging"), n = NULL) {
 }
 
 # Assign colours to a vector of group keys in first-appearance order. Beyond
-# the categorical palette, fall back to a single neutral-to-blue ramp so the
-# plot stays honest (no recycled hues) and relies on direct labels.
-.fd_colour_map <- function(keys) {
+# the categorical palette, fall back to a single ordered ramp (by default
+# neutral-to-blue) so the plot stays honest (no recycled hues) and relies on
+# direct labels.
+.fd_colour_map <- function(keys, ramp = c("#9DB7D5", "#0072B2", "#12324F")) {
   keys <- unique(as.character(keys))
   n <- length(keys)
   cols <- if (n <= length(.fd_cat)) {
     .fd_cat[seq_len(n)]
   } else {
-    grDevices::colorRampPalette(c("#9DB7D5", "#0072B2", "#12324F"),
-                                space = "Lab")(n)
+    grDevices::colorRampPalette(ramp, space = "Lab")(n)
   }
   stats::setNames(cols, keys)
 }
@@ -165,7 +165,7 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
 }
 
 # Build a tidy description of each design-matrix column: which term it belongs
-# to, a human-readable label, basis index, run, and role. Built from the
+# to, a human-readable label, basis index and run. Built from the
 # `col_metadata` attached by the model builders so it follows the actual data
 # layout rather than re-parsing column names.
 .fd_colinfo <- function(x) {
@@ -174,34 +174,29 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
   n <- ncol(DM)
   if (is.null(cm) || nrow(cm) != n) {
     cm <- data.frame(col = seq_len(n), name = colnames(DM), term_tag = "design",
-                     condition = colnames(DM), run = NA_integer_, role = NA_character_,
+                     condition = colnames(DM), run = NA_integer_,
                      basis_ix = NA_integer_, basis_total = NA_integer_,
                      basis_label = NA_character_, stringsAsFactors = FALSE)
   }
   cm$name <- colnames(DM)
   term_vars <- .fd_term_vars(x)
 
-  lab <- vapply(seq_len(n), function(i) {
-    tt <- cm$term_tag[i]
-    cond <- cm$condition[i]
-    if (inherits(x, "baseline_model")) return(.fd_baseline_label(cm[i, ]))
-    if (is.na(cond)) return(cm$name[i])
-    .fd_condition_label(cond, term_vars[[tt]] %||% character(0))
-  }, character(1))
-
   if (inherits(x, "baseline_model")) {
+    lab <- vapply(seq_len(n), function(i) .fd_baseline_label(cm[i, ]), character(1))
     # Nuisance columns (`nuis_<name>_block_<run>`): design_colmap() supplies
-    # the run and role; label them with the user's own column names.
+    # the run; label them with the user's own column names.
     nz <- cm$term_tag %in% "nuisance"
     if (any(nz)) {
-      cm$role[nz] <- "nuisance"
       src <- tryCatch(terms(x)[["nuisance"]]$source_colnames, error = function(e) NULL)
-      if (length(src) == sum(nz)) {
-        lab[nz] <- src
-      } else {
-        lab[nz] <- sub("^nuis_(.*)_block_[0-9]+$", "\\1", cm$name[nz])
-      }
+      lab[nz] <- if (length(src) == sum(nz)) src else
+        sub("^nuis_(.*)_block_[0-9]+$", "\\1", cm$name[nz])
     }
+  } else {
+    lab <- vapply(seq_len(n), function(i) {
+      cond <- cm$condition[i]
+      if (is.na(cond)) return(cm$name[i])
+      .fd_condition_label(cond, term_vars[[cm$term_tag[i]]] %||% character(0))
+    }, character(1))
   }
 
   term <- cm$term_tag
@@ -211,21 +206,15 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
     if (length(v) > 1L) paste(v, collapse = .fd_u(" {times} ")) else if (length(v) == 1L) v else tt
   }, character(1))
 
-  basis_ix <- cm$basis_ix
-  basis_label <- cm$basis_label
-  cond_key <- lab
-
   out <- data.frame(
     col         = seq_len(n),
     name        = cm$name,
     term        = term,
     term_label  = unname(term_lab),
     label       = lab,
-    cond_key    = cond_key,
-    basis_ix    = basis_ix,
-    basis_label = basis_label,
+    basis_ix    = cm$basis_ix,
+    basis_label = cm$basis_label,
     run         = cm$run,
-    role        = cm$role,
     stringsAsFactors = FALSE
   )
   # Full label: add basis component (event models) or run (baseline models)
@@ -268,7 +257,6 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
   if (!inherits(x, "event_model")) return(list())
   tms <- x$terms
   if (is.null(tms)) return(list())
-  cm <- attr(design_matrix(x), "col_metadata")
   tags <- names(attr(design_matrix(x), "col_indices")) %||% names(tms)
   out <- lapply(tms, function(t) {
     ev <- t$events %||% list()
@@ -283,7 +271,8 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
 # Time / run helpers
 # ---------------------------------------------------------------------------
 
-# Per-scan run ids and times plus a run table for bands and labels.
+# Per-scan run ids and times plus a run table for run rules and labels. A
+# frame that does not match the design's rows falls back to scan units.
 .fd_timeline <- function(sframe, n_rows, block_x = c("global", "run")) {
   block_x <- match.arg(block_x)
   if (is.null(sframe)) {
@@ -293,6 +282,7 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
                 unit = "scan", TR = 1))
   }
   bl <- fmrihrf::blocklens(sframe)
+  if (sum(bl) != n_rows) return(.fd_timeline(NULL, n_rows))
   TR <- sframe$TR
   if (length(TR) == 1L) TR <- rep(TR, length(bl))
   run <- rep(seq_along(bl), bl)
@@ -306,10 +296,12 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
   runs <- data.frame(run = seq_along(bl), start = start, end = end, scans = bl,
                      TR = TR, first_scan = c(1L, utils::head(cumsum(bl), -1L) + 1L),
                      last_scan = cumsum(bl))
-  if (length(run) != n_rows) {
-    return(.fd_timeline(NULL, n_rows))
-  }
   list(run = run, time = time, runs = runs, unit = "s", TR = TR)
+}
+
+# The run TRs as "2 s" or "2.00/1.77 s".
+.fd_fmt_tr <- function(TR) {
+  paste0(paste(format(unique(TR), trim = TRUE), collapse = "/"), " s")
 }
 
 # Format seconds as m:ss for axis labels.
@@ -326,12 +318,9 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
 # ---------------------------------------------------------------------------
 
 # Run idiom for time-series plots: hairline rules at run boundaries (drawn by
-# the caller as geom_vline so tests can find them) and "Run k" labels on the
-# top axis. No shading: shading only alternate runs made unshaded runs read as
-# "no run".
-.fd_run_layers <- function(runs, ...) list()
-
-# Secondary (top) axis carrying "Run k" labels at run midpoints.
+# the caller as geom_vline so tests can find them) and "Run k" labels at run
+# midpoints on this secondary (top) axis. No shading: shading only alternate
+# runs made unshaded runs read as "no run".
 .fd_run_sec_axis <- function(runs) {
   if (is.null(runs) || nrow(runs) < 2L) return(ggplot2::waiver())
   ggplot2::sec_axis(~ ., breaks = (runs$start + runs$end) / 2,
@@ -353,19 +342,23 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
 }
 
 # Signed quantities: diverging ramp, symmetric about zero.
-.fd_scale_signed <- function(aesthetic = "fill", limit = 1, name = NULL, ...) {
-  limit <- if (is.finite(limit) && limit > 0) limit else 1
-  ggplot2::scale_fill_gradientn(colours = .fd_div, limits = c(-limit, limit),
-                                oob = .fd_squish, name = name, aesthetics = aesthetic, ...)
+.fd_scale_signed <- function(limit = 1, name = NULL, ...) {
+  .fd_scale_ramp(.fd_div, -1, limit, name, ...)
 }
 
 # Unsigned magnitudes: neutral (zero) to the warm pole of the diverging ramp,
 # so "more positive" looks the same in every plot.
 .fd_mag <- c("#FFFFFF", "#EDBBA6", "#C8664A", "#8A2A1C", "#4A140B")
-.fd_scale_magnitude <- function(aesthetic = "fill", limit = 1, name = NULL, ...) {
+.fd_scale_magnitude <- function(limit = 1, name = NULL, ...) {
+  .fd_scale_ramp(.fd_mag, 0, limit, name, ...)
+}
+
+# Fill scale on `colours` from `lower * limit` to `limit`; a `limit` that is
+# not a positive number falls back to 1.
+.fd_scale_ramp <- function(colours, lower, limit, name, ...) {
   limit <- if (is.finite(limit) && limit > 0) limit else 1
-  ggplot2::scale_fill_gradientn(colours = .fd_mag, limits = c(0, limit),
-                                oob = .fd_squish, name = name, aesthetics = aesthetic, ...)
+  ggplot2::scale_fill_gradientn(colours = colours, limits = c(lower * limit, limit),
+                                oob = .fd_squish, name = name, ...)
 }
 
 # Clamp out-of-range values to the scale limits (scales::squish without the
@@ -376,7 +369,7 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
 
 # Typographic glyphs, built from code points so sources stay ASCII.
 .fd_glyphs <- c(times = 0xD7, dot = 0xB7, minus = 0x2212, ndash = 0x2013,
-                Sigma = 0x3A3, check = 0x2713)
+                sigma = 0x3C3, ge = 0x2265, pm = 0xB1)
 .fd_u <- function(s) {
   for (nm in names(.fd_glyphs)) {
     s <- gsub(paste0("{", nm, "}"), intToUtf8(.fd_glyphs[[nm]]), s, fixed = TRUE)
@@ -438,5 +431,3 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
 .fd_shade <- function(col, amount = 0.45) {
   grDevices::colorRampPalette(c(col, .fd_ink$text), space = "Lab")(100)[round(amount * 100)]
 }
-
-utils::globalVariables(c("start", "end"))

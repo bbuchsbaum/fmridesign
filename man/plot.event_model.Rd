@@ -95,9 +95,9 @@ are unreadable. Rows are ordered by first onset.
 comparing magnitudes directly.
 }
 
-Runs are shown as alternating light bands labelled along the top edge, with
-thin rules at each run's start and end so late starts and overruns are
-easy to spot. Lines never connect across a run boundary.
+Runs are labelled along the top edge, with thin rules at each run's start
+and end so late starts and overruns are easy to spot. Lines never connect
+across a run boundary.
 }
 \examples{
 des <- data.frame(
