@@ -71,6 +71,16 @@ test_that("baseline_model with intercept='none' omits block term", {
   expect_equal(ncol(design_matrix(bmod)), 4)
 })
 
+test_that("baseline design-matrix columns carry no stray attributes", {
+  sframe <- make_sframe_2()
+  bmod <- baseline_model(basis = "poly", degree = 2, sframe = sframe,
+                         nuisance_list = list(cbind(a = rnorm(40)), cbind(a = rnorm(40))))
+  dm <- design_matrix(bmod)
+  for (nm in names(dm)) expect_null(attributes(dm[[nm]]), info = nm)
+  expect_equal(as.matrix(dm[, c("constant_1", "constant_2")]),
+               cbind(constant_1 = rep(1:0, each = 40), constant_2 = rep(0:1, each = 40)))
+})
+
 test_that("baseline_model with intercept='global' creates global intercept", {
   sframe <- make_sframe_2()
   bmod <- baseline_model(basis = "poly", degree = 2, sframe = sframe, intercept = "global")

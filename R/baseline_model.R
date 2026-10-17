@@ -912,11 +912,8 @@ construct_block_term <- function(vname, sframe, intercept = c("global", "runwise
                   dimnames = list(NULL, paste0(vname, "_global")))
     colind <- rep(list(1), length(blockord))
   } else {
-    # Runwise intercept: one indicator column per block. (The "assign" and
-    # "contrasts" attributes model.matrix() adds end up on every design-matrix
-    # column, so this call is kept as is.)
-    expanded_blockids_fac <- factor(blockids_vec, levels = blockord)
-    mat <- model.matrix(~ expanded_blockids_fac - 1)
+    # Runwise intercept: one indicator column per block
+    mat <- outer(blockids_vec, blockord, "==") + 0
     colnames(mat) <- paste0(vname, "_", blockord)
     colind <- as.list(seq_along(blockord))
   }
