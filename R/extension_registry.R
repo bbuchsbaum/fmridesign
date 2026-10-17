@@ -322,10 +322,6 @@ get_external_hrfspec_functions <- function(spec_class) {
 #' )
 #' get_all_external_hrf_functions()
 get_all_external_hrf_functions <- function() {
-  spec_classes <- list_external_hrfspecs()
-  if (length(spec_classes) == 0) {
-    return(character(0))
-  }
-
-  unique(unlist(lapply(spec_classes, get_external_hrfspec_functions)))
+  funcs <- unlist(lapply(list_external_hrfspecs(), get_external_hrfspec_functions))
+  unique(as.character(funcs))
 }

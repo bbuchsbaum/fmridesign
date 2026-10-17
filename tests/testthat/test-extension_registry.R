@@ -294,6 +294,24 @@ test_that("get_all_external_hrf_functions() aggregates from all registrations", 
   expect_true("hrf_n1" %in% all_funcs)
 })
 
+test_that("get_all_external_hrf_functions() always returns a character vector", {
+  # Regression: registrations without formula functions gave NULL.
+  reg <- fmridesign:::.fmridesign_extensions
+  saved <- as.list(reg)
+  rm(list = ls(reg), envir = reg)
+  withr::defer({
+    rm(list = ls(reg), envir = reg)
+    list2env(saved, envir = reg)
+  })
+
+  expect_identical(get_all_external_hrf_functions(), character(0))
+  register_hrfspec_extension(spec_class = "test_hrfspec_Q", package = "testPkg")
+  expect_identical(get_all_external_hrf_functions(), character(0))
+  register_hrfspec_extension(spec_class = "test_hrfspec_R", package = "testPkg",
+                             formula_functions = c("f_r", "f_r"))
+  expect_identical(get_all_external_hrf_functions(), "f_r")
+})
+
 test_that("get_all_external_hrf_functions() returns unique values", {
   local_clean_registry(c("test_hrfspec_O", "test_hrfspec_P"))
 
