@@ -391,35 +391,20 @@ test_that("make_hrf() applies lag", {
   expect_true(inherits(hrf_lagged, "HRF"))
 })
 
-test_that("fmrihrf metadata warning compatibility handler is narrowly scoped", {
-  expect_no_warning(
-    fmridesign:::.without_fmrihrf_metadata_warning(
-      warning(
-        "Parameters width, normalize are not arguments to function decorated and will be ignored",
-        call. = FALSE
-      ),
-      c("width", "normalize")
-    )
+test_that("lagged bases and HRF generators construct without warnings", {
+  # fmrihrf >= 0.4.0 keeps decorator metadata out of argument validation, so
+  # these paths must not warn about "Parameters ... are not arguments".
+  for (basis in list("spmg1", "gamma", "gaussian", fmrihrf::HRF_GAMMA)) {
+    expect_no_warning(fmridesign:::make_hrf(basis, lag = 2))
+  }
+  ev <- data.frame(
+    onset = c(0, 10), duration = c(0, 3),
+    sub_times = I(list(c(0, 1), c(0, 2))),
+    sub_weights = I(list(c(0.5, 0.5), c(0.3, 0.7)))
   )
-
-  expect_warning(
-    fmridesign:::.without_fmrihrf_metadata_warning(
-      warning("an unrelated warning", call. = FALSE),
-      c("width", "normalize")
-    ),
-    "an unrelated warning"
-  )
-
-  expect_warning(
-    fmridesign:::.without_fmrihrf_metadata_warning(
-      warning(
-        "Parameters width are not arguments to function decorated and will be ignored",
-        call. = FALSE
-      ),
-      c("width", "normalize")
-    ),
-    "Parameters width"
-  )
+  expect_no_warning(boxcar_hrf_gen()(ev))
+  expect_no_warning(duration_hrf_gen(fmrihrf::HRF_GAMMA)(ev))
+  expect_no_warning(weighted_hrf_gen(relative = TRUE)(ev))
 })
 
 test_that("make_hrf() from HRF object", {
