@@ -55,6 +55,11 @@ validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
     }
   }
 
+  # Helper: a t-contrast vector becomes a one-column matrix
+  as_weight_matrix <- function(w) {
+    if (is.null(dim(w))) matrix(as.numeric(w), ncol = 1) else as.matrix(w)
+  }
+
   # Helper: build a named list of contrast matrices to validate
   gather_from_model <- function(model) {
     out <- list()
@@ -93,14 +98,9 @@ validate_contrasts <- function(x, weights = NULL, tol = 1e-8) {
       stop("validate_contrasts: when 'x' is a matrix, 'weights' must be provided.")
     }
   } else if (is.list(weights)) {
-    wlist <- weights
+    wlist <- lapply(weights, as_weight_matrix)
   } else if (is.numeric(weights)) {
-    # vector or matrix
-    if (is.null(dim(weights))) {
-      wlist[["contrast"]] <- matrix(as.numeric(weights), ncol = 1)
-    } else {
-      wlist[["contrast"]] <- as.matrix(weights)
-    }
+    wlist[["contrast"]] <- as_weight_matrix(weights)
   } else {
     stop("validate_contrasts: 'weights' must be a numeric vector, matrix, or list of such.")
   }
