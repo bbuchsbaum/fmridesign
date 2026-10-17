@@ -112,6 +112,17 @@ test_that("hrf() with contrast_set stores named list", {
   expect_true("diff" %in% names(spec$contrasts))
 })
 
+test_that("hrf() names unnamed contrast lists and validates their elements", {
+  c1 <- pair_contrast(~ cond == "A", ~ cond == "B", name = "AvB")
+  c2 <- c1
+  c2$name <- NULL
+  expect_named(hrf(cond, contrasts = list(c1, c2))$contrasts, c("AvB", "contrast2"))
+  expect_named(hrf(cond, contrasts = contrast_set(c1, c2))$contrasts, c("AvB", "contrast2"))
+  expect_named(hrf(cond, contrasts = list(first = c1))$contrasts, "first")
+  expect_error(hrf(cond, contrasts = list(c1, 1)), "all elements must be contrast_spec")
+  expect_error(hrf(cond, contrasts = list(c1, c1)), "unique names")
+})
+
 test_that("hrf() errors on invalid contrasts argument", {
   expect_error(hrf(cond, contrasts = "not_a_contrast"), "contrast_spec")
 })
@@ -127,6 +138,13 @@ test_that("hrf() with hrf_fun stores function", {
 test_that("hrf() with hrf_fun as formula stores formula", {
   spec <- hrf(cond, hrf_fun = ~hrf_col)
   expect_true(rlang::is_formula(spec$hrf_fun))
+})
+
+test_that("hrf() warns when hrf_fun overrides a non-default basis", {
+  gen <- boxcar_hrf_gen()
+  expect_warning(hrf(cond, basis = "spmg3", hrf_fun = gen), "takes precedence")
+  expect_warning(hrf(cond, basis = fmrihrf::HRF_GAMMA, hrf_fun = gen), "takes precedence")
+  expect_no_warning(hrf(cond, basis = "spmg1", hrf_fun = gen))
 })
 
 test_that("hrf() errors on invalid hrf_fun type", {
@@ -391,35 +409,86 @@ test_that("make_hrf() applies lag", {
   expect_true(inherits(hrf_lagged, "HRF"))
 })
 
-test_that("fmrihrf metadata warning compatibility handler is narrowly scoped", {
-  expect_no_warning(
-    fmridesign:::.without_fmrihrf_metadata_warning(
-      warning(
-        "Parameters width, normalize are not arguments to function decorated and will be ignored",
-        call. = FALSE
-      ),
-      c("width", "normalize")
-    )
+test_that("lagged bases and HRF generators construct without warnings", {
+  # fmrihrf >= 0.4.0 keeps decorator metadata out of argument validation, so
+  # these paths must not warn about "Parameters ... are not arguments".
+  for (basis in list("spmg1", "gamma", "gaussian", fmrihrf::HRF_GAMMA)) {
+    expect_no_warning(fmridesign:::make_hrf(basis, lag = 2))
+  }
+  ev <- data.frame(
+    onset = c(0, 10), duration = c(0, 3),
+    sub_times = I(list(c(0, 1), c(0, 2))),
+    sub_weights = I(list(c(0.5, 0.5), c(0.3, 0.7)))
   )
+  expect_no_warning(boxcar_hrf_gen()(ev))
+  expect_no_warning(duration_hrf_gen(fmrihrf::HRF_GAMMA)(ev))
+  expect_no_warning(weighted_hrf_gen(relative = TRUE)(ev))
+})
 
-  expect_warning(
-    fmridesign:::.without_fmrihrf_metadata_warning(
-      warning("an unrelated warning", call. = FALSE),
-      c("width", "normalize")
-    ),
-    "an unrelated warning"
-  )
+test_that("make_hrf() resolves basis names to fmridesign's basis sets", {
+  t <- seq(0, 30, by = 0.5)
+  # Fixed bases are fmrihrf's constants, whatever nbasis is
+  expect_identical(fmridesign:::make_hrf("spmg3", lag = 0, nbasis = 7), fmrihrf::HRF_SPMG3)
+  # Resizable bases reuse the constant only at its own size
+  expect_identical(fmridesign:::make_hrf("bspline", lag = 0, nbasis = 5), fmrihrf::HRF_BSPLINE)
+  expect_identical(fmridesign:::make_hrf("fir", lag = 0, nbasis = 12), fmrihrf::HRF_FIR)
 
-  expect_warning(
-    fmridesign:::.without_fmrihrf_metadata_warning(
-      warning(
-        "Parameters width are not arguments to function decorated and will be ignored",
-        call. = FALSE
-      ),
-      c("width", "normalize")
-    ),
-    "Parameters width"
-  )
+  bs6 <- fmridesign:::make_hrf("bspline", lag = 0, nbasis = 6)
+  expect_equal(attr(bs6, "name"), "bspline")
+  expect_equal(fmrihrf::nbasis(bs6), 6L)
+  expect_equal(bs6(t), fmrihrf::hrf_bspline(t, span = 24, N = 6, degree = 3))
+
+  fir6 <- fmridesign:::make_hrf("fir", lag = 0, nbasis = 6)
+  expect_equal(attr(fir6, "name"), "fir")
+  expect_equal(fmrihrf::nbasis(fir6), 6L)
+
+  four <- fmridesign:::make_hrf("fourier", lag = 2, nbasis = 4)
+  expect_equal(fmrihrf::nbasis(four), 4L)
+  expect_equal(four(t), fmrihrf::hrf_fourier(t - 2, span = 24, nbasis = 4))
+})
+
+test_that("basis = 'fir' with a non-default nbasis is a true FIR basis", {
+  # Regression: a resized "fir" used to be a degree-1 B-spline (tent) basis.
+  fir6 <- fmridesign:::make_hrf("fir", lag = 0, nbasis = 6)
+  t <- c(0, 1, 3.9, 4, 10, 23.9, 24, 30)
+  expect_equal(fir6(t), fmrihrf::hrf_fir_generator(nbasis = 6, span = 24)(t))
+  # Every time in [0, 24) lies in exactly one 4-second bin
+  expect_equal(rowSums(fir6(t)), c(1, 1, 1, 1, 1, 1, 0, 0))
+  expect_equal(which(fir6(10)[1, ] == 1), 3L)
+  expect_s3_class(fir6, "FIR_HRF")
+
+  spec <- hrf(cond, basis = "fir", nbasis = 10)
+  expect_equal(spec$hrf(c(1, 3)), fmrihrf::hrf_fir_generator(nbasis = 10, span = 24)(c(1, 3)))
+})
+
+test_that("basis sets use their standard size when nbasis is omitted", {
+  # Regression: hrf()'s nbasis = 1 default used to give a 1-column "fir" or
+  # "fourier" basis and a "bspline" basis that failed to evaluate.
+  expect_identical(hrf(cond, basis = "fir")$hrf, fmrihrf::HRF_FIR)
+  expect_identical(hrf(cond, basis = "bspline")$hrf, fmrihrf::HRF_BSPLINE)
+  expect_equal(nbasis(hrf(cond, basis = "fourier")), 5L)
+  expect_equal(dim(hrf(cond, basis = "bspline")$hrf(0:30)), c(31L, 5L))
+  expect_equal(nbasis(trialwise(basis = "fir")), 12L)
+  rms <- abs(sin(seq(0, 20, by = 0.5)))
+  expect_equal(nbasis(feature(rms, dt = 0.5, basis = "fir")$hrf), 12L)
+
+  # An explicit nbasis is still honoured, and fixed bases ignore it
+  expect_equal(nbasis(hrf(cond, basis = "fir", nbasis = 1)), 1L)
+  expect_equal(nbasis(trialwise(basis = "fir", nbasis = 4)), 4L)
+  expect_equal(nbasis(hrf(cond, basis = "spmg3")), 3L)
+  expect_identical(fmridesign:::make_hrf("spmg1", lag = 0), fmrihrf::HRF_SPMG1)
+})
+
+test_that("hrf() accepts the documented basis names 'bs' and 'tent'", {
+  # Regression: both were documented but rejected as unknown names.
+  t <- seq(0, 30, by = 0.5)
+  expect_identical(hrf(cond, basis = "bs")$hrf, fmrihrf::HRF_BSPLINE)
+  expect_equal(hrf(cond, basis = "bs", nbasis = 6)$hrf(t),
+               hrf(cond, basis = "bspline", nbasis = 6)$hrf(t))
+  tent4 <- hrf(cond, basis = "tent", nbasis = 4)$hrf
+  expect_equal(nbasis(tent4), 4L)
+  expect_equal(tent4(t), fmrihrf::hrf_tent_generator(nbasis = 4, span = 24)(t))
+  expect_equal(nbasis(hrf(cond, basis = "tent")), 5L)
 })
 
 test_that("make_hrf() from HRF object", {

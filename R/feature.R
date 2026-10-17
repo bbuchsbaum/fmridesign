@@ -72,30 +72,21 @@ feature <- function(x,
     stop("`feature()` requires `x` (a numeric vector, matrix, or per-run list).",
          call. = FALSE)
   }
-  if (!is.null(dt) && !is.null(times)) {
+  if (is.null(dt) == is.null(times)) {
     stop("Supply exactly one of `dt` or `times`.", call. = FALSE)
   }
-  if (is.null(dt) && is.null(times)) {
-    stop("Supply exactly one of `dt` or `times`.", call. = FALSE)
+  is_finite_scalar <- function(v) is.numeric(v) && length(v) == 1L && is.finite(v)
+  if (!is.null(dt) && !(is_finite_scalar(dt) && dt > 0)) {
+    stop("`dt` must be a single positive finite number.", call. = FALSE)
   }
-  if (!is.null(dt)) {
-    if (!is.numeric(dt) || length(dt) != 1L || is.na(dt) || !is.finite(dt) ||
-        dt <= 0) {
-      stop("`dt` must be a single positive finite number.", call. = FALSE)
-    }
-  }
-  if (!is.numeric(start) || length(start) != 1L || is.na(start) ||
-      !is.finite(start) || start < 0) {
+  if (!(is_finite_scalar(start) && start >= 0)) {
     stop("`start` must be a single non-negative finite number.", call. = FALSE)
   }
   if (!is.logical(center) || length(center) != 1L || is.na(center)) {
     stop("`center` must be a single logical value.", call. = FALSE)
   }
-  if (!is.null(precision)) {
-    if (!is.numeric(precision) || length(precision) != 1L ||
-        is.na(precision) || !is.finite(precision) || precision <= 0) {
-      stop("`precision` must be a single positive finite number.", call. = FALSE)
-    }
+  if (!is.null(precision) && !(is_finite_scalar(precision) && precision > 0)) {
+    stop("`precision` must be a single positive finite number.", call. = FALSE)
   }
 
   final_id <- id %||% name
@@ -111,7 +102,7 @@ feature <- function(x,
     final_id <- sanitize(final_id, allow_dot = FALSE)
   }
 
-  hrf_obj <- make_hrf(basis, lag, nbasis = nbasis)
+  hrf_obj <- make_hrf(basis, lag, nbasis = if (missing(nbasis)) NULL else nbasis)
 
   ret <- list(
     name = final_id,
@@ -505,9 +496,6 @@ construct.featurespec <- function(x, model_spec, ...) {
   cond_per_col <- rep(base_cnames, each = nb)
   basis_per_col <- rep(seq_len(nb), times = n_cond)
   basis_name <- if (!is.null(hrf)) class(hrf)[[1L]] else NA_character_
-  if (length(basis_name) == 0L) {
-    basis_name <- NA_character_
-  }
 
   .make_col_metadata(
     name = colnames_final,

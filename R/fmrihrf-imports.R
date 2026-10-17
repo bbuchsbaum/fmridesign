@@ -1,28 +1,10 @@
-# Auto-generated file for fmrihrf imports
-
-#' fmrihrf reexports
-#'
-#' Re-exported functions from the fmrihrf package for convenience.
-#' See the upstream fmrihrf documentation for details on usage and return
-#' values of each function.
-#'
-#' @name fmrihrf-reexports
-#' @return See the corresponding fmrihrf function documentation.
-NULL
-
+# fmrihrf is imported wholesale (explicit importFrom() lines would be
+# redundant); package code calls it as fmrihrf::name().
 #' @import fmrihrf
-#' @importFrom fmrihrf HRF as_hrf gen_hrf bind_basis
-#' @importFrom fmrihrf hrf_spmg1 hrf_gamma hrf_gaussian
-#' @importFrom fmrihrf hrf_bspline hrf_mexhat hrf_sine hrf_inv_logit hrf_half_cosine
-#' @importFrom fmrihrf lag_hrf block_hrf normalise_hrf
-#' @importFrom fmrihrf regressor feature_regressor sampling_frame
-#' @importFrom fmrihrf evaluate nbasis penalty_matrix reconstruction_matrix
-#' @importFrom fmrihrf blocklens blockids samples global_onsets
-#' @importFrom fmrihrf HRF_SPMG1 HRF_SPMG2 HRF_SPMG3 HRF_GAMMA HRF_GAUSSIAN HRF_BSPLINE HRF_FIR
 NULL
 
-# Re-export commonly used functions for backward compatibility
-# Note: We don't re-export generics that conflict with fmridesign's own generics
+# Re-export commonly used functions for backward compatibility. Generics shared
+# with fmrihrf are re-exported in R/fmrihrf-reexports.R.
 #' @export
 fmrihrf::HRF
 
