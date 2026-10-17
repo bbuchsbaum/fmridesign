@@ -3,7 +3,6 @@
 #' @importFrom tibble tibble
 #' @importFrom rlang is_formula f_rhs f_lhs f_env eval_tidy syms sym is_list is_call call_name call_args %||% empty_env %||% is_expression as_label expr quo_get_expr env_bury
 #' @import assertthat
-#' @importFrom purrr map map_dfr
 #' @importFrom cli cli_progress_bar cli_progress_update cli_progress_done
 #' @importFrom stats setNames approxfun quantile dnorm dgamma poly model.matrix terms reformulate
 #' @importFrom utils head combn modifyList

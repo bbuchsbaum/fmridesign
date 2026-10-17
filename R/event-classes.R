@@ -199,9 +199,6 @@ event_variable <- function(vec, name, onsets, blockids = 1, durations = 0, subse
   if (!is.numeric(vec) || !(is.vector(vec) || length(dim(vec)) <= 1)) {
       stop("`vec` must be a numeric vector.")
   }
-  if (is.factor(vec)) {
-    stop("Cannot create an event_variable from a factor, use 'event_factor'.")
-  }
 
   # Call the unified internal constructor
   event(value = vec, 

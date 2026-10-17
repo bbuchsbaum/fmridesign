@@ -985,7 +985,6 @@ regressors.event_term <- function(x, hrf, sampling_frame, summate = FALSE, drop.
 #' @rdname convolve
 #' @export
 #' @importFrom tibble as_tibble
-#' @importFrom dplyr %>% group_by select do ungroup
 #' @examples
 #' term <- event_term(
 #'   list(condition = factor(c("A", "B", "A"))),

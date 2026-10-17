@@ -564,7 +564,7 @@ Fcontrasts.event_model <- function(x, ...) {
     fcon_local <- Fcontrasts(term_i)
     
     if (!is.null(fcon_local) && length(fcon_local) > 0) {
-        ret_mapped <- lapply(names(fcon_local), function(con_name) {
+        ret_mapped <- lapply(stats::setNames(nm = names(fcon_local)), function(con_name) {
             cw <- .expand_fcontrast_basis(fcon_local[[con_name]], term_i)
             emb <- .embed_term_weights(cw, colnames(x$design_matrix),
                                        term_indices_vec, tnames[i],
@@ -576,17 +576,12 @@ Fcontrasts.event_model <- function(x, ...) {
             out
         })
       
-        # Filter out NULLs from failed mappings
-        ret_mapped <- ret_mapped[!sapply(ret_mapped, is.null)]
-        
-        # Set names based on original contrast names, prefixed with term name
+        # Drop failed mappings; name the rest "<term>#<contrast>"
+        ret_mapped <- ret_mapped[!vapply(ret_mapped, is.null, logical(1))]
         if (length(ret_mapped) > 0) {
-            prefix <- tnames[i]
-            # Check if sapply(fcon_local, non_null) is necessary or exists
-            valid_local_cons <- !sapply(fcon_local, is.null) # Simple check for non-NULL
-            names(ret_mapped) <- paste0(prefix, "#", names(fcon_local)[valid_local_cons]) 
+            names(ret_mapped) <- paste0(tnames[i], "#", names(ret_mapped))
         }
-         ret_mapped
+        ret_mapped
          
     } else { # No Fcontrasts for this term
         NULL
