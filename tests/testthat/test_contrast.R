@@ -370,6 +370,41 @@ test_that("can form formula contrast with two factor terms and one continuous co
   
 })
 
+test_that("cell-based contrasts map onto factor-by-modulator columns", {
+  set.seed(5)
+  des <- data.frame(onset = seq(2, by = 6, length.out = 12), run = 1,
+                    cond = factor(rep(c("A", "B", "C"), 4)), RT = rnorm(12))
+  sframe <- fmrihrf::sampling_frame(blocklens = 100, TR = 2)
+  cset <- contrast_set(
+    pair_contrast(~ cond == "A", ~ cond == "B", name = "ab"),
+    unit_contrast(~ cond == "C", name = "c"),
+    oneway_contrast(~ cond, name = "main"),
+    poly_contrast(~ cond, name = "lin", degree = 1,
+                  value_map = list(A = 1, B = 2, C = 3)),
+    contrast(~ A - C, name = "ac")
+  )
+  ref <- event_model(onset ~ hrf(cond, contrasts = cset), data = des,
+                     block = ~run, sampling_frame = sframe)
+  pm <- event_model(onset ~ hrf(cond, RT, contrasts = cset), data = des,
+                    block = ~run, sampling_frame = sframe)
+  expect_silent(cw_pm <- contrast_weights(pm))
+  cw_ref <- contrast_weights(ref)
+  expect_equal(unname(cw_pm[[grep("#ab$", names(cw_pm))]]$offset_weights[, 1]), c(1, -1, 0))
+  expect_equal(unname(cw_pm[[grep("#ac$", names(cw_pm))]]$offset_weights[, 1]), c(1, 0, -1))
+  # Same cell weights as for the unmodulated term, on the modulator columns
+  for (i in seq_along(cw_ref)) {
+    expect_equal(unname(cw_pm[[i]]$offset_weights), unname(cw_ref[[i]]$offset_weights),
+                 info = names(cw_ref)[i])
+  }
+  expect_equal(rownames(cw_pm[[1]]$weights), conditions(terms(pm)[[1]]))
+
+  # Multi-basis: replicated on every basis column of the modulated regressors
+  pm2 <- event_model(onset ~ hrf(cond, RT, basis = "spmg2", contrasts = cset),
+                     data = des, block = ~run, sampling_frame = sframe)
+  ab2 <- contrast_weights(pm2)[[1]]
+  expect_equal(unname(ab2$offset_weights[, 1]), c(1, 1, -1, -1, 0, 0))
+})
+
 test_that("formula contrasts work on continuous terms with several variables", {
   set.seed(11)
   des <- data.frame(onset = seq(2, by = 6, length.out = 12), run = 1,

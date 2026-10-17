@@ -928,10 +928,12 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, b
 #' `.contrast_where_cells()` restricts a term's cells to the spec's `where`
 #' subset (and to the optional logical `select`); an error while evaluating
 #' `where` becomes a warning and selects no cells.
-#' `.contrast_base_condnames()` returns the term's base (pre-basis) condition
-#' names, or `character(0)` with a warning when they are unavailable.
+#' `.contrast_cell_names()` returns the tags of all of the term's cells (for a
+#' categorical term, its base condition names; see `.condition_cell_tags()`),
+#' or `character(0)` with a warning when they are unavailable.
 #' `.new_contrast()` assembles the standard contrast object;
-#' `.expanded_contrast()` first replicates base-condition weights across the
+#' `.expanded_contrast()` first moves cell-row weights onto the term's base
+#' conditions (`.cell_rows_to_conditions()`) and replicates them across the
 #' basis functions of a multi-basis HRF (see `.expand_and_filter_basis()`).
 #' `.cell_contrast_class()` is the class of the factorial (F-type) results.
 #' @keywords internal
@@ -953,13 +955,13 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, b
   relevant_cells
 }
 
-.contrast_base_condnames <- function(x, term) {
+.contrast_cell_names <- function(x, term) {
   condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = FALSE), silent = TRUE)
   if (inherits(condnames, "try-error") || length(condnames) == 0) {
     warning(paste("Contrast '", x$name, "': Failed to get condition names for term '", term$varname, "'."), call. = FALSE)
-    condnames <- character(0)
+    return(character(0))
   }
-  condnames
+  .term_cell_names(term, condnames)
 }
 
 .new_contrast <- function(x, term, weights, condnames, class) {
@@ -970,10 +972,70 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, b
 
 .expanded_contrast <- function(x, term, weights, class,
                                basis_spec = NULL, basis_weights = NULL) {
-  expanded <- .expand_and_filter_basis(weights, term, x$name,
+  expanded <- .expand_and_filter_basis(.cell_rows_to_conditions(weights, term),
+                                       term, x$name,
                                        basis_spec = basis_spec,
                                        basis_weights = basis_weights)
   .new_contrast(x, term, expanded$weights, expanded$condnames, class)
+}
+
+#' Cell tag of each base condition of a term
+#'
+#' Cell-based contrasts assign one weight per cell of the term's categorical
+#' variables. In a term that also has continuous variables (a parametric
+#' modulator, e.g. `hrf(cond, RT)`), the base conditions (`cond.A_RT`) are the
+#' cells crossed with the continuous columns, so their names differ from the
+#' cell tags (`cond.A`). This rebuilds the condition grid the way
+#' `conditions()` does and returns, for each of `condnames`
+#' (`conditions(term, drop.empty = FALSE)`), the tag of its cell. For a purely
+#' categorical or purely continuous term, or if the grid does not reproduce
+#' `condnames`, `condnames` is returned unchanged.
+#' @keywords internal
+#' @noRd
+.condition_cell_tags <- function(term, condnames) {
+  evs <- term$events
+  if (!is.list(evs) || !length(evs)) return(condnames)
+  tryCatch({
+    is_cat <- vapply(evs, is_categorical, logical(1))
+    if (all(is_cat) || !any(is_cat)) return(condnames)
+    tokens <- lapply(evs, function(ev) {
+      if (is_categorical(ev)) level_token(ev$varname, levels(ev)) else columns(ev)
+    })
+    used <- lengths(tokens) > 0
+    grid <- expand.grid(tokens[used], stringsAsFactors = FALSE, KEEP.OUT.ATTRS = FALSE)
+    full <- if (nrow(grid)) apply(grid, 1, make_cond_tag) else character(0)
+    if (!identical(unname(full), unname(as.character(condnames))) || !any(is_cat[used])) {
+      return(condnames)
+    }
+    unname(apply(grid[, is_cat[used], drop = FALSE], 1, make_cond_tag))
+  }, error = function(e) condnames)
+}
+
+# The distinct cell tags of `condnames` (`condnames` itself when they coincide)
+.term_cell_names <- function(term, condnames) {
+  tags <- .condition_cell_tags(term, condnames)
+  if (identical(tags, condnames)) condnames else unique(tags)
+}
+
+#' Move cell-row weights onto a term's base conditions
+#'
+#' `weights` has one row per cell tag; each base condition of the term takes
+#' the row of its cell (see `.condition_cell_tags()`), so a modulated term gets
+#' the cell weights on its modulator columns. Conditions whose cell has no row
+#' are dropped. A no-op for terms whose conditions are their cells.
+#' @keywords internal
+#' @noRd
+.cell_rows_to_conditions <- function(weights, term) {
+  if (!nrow(weights) || is.null(rownames(weights))) return(weights)
+  condnames <- try(conditions(term, drop.empty = FALSE, expand_basis = FALSE), silent = TRUE)
+  if (inherits(condnames, "try-error") || !length(condnames)) return(weights)
+  cell_tags <- .condition_cell_tags(term, condnames)
+  if (identical(cell_tags, condnames)) return(weights)
+  idx <- match(cell_tags, rownames(weights))
+  keep <- !is.na(idx)
+  out <- weights[idx[keep], , drop = FALSE]
+  rownames(out) <- condnames[keep]
+  out
 }
 
 .cell_contrast_class <- function(type, weights) {
@@ -1021,8 +1083,8 @@ poly_contrast <- function(A, name, where = NULL, degree = 1, value_map = NULL, b
 #' @rdname contrast_weights
 #' @export
 contrast_weights.unit_contrast_spec <- function(x, term,...) {
-  # All possible condition names (pre-basis expansion)
-  all_condnames <- .contrast_base_condnames(x, term)
+  # All possible cells (for a categorical term, its pre-basis condition names)
+  all_condnames <- .contrast_cell_names(x, term)
 
   weights_out <- matrix(0, nrow = length(all_condnames), ncol = 1)
   rownames(weights_out) <- all_condnames
@@ -1178,7 +1240,7 @@ generate_interaction_contrast <- function(relevant_cells, factors) {
 #' @rdname contrast_weights
 #' @export
 contrast_weights.poly_contrast_spec <- function(x, term,...) {
-  all_condnames <- .contrast_base_condnames(x, term)
+  all_condnames <- .contrast_cell_names(x, term)
 
   weights_out <- matrix(0, nrow = length(all_condnames), ncol = x$degree)
   rownames(weights_out) <- all_condnames
@@ -1246,13 +1308,15 @@ contrast_weights.pair_contrast_spec <- function(x, term,...) {
   # Get cells (only categorical combinations) for evaluating formulas A & B
   term_cells <- cells(term)
 
-  # Base condition names (pre-expansion) are the targets for the weights;
-  # basis expansion / filtering happens once the base mask is built.
+  # The term's cells (for a categorical term, its pre-basis condition names)
+  # are the targets for the weights; mapping onto the conditions and basis
+  # expansion / filtering happen once the base mask is built.
   base_condnames_all <- try(conditions(term, drop.empty=FALSE, expand_basis=FALSE), silent=TRUE)
   if (inherits(base_condnames_all, "try-error") || length(base_condnames_all) == 0) {
       warning(paste("Contrast '", x$name, "': Failed to get base condition names for term '", term$varname, "'. Skipping."), call. = FALSE)
       return(NULL) # Return NULL if cannot proceed
   }
+  base_condnames_all <- .term_cell_names(term, base_condnames_all)
   
   if (nrow(term_cells) == 0) {
       # If term_cells is empty, we can still proceed if base_condnames_all exist,
