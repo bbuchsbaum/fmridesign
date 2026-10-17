@@ -91,7 +91,10 @@ test_that("baseline_model design_matrix with blockid has unique columns", {
 })
 
 test_that("terms without block structure refuse blockid subsetting", {
+  # No reliance on tibble's deprecated compatibility name repair
+  withr::local_options(lifecycle_verbosity = "error")
   mt <- fmridesign:::matrix_term("m", matrix(1, 4, 2))
   expect_equal(dim(design_matrix(mt)), c(4L, 2L))
+  expect_named(design_matrix(mt), c("V1", "V2"))
   expect_error(design_matrix(mt, blockid = 1), "no block structure")
 })

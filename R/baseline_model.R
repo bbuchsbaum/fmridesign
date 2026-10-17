@@ -947,7 +947,9 @@ nuisance <- function(x) {
 # @keywords internal
 matrix_term <- function(varname, mat) {
   stopifnot(is.matrix(mat))
-  ret <- list(varname = varname, design_matrix = suppressMessages(tibble::as_tibble(mat)))
+  if (is.null(colnames(mat))) colnames(mat) <- paste0("V", seq_len(ncol(mat)))
+  ret <- list(varname = varname,
+              design_matrix = suppressMessages(tibble::as_tibble(mat, .name_repair = "unique")))
   class(ret) <- c("baseline_term", "matrix_term", "fmri_term", "list")
   ret
 }
