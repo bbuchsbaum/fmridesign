@@ -687,10 +687,9 @@ Fcontrasts.event_model <- function(x, ...) {
 #' @keywords internal
 #' @noRd
 .expand_fcontrast_basis <- function(cw, term) {
-  hrfspec <- attr(term, "hrfspec")
-  if (is.null(hrfspec) || is.null(hrfspec$hrf) || !is.matrix(cw)) return(cw)
-  nb <- tryCatch(as.integer(fmrihrf::nbasis(hrfspec$hrf)), error = function(e) 1L)
-  if (length(nb) != 1L || is.na(nb) || nb <= 1L) return(cw)
+  if (!is.matrix(cw)) return(cw)
+  nb <- .term_nbasis(term)
+  if (nb <= 1L) return(cw)
   rn <- rownames(cw)
   if (is.null(rn) || any(grepl("_b[0-9]+$", rn))) return(cw)
 

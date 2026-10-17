@@ -354,7 +354,7 @@ cells.convolved_term <- function(x, ...) {
 conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
                                   style = c("canonical", "display"), ...) {
   style <- match.arg(style)
-  nb <- if (expand_basis) .hrfspec_nbasis(attr(x, "hrfspec")) else 1L
+  nb <- if (expand_basis) .term_nbasis(x) else 1L
 
   # --- Shortcut: a single one-column continuous event is its column token
   # (returned as is, attributes included)
@@ -403,13 +403,6 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
   as.vector(add_basis(cond_tags, nb))
 }
 
-#' Number of HRF basis functions declared by an hrfspec (1 when absent).
-#' @keywords internal
-#' @noRd
-.hrfspec_nbasis <- function(hrfspec) {
-  if (!is.null(hrfspec) && !is.null(hrfspec$hrf)) fmrihrf::nbasis(hrfspec$hrf) else 1L
-}
-
 # conditions() always returns the full grid of factor levels. For names,
 # drop.empty = TRUE keeps only the cells that have events, i.e. those that
 # get a design-matrix column; the event-level design matrix of the term
@@ -430,7 +423,7 @@ conditions.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
   keep <- if (isTRUE(drop.empty)) .present_cells(x) else rep(TRUE, length(out))
   out <- out[keep]
   if (isTRUE(expand_basis)) {
-    out <- add_basis(out, .hrfspec_nbasis(attr(x, "hrfspec")))
+    out <- add_basis(out, .term_nbasis(x))
   }
   out
 }
@@ -457,7 +450,7 @@ condition_map.event_term <- function(x, drop.empty = TRUE, expand_basis = FALSE,
 }
 
 #' @noRd
-parent_terms.event_term <- function(x) unlist(lapply(x$events, function(ev) ev$varname))
+parent_terms <- function(x) unlist(lapply(x$events, function(ev) ev$varname))
 
 ## ============================================================================
 ## Section 7: Continuous/Categorical Checks and Elements Extraction
@@ -646,7 +639,8 @@ event_table.convolved_term <- function(x, ...) {
 #' @rdname fmrihrf-generics
 #' @export
 nbasis.convolved_term <- function(x, ...) {
-  .hrfspec_nbasis(x$hrfspec %||% attr(x, "hrfspec"))
+  hrf <- (x$hrfspec %||% attr(x, "hrfspec"))$hrf
+  if (is.null(hrf)) 1L else fmrihrf::nbasis(hrf)
 }
 
 #' @export
@@ -947,7 +941,8 @@ convolve_design <- function(hrf, dmat, globons, durations, summate = TRUE, hrf_l
       fmrihrf::regressor(onsets = numeric(0), hrf = ref_hrf, amplitude = 0)
     } else if (hrf_is_list) {
       # Per-onset HRFs: create individual regressors per event since
-      # fmrihrf::regressor does not accept a list of HRF objects
+      # (one regressor per event, summed after evaluation; this predates
+      # fmrihrf::regressor() accepting a list of HRFs and is kept as is)
       per_event_regs <- lapply(nonzero, function(k) {
         fmrihrf::regressor(
           onsets = globons[k],

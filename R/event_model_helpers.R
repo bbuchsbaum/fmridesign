@@ -10,16 +10,15 @@
 # Helper to recursively find and evaluate hrf/trialwise calls in formula RHS
 #' @keywords internal
 #' @noRd
-find_and_eval_hrf_calls <- function(expr, data, f_env) {
+find_and_eval_hrf_calls <- function(expr, data, f_env,
+                                    targets = c("hrf", "trialwise", "covariate", "feature",
+                                                get_all_external_hrf_functions())) {
   
   if (rlang::is_call(expr)) {
     fun_name <- rlang::call_name(expr)
     
-    # Get list of external HRF functions from registry
-    external_funcs <- get_all_external_hrf_functions()
-    
     # Base case: Found a target function call (built-in or external)
-    if (fun_name %in% c("hrf", "trialwise", "covariate", "feature", external_funcs)) {
+    if (fun_name %in% targets) {
       # Evaluate the call in the formula env, using data as a mask
       data_mask <- if (is.null(data)) list() else data
       eval_env <- rlang::env_bury(f_env %||% rlang::empty_env(), !!!data_mask)
@@ -39,7 +38,7 @@ find_and_eval_hrf_calls <- function(expr, data, f_env) {
     # Recursive case: Traverse arguments of other calls (like + or *)
     # Collect results from each argument and concatenate while preserving
     # list structure (so each hrfspec remains intact)
-    results_list <- lapply(rlang::call_args(expr), find_and_eval_hrf_calls, data, f_env)
+    results_list <- lapply(rlang::call_args(expr), find_and_eval_hrf_calls, data, f_env, targets)
     results <- do.call(c, results_list)
     return(results)
     
