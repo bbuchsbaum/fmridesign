@@ -118,7 +118,8 @@
 #' @param weights_mat Numeric matrix of weights (rows = conditions, cols = contrasts).
 #' @param term An event_term object with hrfspec attribute.
 #' @param basis_spec NULL (no filtering), integer vector (basis indices), or "all".
-#' @param basis_weights_spec NULL (equal weights), or numeric vector of weights for selected bases.
+#' @param basis_weights_spec NULL (equal weights), or numeric vector of weights for the
+#'   selected bases (all bases when `basis_spec` is NULL or "all").
 #' @param contrast_name Name of contrast (for error messages).
 #' @param expanded_condnames Character vector of expanded condition names (with _b## suffixes).
 #' @return List with:
@@ -132,8 +133,9 @@
   nbasis <- .term_nbasis(term)
   no_filter <- is.null(basis_spec) || identical(basis_spec, "all")
 
-  # Nothing to do without a multi-basis HRF or a basis selection
-  if (nbasis <= 1 || no_filter) {
+  # Nothing to do without a multi-basis HRF, or without a basis selection or
+  # basis weights
+  if (nbasis <= 1 || (no_filter && is.null(basis_weights_spec))) {
     if (nbasis <= 1 && !no_filter) {
       warning(sprintf("Contrast '%s': basis filtering requested but term has no multi-basis HRF (nbasis = %d). Ignoring basis filter.",
                       contrast_name, nbasis), call. = FALSE)
@@ -159,9 +161,13 @@
     }
   }
 
-  # Filter to keep only requested basis functions
-  filtered_condnames <- .filter_basis(expanded_condnames, basis = basis_spec,
-                                      nbasis = nbasis, contrast_name = contrast_name)
+  # Filter to keep only requested basis functions (all of them if none selected)
+  filtered_condnames <- if (no_filter) {
+    expanded_condnames
+  } else {
+    .filter_basis(expanded_condnames, basis = basis_spec,
+                  nbasis = nbasis, contrast_name = contrast_name)
+  }
 
   # Zero out weights for non-selected basis functions
   keep_mask <- rownames(weights_mat) %in% filtered_condnames
@@ -169,7 +175,7 @@
 
   # Apply basis_weights if specified
   if (!is.null(basis_weights_spec)) {
-    num_selected_bases <- length(basis_spec)
+    num_selected_bases <- if (no_filter) nbasis else length(basis_spec)
 
     # Validate length
     if (length(basis_weights_spec) != num_selected_bases) {
@@ -595,7 +601,8 @@ sliding_window_contrasts <- function(levels, facname, window_size = 2, where = N
 #'   Only relevant when the HRF uses multiple basis functions (e.g., bspline, FIR, Fourier).
 #'   Basis indices are 1-based (1 = first basis function, 2 = second, etc.).
 #' @param basis_weights NULL (default: equal weights), or a numeric vector of weights to apply
-#'   to the selected basis functions. Must have the same length as `basis` selection and will
+#'   to the selected basis functions. Must have one weight per selected basis function (all of
+#'   them when `basis` is NULL or `"all"`) and will
 #'   be normalized to sum to 1. Use this to emphasize specific temporal components (e.g.,
 #'   `c(.1, .2, .4, .2, .1)` for Gaussian-like weighting emphasizing the peak).
 #'
@@ -685,7 +692,8 @@ pair_contrast <- function(A, B, name, where = NULL, basis = NULL, basis_weights 
 #'   which basis function indices to include, or `"all"`. See \code{\link{pair_contrast}}
 #'   for details on basis filtering.
 #' @param basis_weights NULL (default: equal weights), or a numeric vector of weights to apply
-#'   to the selected basis functions. Must have the same length as `basis` selection and will
+#'   to the selected basis functions. Must have one weight per selected basis function (all of
+#'   them when `basis` is NULL or `"all"`) and will
 #'   be normalized to sum to 1. See \code{\link{pair_contrast}} for details on basis weighting.
 #' @return A oneway_contrast_spec object that can be used to generate contrast weights
 #' @examples
@@ -866,7 +874,8 @@ column_contrast <- function(pattern_A, pattern_B = NULL, name, where = NULL) {
 #'   which basis function indices to include, or `"all"`. See \code{\link{pair_contrast}}
 #'   for details on basis filtering.
 #' @param basis_weights NULL (default: equal weights), or a numeric vector of weights to apply
-#'   to the selected basis functions. Must have the same length as `basis` selection and will
+#'   to the selected basis functions. Must have one weight per selected basis function (all of
+#'   them when `basis` is NULL or `"all"`) and will
 #'   be normalized to sum to 1. See \code{\link{pair_contrast}} for details on basis weighting.
 #'
 #' @return A poly_contrast_spec object containing the specification for generating

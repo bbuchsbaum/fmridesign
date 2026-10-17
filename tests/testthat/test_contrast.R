@@ -897,6 +897,65 @@ test_that("basis_weights with basis = NULL (all bases)", {
   expect_true(any(grepl("_b05$", cw$condnames)))
 })
 
+test_that("basis_weights apply to every basis function when basis is NULL or 'all'", {
+  des <- data.frame(
+    onset = rep(seq(2, 58, by = 4), 2),
+    condition = rep(c("A", "B"), 15),
+    run = rep(1:2, each = 15)
+  )
+  sframe <- fmrihrf::sampling_frame(blocklens = c(50, 50), TR = 2)
+  espec <- event_model(onset ~ hrf(condition, basis = "bspline", nbasis = 5),
+                       data = des, block = ~run, sampling_frame = sframe)
+  term1 <- terms(espec)[[1]]
+  bw <- c(0.1, 0.2, 0.3, 0.25, 0.15)
+
+  cw <- contrast_weights(
+    pair_contrast(~ condition == "A", ~ condition == "B",
+                  basis_weights = bw, name = "A_vs_B_weighted"),
+    term1
+  )
+  rn <- rownames(cw$weights)
+  expect_equal(unname(cw$weights[grepl("condition\\.A_b", rn), 1]), bw)
+  expect_equal(unname(cw$weights[grepl("condition\\.B_b", rn), 1]), -bw)
+  expect_equal(sum(cw$weights), 0)
+
+  # Same as basis = "all" and as selecting all five bases explicitly
+  cw_all <- contrast_weights(
+    pair_contrast(~ condition == "A", ~ condition == "B", basis = "all",
+                  basis_weights = bw, name = "A_vs_B_weighted"),
+    term1
+  )
+  cw_sel <- contrast_weights(
+    pair_contrast(~ condition == "A", ~ condition == "B", basis = 1:5,
+                  basis_weights = bw, name = "A_vs_B_weighted"),
+    term1
+  )
+  expect_equal(cw_all$weights, cw$weights)
+  expect_equal(cw_sel$weights, cw$weights)
+
+  # Documented: c(1, 0, 0, 0, 0) isolates the first basis, like basis = 1
+  cw_first <- contrast_weights(
+    pair_contrast(~ condition == "A", ~ condition == "B",
+                  basis_weights = c(1, 0, 0, 0, 0), name = "first"),
+    term1
+  )
+  cw_b1 <- contrast_weights(
+    pair_contrast(~ condition == "A", ~ condition == "B", basis = 1, name = "first"),
+    term1
+  )
+  expect_equal(cw_first$weights, cw_b1$weights)
+
+  # One weight per basis function is required
+  expect_error(
+    contrast_weights(
+      pair_contrast(~ condition == "A", ~ condition == "B",
+                    basis_weights = c(0.5, 0.5), name = "bad"),
+      term1
+    ),
+    "basis_weights length \\(2\\) must match number of selected basis functions \\(5\\)"
+  )
+})
+
 test_that("basis_weights preserves sum-to-zero property", {
   des <- data.frame(
     onset = rep(seq(2, 58, by = 4), 2),

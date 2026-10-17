@@ -21,7 +21,8 @@ Only relevant when the HRF uses multiple basis functions (e.g., bspline, FIR, Fo
 Basis indices are 1-based (1 = first basis function, 2 = second, etc.).}
 
 \item{basis_weights}{NULL (default: equal weights), or a numeric vector of weights to apply
-to the selected basis functions. Must have the same length as \code{basis} selection and will
+to the selected basis functions. Must have one weight per selected basis function (all of
+them when \code{basis} is NULL or \code{"all"}) and will
 be normalized to sum to 1. Use this to emphasize specific temporal components (e.g.,
 \code{c(.1, .2, .4, .2, .1)} for Gaussian-like weighting emphasizing the peak).}
 }
