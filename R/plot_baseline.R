@@ -133,14 +133,19 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   long$facet <- factor(long$lane, levels = lane_levels)
   long$run_lab <- factor(paste("Run", long$run), levels = paste("Run", runs$run))
 
-  # Colours: drift bases get an ordered ramp keyed by basis index; other
-  # lanes use the categorical palette in column order, so a regressor keeps
-  # its colour in every run (and x/y/z match across motion lanes).
+  # Colours: the categorical palette in column order, so a regressor keeps
+  # its colour in every run (and x/y/z match across motion lanes). Past 7
+  # series, drift bases get an ordered ramp from dark indigo through blue and
+  # teal to green, keyed by basis index.
   long$colour <- NA_character_
   for (ln in lane_levels) {
     sel <- long$lane == ln
     keys <- unique(long$label[sel])
-    cmap <- if (all(long$term[sel] == "drift")) .fd_bl_ramp(keys) else .fd_colour_map(keys)
+    cmap <- if (all(long$term[sel] == "drift")) {
+      .fd_colour_map(keys, ramp = c("#1B2A5E", "#1F6FB2", "#3A9FA8", "#86B84F"))
+    } else {
+      .fd_colour_map(keys)
+    }
     long$colour[sel] <- cmap[long$label[sel]]
   }
 
@@ -348,19 +353,6 @@ plot.baseline_model <- function(x, term_name = NULL, title = NULL,
   rest <- lanes[!is_motion]
   before <- rest[rest %in% lanes[seq_len(first - 1L)]]
   c(before, intersect(motion, lanes), setdiff(rest, before))
-}
-
-# Colours for drift bases: the categorical palette in basis order while it
-# lasts (every basis clearly distinct), otherwise an ordered ramp from dark
-# indigo through blue and teal to green.
-.fd_bl_ramp <- function(keys) {
-  keys <- unique(as.character(keys))
-  n <- length(keys)
-  cols <- if (n <= length(.fd_cat)) .fd_cat[seq_len(n)] else {
-    grDevices::colorRampPalette(c("#1B2A5E", "#1F6FB2", "#3A9FA8", "#86B84F"),
-                                space = "Lab")(n)
-  }
-  stats::setNames(cols, keys)
 }
 
 # In-panel keys at the right edge of each lane, listed top-down in column

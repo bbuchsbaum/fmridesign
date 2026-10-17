@@ -70,21 +70,18 @@
   if (.fd_hm_unicode()) return(s)
   s <- gsub(.fd_u("{minus}"), "-", s, fixed = TRUE)
   s <- gsub(.fd_u("{ndash}"), "-", s, fixed = TRUE)
-  s <- gsub(intToUtf8(0x03C3L), "sigma", s, fixed = TRUE)
-  gsub(intToUtf8(0x2265L), ">=", s, fixed = TRUE)
+  s <- gsub(.fd_u("{sigma}"), "sigma", s, fixed = TRUE)
+  gsub(.fd_u("{ge}"), ">=", s, fixed = TRUE)
 }
 
+# Compact numbers with a true minus sign (also the legend tick labeller);
+# NA prints as "".
 .fd_hm_num <- function(x, digits = 2) {
   out <- .fd_hm_ascii(.fd_num(x, digits))
   out[is.na(x)] <- ""
   out
 }
 
-# Legend tick labels with a true minus sign.
-.fd_hm_tick_labels <- function(b) .fd_hm_num(b, 2)
-
-.fd_hm_ge <- function() intToUtf8(0x2265L)
-.fd_hm_pm <- function() intToUtf8(0x00B1L)
 .fd_hm_sep <- function() .fd_u(" {dot} ")
 
 # Correlations without the leading zero: ".28", "-.3".
@@ -135,11 +132,11 @@
 .fd_hm_fill_signed <- function(limit, name, limits = NULL, ...) {
   if (is.null(limits)) {
     return(.fd_scale_signed(limit = limit, name = name, guide = .fd_hm_bar(),
-                            na.value = .fd_ink$band, labels = .fd_hm_tick_labels, ...))
+                            na.value = .fd_ink$band, labels = .fd_hm_num, ...))
   }
   ggplot2::scale_fill_gradientn(colours = .fd_div, limits = limits, name = name,
                                 oob = .fd_squish, na.value = .fd_ink$band,
-                                labels = .fd_hm_tick_labels, guide = .fd_hm_bar(), ...)
+                                labels = .fd_hm_num, guide = .fd_hm_bar(), ...)
 }
 
 # Theme additions common to the heatmaps. The top axis carries no labels;
@@ -280,13 +277,6 @@ makeContent.fd_hm_spanner <- function(x) {
 # Diagnostics
 # ---------------------------------------------------------------------------
 
-# Columns whose peak abs value is tiny next to the largest in their term (or
-# zero): per-column rescaling would otherwise make them look healthy.
-.fd_hm_near_flat <- function(mx, term, rel = 0.05) {
-  ref <- stats::ave(mx, term, FUN = max)
-  mx < .Machine$double.eps | mx < rel * ref
-}
-
 # Variance inflation factors of the design columns after removing each run's
 # mean (i.e. with per-run intercepts in the model). VIF_j = 1 / (1 - R2_j),
 # where R2_j comes from regressing column j on all the others. Columns that
@@ -386,9 +376,11 @@ makeContent.fd_hm_spanner <- function(x) {
   if (scale == "column") {
     vals <- sweep(DM, 2, ifelse(mx < .Machine$double.eps, 1, mx), "/")
   }
-  flat <- .fd_hm_near_flat(mx, ci$term)
   term_max <- stats::ave(mx, ci$term, FUN = max)
   rel <- ifelse(term_max > 0, mx / term_max, 0)
+  # Near-flat: peak abs value tiny next to the largest in its term (or zero);
+  # per-column rescaling would otherwise make such columns look healthy.
+  flat <- mx < .Machine$double.eps | mx < 0.05 * term_max
 
   # Nuisance columns are drawn quieter so the block structure dominates.
   quiet <- is_baseline & ci$term == "nuisance"
@@ -454,7 +446,7 @@ makeContent.fd_hm_spanner <- function(x) {
     ggplot2::scale_fill_gradientn(
       colours = c("#FFFFFF", .fd_ink$text),
       limits = fill_limits %||% range(vals, na.rm = TRUE), name = fill_name,
-      oob = .fd_squish, na.value = .fd_ink$band, labels = .fd_hm_tick_labels,
+      oob = .fd_squish, na.value = .fd_ink$band, labels = .fd_hm_num,
       guide = .fd_hm_bar())
   } else if (is.null(fill_limits) && is.null(fill_midpoint)) {
     .fd_hm_fill_signed(max(abs(vals), na.rm = TRUE), fill_name)
@@ -835,10 +827,10 @@ design_map.baseline_model <- function(x,
       w <- which(abs(low) == max_r, arr.ind = TRUE)[1, ]
       s <- paste0("Max abs r = ", formatC(max_r, format = "f", digits = 2), ": ",
                   labs_full[w[[2]]], " vs ", labs_full[w[[1]]], .fd_hm_sep(),
-                  n_flag, if (n_flag == 1L) " pair" else " pairs", " at abs r ",
-                  .fd_hm_ge(), " ", format(flag_threshold))
+                  n_flag, if (n_flag == 1L) " pair" else " pairs",
+                  .fd_u(" at abs r {ge} "), format(flag_threshold))
       if (any(high_vif)) {
-        s <- paste0(s, "\nVIF ", .fd_hm_ge(), " ", format(vif_threshold),
+        s <- paste0(s, .fd_u("\nVIF {ge} "), format(vif_threshold),
                     " or aliased: ",
                     .fd_hm_name_or_count(labs_full[high_vif], "column"))
       }
@@ -884,7 +876,7 @@ design_map.baseline_model <- function(x,
   legend_name <- if (limit == 1) {
     if (method == "spearman") "Spearman r" else "r"
   } else {
-    paste0("r (", .fd_hm_pm(), "max abs r)")
+    .fd_u("r ({pm}max abs r)")
   }
   plt <- ggplot2::ggplot(df, ggplot2::aes(x = x, y = y)) +
     ggplot2::geom_tile(ggplot2::aes(fill = r), colour = "#FFFFFF",
@@ -1224,17 +1216,16 @@ plot_contrasts.event_model <- function(x,
   col_labels <- ci$full_label
   x_show <- .fd_hm_thin(p, 60)
 
-  pm <- .fd_hm_pm()
   legend_name <- if (one_sided) {
     if (isTRUE(absolute_limits)) "Weight (fixed 0 to 1)" else "Weight (0 to max w)"
   } else if (isTRUE(absolute_limits)) {
-    paste0("Weight (fixed ", pm, "1)")
+    .fd_u("Weight (fixed {pm}1)")
   } else {
-    paste0("Weight (", pm, "max abs w)")
+    .fd_u("Weight ({pm}max abs w)")
   }
   fill_scale <- if (one_sided) {
     .fd_scale_magnitude(limit = limit, name = legend_name, guide = .fd_hm_bar(),
-                        labels = .fd_hm_tick_labels)
+                        labels = .fd_hm_num)
   } else {
     .fd_hm_fill_signed(limit, legend_name)
   }
@@ -1258,7 +1249,7 @@ plot_contrasts.event_model <- function(x,
   }
 
   # Right-margin check columns: sum of weights, then the SE multiplier.
-  se_head <- .fd_hm_ascii(paste0("SE ", .fd_u("{times}"), intToUtf8(0x03C3L)))
+  se_head <- .fd_hm_ascii(.fd_u("SE {times}{sigma}"))
   char_pt <- 6.2
   w_sum <- char_pt * max(nchar(c(sum_lab, "sum w"))) + 16
   w_se <- char_pt * max(nchar(c(se_lab, se_head)))

@@ -73,16 +73,16 @@ fmridesign_palette <- function(type = c("categorical", "diverging"), n = NULL) {
 }
 
 # Assign colours to a vector of group keys in first-appearance order. Beyond
-# the categorical palette, fall back to a single neutral-to-blue ramp so the
-# plot stays honest (no recycled hues) and relies on direct labels.
-.fd_colour_map <- function(keys) {
+# the categorical palette, fall back to a single ordered ramp (by default
+# neutral-to-blue) so the plot stays honest (no recycled hues) and relies on
+# direct labels.
+.fd_colour_map <- function(keys, ramp = c("#9DB7D5", "#0072B2", "#12324F")) {
   keys <- unique(as.character(keys))
   n <- length(keys)
   cols <- if (n <= length(.fd_cat)) {
     .fd_cat[seq_len(n)]
   } else {
-    grDevices::colorRampPalette(c("#9DB7D5", "#0072B2", "#12324F"),
-                                space = "Lab")(n)
+    grDevices::colorRampPalette(ramp, space = "Lab")(n)
   }
   stats::setNames(cols, keys)
 }
@@ -339,19 +339,23 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
 }
 
 # Signed quantities: diverging ramp, symmetric about zero.
-.fd_scale_signed <- function(aesthetic = "fill", limit = 1, name = NULL, ...) {
-  limit <- if (is.finite(limit) && limit > 0) limit else 1
-  ggplot2::scale_fill_gradientn(colours = .fd_div, limits = c(-limit, limit),
-                                oob = .fd_squish, name = name, aesthetics = aesthetic, ...)
+.fd_scale_signed <- function(limit = 1, name = NULL, ...) {
+  .fd_scale_ramp(.fd_div, -1, limit, name, ...)
 }
 
 # Unsigned magnitudes: neutral (zero) to the warm pole of the diverging ramp,
 # so "more positive" looks the same in every plot.
 .fd_mag <- c("#FFFFFF", "#EDBBA6", "#C8664A", "#8A2A1C", "#4A140B")
-.fd_scale_magnitude <- function(aesthetic = "fill", limit = 1, name = NULL, ...) {
+.fd_scale_magnitude <- function(limit = 1, name = NULL, ...) {
+  .fd_scale_ramp(.fd_mag, 0, limit, name, ...)
+}
+
+# Fill scale on `colours` from `lower * limit` to `limit`; a `limit` that is
+# not a positive number falls back to 1.
+.fd_scale_ramp <- function(colours, lower, limit, name, ...) {
   limit <- if (is.finite(limit) && limit > 0) limit else 1
-  ggplot2::scale_fill_gradientn(colours = .fd_mag, limits = c(0, limit),
-                                oob = .fd_squish, name = name, aesthetics = aesthetic, ...)
+  ggplot2::scale_fill_gradientn(colours = colours, limits = c(lower * limit, limit),
+                                oob = .fd_squish, name = name, ...)
 }
 
 # Clamp out-of-range values to the scale limits (scales::squish without the
@@ -362,7 +366,7 @@ theme_fmridesign <- function(base_size = 11, base_family = "") {
 
 # Typographic glyphs, built from code points so sources stay ASCII.
 .fd_glyphs <- c(times = 0xD7, dot = 0xB7, minus = 0x2212, ndash = 0x2013,
-                Sigma = 0x3A3, check = 0x2713)
+                sigma = 0x3C3, ge = 0x2265, pm = 0xB1)
 .fd_u <- function(s) {
   for (nm in names(.fd_glyphs)) {
     s <- gsub(paste0("{", nm, "}"), intToUtf8(.fd_glyphs[[nm]]), s, fixed = TRUE)
