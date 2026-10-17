@@ -112,6 +112,17 @@ test_that("hrf() with contrast_set stores named list", {
   expect_true("diff" %in% names(spec$contrasts))
 })
 
+test_that("hrf() names unnamed contrast lists and validates their elements", {
+  c1 <- pair_contrast(~ cond == "A", ~ cond == "B", name = "AvB")
+  c2 <- c1
+  c2$name <- NULL
+  expect_named(hrf(cond, contrasts = list(c1, c2))$contrasts, c("AvB", "contrast2"))
+  expect_named(hrf(cond, contrasts = contrast_set(c1, c2))$contrasts, c("AvB", "contrast2"))
+  expect_named(hrf(cond, contrasts = list(first = c1))$contrasts, "first")
+  expect_error(hrf(cond, contrasts = list(c1, 1)), "all elements must be contrast_spec")
+  expect_error(hrf(cond, contrasts = list(c1, c1)), "unique names")
+})
+
 test_that("hrf() errors on invalid contrasts argument", {
   expect_error(hrf(cond, contrasts = "not_a_contrast"), "contrast_spec")
 })

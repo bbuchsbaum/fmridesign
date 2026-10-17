@@ -1,6 +1,5 @@
-#' @importFrom rlang enquos enexpr syms is_formula is_quosure is_call as_label %||% quo_get_expr is_symbol
+#' @importFrom rlang %||%
 #' @importFrom assertthat assert_that
-#' @importFrom stats setNames
 
 
 #' @keywords internal
@@ -62,8 +61,6 @@ make_hrf <- function(basis, lag, nbasis=1) {
   fmrihrf::as_hrf(fn, name = basis, nbasis = nbasis, span = span)
 }
 
-#### TODO character variables need an "as.factor"
-
 #' hemodynamic regressor specification function for model formulas.
 #'
 #' This function is to be used in formulas for fitting functions, e.g. onsets ~ hrf(fac1,fac2) ...
@@ -121,7 +118,6 @@ make_hrf <- function(basis, lag, nbasis=1) {
 #'                       hrf_fun = weighted_hrf_gen("sub_times", "sub_weights"))
 #'
 #' @export
-#' @importFrom rlang enquos enexpr syms is_formula is_quosure is_call as_label %||%
 #' @return an \code{hrfspec} instance
 hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, prefix=NULL, subset=NULL, precision=.3,
                 nbasis=1, contrasts=NULL, id=NULL, name=NULL, lag=0, summate=TRUE, normalize=FALSE) {
@@ -161,39 +157,20 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
   if (!is.null(contrasts)) {
     # Accept a single contrast_spec directly (even though it inherits from list)
     if (inherits(contrasts, "contrast_spec")) {
-      cs <- contrasts
-      cname <- cs$name %||% "contrast1"
-      contrasts <- list(cs)
-      names(contrasts) <- cname
-    } else if (inherits(contrasts, "contrast_set")) {
-      # Named list of contrast_spec objects; ensure names exist
-      if (is.null(names(contrasts)) || any(names(contrasts) == "")) {
-        cnames <- vapply(contrasts, function(cs) cs$name %||% "", character(1))
-        # Fill blanks with defaults
-        blanks <- which(cnames == "")
-        if (length(blanks) > 0) {
-          cnames[blanks] <- paste0("contrast", blanks)
-        }
-        if (any(duplicated(cnames))) {
-          stop("If `contrasts=` is a list, it must be a named list with unique names.", call. = FALSE)
-        }
-        names(contrasts) <- cnames
-      }
+      contrasts <- stats::setNames(list(contrasts), contrasts$name %||% "contrast1")
     } else if (is.list(contrasts)) {
-      # Bare list provided; validate elements are contrast_spec
-      is_spec <- vapply(contrasts, function(x) inherits(x, "contrast_spec"), logical(1))
-      if (!all(is_spec)) {
+      # A contrast_set is already a list of contrast_specs; a bare list is checked
+      if (!inherits(contrasts, "contrast_set") &&
+          !all(vapply(contrasts, inherits, logical(1), "contrast_spec"))) {
         stop("If `contrasts=` is a list, all elements must be contrast_spec objects.\n",
              "  Hint: Use functions like contrast(), pair_contrast(), contrast_set() to define contrasts.", 
              call. = FALSE)
       }
-      # Ensure names
+      # Ensure names, falling back to each spec's name and then "contrast<i>"
       if (is.null(names(contrasts)) || any(names(contrasts) == "")) {
         cnames <- vapply(contrasts, function(cs) cs$name %||% "", character(1))
         blanks <- which(cnames == "")
-        if (length(blanks) > 0) {
-          cnames[blanks] <- paste0("contrast", blanks)
-        }
+        cnames[blanks] <- paste0("contrast", blanks)
         if (any(duplicated(cnames))) {
           stop("If `contrasts=` is a list, it must be a named list with unique names.", call. = FALSE)
         }
@@ -209,13 +186,8 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
   # -----------------------------
 
   # --- Handle hrf_fun parameter ---
-  hrf_fun_captured <- NULL
   if (!is.null(hrf_fun)) {
-    if (rlang::is_formula(hrf_fun)) {
-      hrf_fun_captured <- hrf_fun
-    } else if (is.function(hrf_fun)) {
-      hrf_fun_captured <- hrf_fun
-    } else {
+    if (!rlang::is_formula(hrf_fun) && !is.function(hrf_fun)) {
       stop("`hrf_fun` must be a function or formula (e.g., ~hrf_column)", call. = FALSE)
     }
 
@@ -232,7 +204,7 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
   ret <- hrfspec(
     vars = vars, # Pass list of quosures captured by enquos
     basis = basis_obj,
-    hrf_fun = hrf_fun_captured,  # NEW: per-onset HRF generator
+    hrf_fun = hrf_fun,  # per-onset HRF generator (function or formula)
     onsets = onsets,
     durations = durations,
     prefix = prefix,
@@ -258,7 +230,6 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
 #' @param basis An `HRF` object.
 #' @param ... Other arguments passed from `hrf()` (onsets, durations, prefix, subset, etc.)
 #' @return An `hrfspec` instance (list with class `hrfspec`).
-#' @importFrom rlang as_label is_symbol is_call quo_get_expr
 #' @noRd
 #' @keywords internal
 hrfspec <- function(vars, label=NULL, basis=fmrihrf::HRF_SPMG1, ...) {
@@ -290,7 +261,7 @@ hrfspec <- function(vars, label=NULL, basis=fmrihrf::HRF_SPMG1, ...) {
     vars = vars,
     varnames = varnames,
     hrf = basis,
-    hrf_fun = other_args$hrf_fun,  # NEW: per-onset HRF generator (function or formula)
+    hrf_fun = other_args$hrf_fun,  # per-onset HRF generator (function or formula)
     onsets = other_args$onsets,
     durations = other_args$durations,
     prefix = other_args$prefix,
@@ -354,7 +325,6 @@ contrasts.hrfspec <- function(x, ...) {
 
 #' @export
 construct.hrfspec <- function(x, model_spec, ...) {
-  ons <- if (!is.null(x$onsets)) x$onsets else model_spec$onsets
   et <- construct_event_term(x, model_spec)
 
   # Set the term_tag attribute on the event_term before returning
@@ -366,7 +336,7 @@ construct.hrfspec <- function(x, model_spec, ...) {
   # Just return the event_term with hrfspec attached
   # The hrfspec is already attached in construct_event_term
 
-  # NEW: Propagate hrf_fun for per-onset HRF generation during convolution
+  # Propagate hrf_fun for per-onset HRF generation during convolution
   if (!is.null(x$hrf_fun)) {
     attr(et, "hrf_fun") <- x$hrf_fun
   }
@@ -380,23 +350,6 @@ construct.hrfspec <- function(x, model_spec, ...) {
 
   # Return the event_term directly, not a convolved_term
   et
-}
-
-#' evaluate.hrfspec
-#'
-#' This function evaluates a hemodynamic response function (HRF) specified by an hrfspec object for a given set of time points (grid) and other parameters.
-#' It is a wrapper function that calls the evaluate.HRF function with the HRF function contained in the hrfspec object.
-#'
-#' @param x The hrfspec object containing the HRF function.
-#' @param grid A vector of time points.
-#' @param amplitude The scaling value for the event (default: 1).
-#' @param duration The duration of the event (default: 0).
-#' @param precision The temporal resolution used for computing summed responses when duration > 0 (default: 0.1).
-#' @param ... Additional arguments to be passed to the evaluate.HRF function.
-#' @return A vector of HRF values at the specified time points.
-#' @noRd
-evaluate.hrfspec <- function(x, grid, amplitude=1, duration=0, precision=.1, ...) {
-  fmrihrf::evaluate(x$hrf, grid, amplitude, duration, precision)
 }
 
 #' trialwise
@@ -598,11 +551,10 @@ duration_hrf_gen <- function(base = fmrihrf::HRF_SPMG1, min_duration = 0) {
 weighted_hrf_gen <- function(times_col = "sub_times", weights_col = "sub_weights",
                               relative = FALSE, method = "constant", normalize = FALSE) {
   function(d) {
-    if (!times_col %in% names(d)) {
-      stop(sprintf("weighted_hrf_gen: column '%s' not found in event data", times_col), call. = FALSE)
-    }
-    if (!weights_col %in% names(d)) {
-      stop(sprintf("weighted_hrf_gen: column '%s' not found in event data", weights_col), call. = FALSE)
+    for (col in c(times_col, weights_col)) {
+      if (!col %in% names(d)) {
+        stop(sprintf("weighted_hrf_gen: column '%s' not found in event data", col), call. = FALSE)
+      }
     }
 
     Map(function(times, weights, onset) {
