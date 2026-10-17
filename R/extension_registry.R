@@ -12,6 +12,7 @@
 #'
 #' Holds registration data for external HRF specification classes.
 #' @keywords internal
+#' @noRd
 #' @return An environment used internally as a registry.
 .fmridesign_extensions <- new.env(parent = emptyenv())
 
@@ -23,6 +24,7 @@
 #' External packages can register their own basis classes via
 #' [register_basis()].
 #' @keywords internal
+#' @noRd
 #' @return An environment used internally as a registry.
 .fmridesign_basis_registry <- new.env(parent = emptyenv())
 

@@ -455,6 +455,7 @@ trialwise <- function(basis   = "spmg1",
 #' @param n Length of the factor to generate.
 #' @return A factor of length `n` with zero-padded sequential levels.
 #' @keywords internal
+#' @noRd
 .trial_factor <- function(n) {
   pad <- nchar(as.character(n))
   factor(sprintf(paste0("%0", pad, "d"), seq_len(n)))
