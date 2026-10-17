@@ -857,7 +857,7 @@ design_map.baseline_model <- function(x,
 
   annotate <- annotate %||% (p <= annotate_max)
   digits <- if (p <= 10L) 2L else 1L
-  df$lab <- if (isTRUE(annotate)) .fd_hm_fmt_r(df$r, digits) else ""
+  df$lab <- if (isTRUE(annotate)) .fd_hm_fmt_r(df$r, digits) else rep("", nrow(df))
   df$tcol <- .fd_hm_text_col(df$r / limit)
   text_size <- if (p <= 8L) 3.4 else if (p <= 14L) 2.9 else 2.4
   flagged <- df[!is.na(df$r) & abs(df$r) >= flag_threshold, , drop = FALSE]

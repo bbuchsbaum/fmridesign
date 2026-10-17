@@ -128,3 +128,13 @@ test_that("correlation_map draws one-cell tiles when only some pairs are shown",
   expect_equal(tiles$xmax - tiles$xmin, c(1, 1))
   expect_equal(tiles$ymax - tiles$ymin, c(1, 1))
 })
+
+test_that("correlation_map(annotate = FALSE) handles a design with nothing to correlate", {
+  des <- data.frame(onset = c(5, 25), run = 1, cond = factor("a"))
+  em1 <- event_model(onset ~ hrf(cond), data = des, block = ~run,
+                     sampling_frame = fmrihrf::sampling_frame(40, 2))
+  p <- correlation_map(em1, annotate = FALSE)
+  expect_s3_class(p, "ggplot")
+  expect_match(p$labels$subtitle, "Only one regressor")
+  expect_equal(nrow(p$data), 0L)
+})
