@@ -144,7 +144,7 @@ check_estimability(X, contrasts = list(A_vs_B = c(1, -1, 0)))
 #> - Weakest direction trades the baseline against same-sign event/regressor loadings (baseline_minus_regressors). 
 #> - Non-estimable contrasts have no identifiable coefficient variance (variance_factor = NA). 
 #>            name quantity estimable variance_factor null_fraction
-#>          A_vs_B contrast      TRUE               1  9.476346e-17
+#>          A_vs_B contrast      TRUE               1  1.570092e-16
 #>     beta:task_A absolute     FALSE              NA  5.000000e-01
 #>     beta:task_B absolute     FALSE              NA  5.000000e-01
 #>  beta:intercept absolute     FALSE              NA  7.071068e-01
