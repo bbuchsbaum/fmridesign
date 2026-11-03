@@ -134,7 +134,7 @@
     return(.fd_scale_signed(limit = limit, name = name, guide = .fd_hm_bar(),
                             na.value = .fd_ink$band, labels = .fd_hm_num, ...))
   }
-  ggplot2::scale_fill_gradientn(colours = .fd_div, limits = limits, name = name,
+  ggplot2::scale_fill_gradientn(colours = .fd_div(), limits = limits, name = name,
                                 oob = .fd_squish, na.value = .fd_ink$band,
                                 labels = .fd_hm_num, guide = .fd_hm_bar(), ...)
 }
@@ -462,7 +462,7 @@ makeContent.fd_hm_spanner <- function(x) {
     qg <- .fd_hm_groups(quiet)
     qg <- qg[qg$label == "TRUE", , drop = FALSE]
     plt <- plt + ggplot2::annotate("rect", xmin = qg$start - 0.5, xmax = qg$end + 0.5,
-                                   ymin = 0.5, ymax = n + 0.5, fill = .fd_div[4],
+                                   ymin = 0.5, ymax = n + 0.5, fill = .fd_div()[4],
                                    alpha = 0.45, colour = NA)
   }
   if (length(sub_rules)) {
@@ -491,9 +491,9 @@ makeContent.fd_hm_spanner <- function(x) {
     fx <- which(flat)
     plt <- plt +
       ggplot2::annotate("rect", xmin = fx - 0.5, xmax = fx + 0.5, ymin = s_top,
-                        ymax = s_bot, fill = .fd_cat[2], colour = NA) +
+                        ymax = s_bot, fill = .fd_cat()[2], colour = NA) +
       ggplot2::annotate("rect", xmin = fx - 0.5, xmax = fx + 0.5, ymin = 0.5,
-                        ymax = n + 0.5, fill = NA, colour = .fd_cat[2],
+                        ymax = n + 0.5, fill = NA, colour = .fd_cat()[2],
                         linewidth = if (p <= 40L) 0.7 else 0.45)
   }
 
@@ -815,7 +815,7 @@ design_map.baseline_model <- function(x,
     vif_lab[aliased] <- "!"
   }
   diag_df <- data.frame(x = seq_len(p), y = seq_len(p), lab = vif_lab,
-                        col = ifelse(high_vif, .fd_cat[2], .fd_ink$muted),
+                        col = ifelse(high_vif, .fd_cat()[2], .fd_ink$muted),
                         high = high_vif)
 
   if (is.null(subtitle)) {
@@ -909,7 +909,7 @@ design_map.baseline_model <- function(x,
       data = diag_df[diag_df$high, , drop = FALSE],
       ggplot2::aes(xmin = x - 0.5 + inset, xmax = x + 0.5 - inset,
                    ymin = y - 0.5 + inset, ymax = y + 0.5 - inset),
-      inherit.aes = FALSE, fill = NA, colour = .fd_cat[2], linewidth = lw_flag)
+      inherit.aes = FALSE, fill = NA, colour = .fd_cat()[2], linewidth = lw_flag)
   }
   if (any(nzchar(df$lab))) {
     plt <- plt + ggplot2::geom_text(ggplot2::aes(label = lab, colour = tcol),
@@ -1194,12 +1194,12 @@ plot_contrasts.event_model <- function(x,
   balanced <- abs(sums) < 1e-8 & !empty
   sum_lab <- ifelse(abs(sums) < 1e-8, "0", .fd_hm_num(sums, 3))
   sum_lab[empty] <- "all 0"
-  sum_col <- ifelse(balanced, .fd_ink$muted, .fd_cat[2])
+  sum_col <- ifelse(balanced, .fd_ink$muted, .fd_cat()[2])
 
   se <- .fd_hm_contrast_se(DM, .fd_hm_scan_runs(x, nrow(DM)), t(W))
   se_lab <- ifelse(is.na(se), "not est.", .fd_hm_num(se, 2))
   se_lab[empty] <- ""
-  se_col <- ifelse(is.na(se), .fd_cat[2], .fd_ink$text2)
+  se_col <- ifelse(is.na(se), .fd_cat()[2], .fd_ink$text2)
 
   df <- data.frame(x = rep(seq_len(p), each = n_rows),
                    y = rep(seq_len(n_rows), times = p),
