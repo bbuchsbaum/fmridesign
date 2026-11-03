@@ -309,7 +309,8 @@ plot.event_model <- function(x,
         strip.placement = "outside",
         strip.text.y.left = ggplot2::element_text(angle = 0, hjust = 1, face = "plain",
                                                   size = strip_text_size + 0.5,
-                                                  colour = .fd_ink$text),
+                                                  colour = .fd_ink$text,
+                                                  margin = ggplot2::margin(l = 4, r = 6)),
         strip.text.x = ggplot2::element_text(size = strip_text_size + 0.5),
         panel.spacing.y = grid::unit(3, "pt"),
         legend.position = "none"
@@ -458,9 +459,11 @@ plot.event_model <- function(x,
     d <- 10^(floor(log10(abs(v))) - 1)
     trunc(v / d) * d
   }
+  # An extreme too close to zero would print on top of the zero label; it is
+  # labelled only when at least 15% of the range away.
   b <- 0
-  if (hi > 0.02 * r) b <- c(b, trunc2(hi))
-  if (lo < -0.02 * r) b <- c(trunc2(lo), b)
+  if (hi > 0.15 * r) b <- c(b, trunc2(hi))
+  if (lo < -0.15 * r) b <- c(trunc2(lo), b)
   unique(b)
 }
 

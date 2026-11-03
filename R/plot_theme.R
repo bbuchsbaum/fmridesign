@@ -97,8 +97,11 @@ fmridesign_palette <- function(type = c("categorical", "diverging"), n = NULL) {
 #' and small uppercase-free strip labels. All plotting methods in the package
 #' use it; add it to your own plots to match.
 #'
-#' @param base_size Base font size in points.
-#' @param base_family Base font family.
+#' @param base_size Base font size in points. Defaults to the option
+#'   `fmridesign.base_size` (11), so a host application can set the size of
+#'   every fmridesign figure at once.
+#' @param base_family Base font family. Defaults to the option
+#'   `fmridesign.base_family` (`""`, the device's default sans).
 #' @return A ggplot2 theme object.
 #' @examples
 #' if (requireNamespace("ggplot2", quietly = TRUE)) {
@@ -107,7 +110,8 @@ fmridesign_palette <- function(type = c("categorical", "diverging"), n = NULL) {
 #'     theme_fmridesign()
 #' }
 #' @export
-theme_fmridesign <- function(base_size = 11, base_family = "") {
+theme_fmridesign <- function(base_size = getOption("fmridesign.base_size", 11),
+                             base_family = getOption("fmridesign.base_family", "")) {
   ink <- .fd_ink
   ggplot2::theme_minimal(base_size = base_size, base_family = base_family) +
     ggplot2::theme(

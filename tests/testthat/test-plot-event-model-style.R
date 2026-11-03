@@ -111,6 +111,11 @@ test_that("plotting helpers produce readable axis values", {
   expect_equal(.fd_peak_breaks(lims), c(-0.71, 0, 0.54))
   lims2 <- c(0, 1.93) + c(-0.22, 0.08) * 1.93
   expect_equal(.fd_peak_breaks(lims2), c(0, 1.9))
+  # A dip just below zero (an HRF undershoot) gets no label of its own: it
+  # would print on top of the zero label.
+  r3 <- 0.34
+  lims3 <- c(-0.03, 0.31) + c(-0.22, 0.08) * r3
+  expect_equal(.fd_peak_breaks(lims3), c(0, 0.31))
   expect_error(fmridesign_palette("categorical", 9), "distinct hues")
   expect_length(fmridesign_palette("diverging", 11), 11L)
 })
