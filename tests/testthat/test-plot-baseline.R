@@ -155,7 +155,7 @@ test_that("plot.baseline_model drift colours are distinct and motion lanes drop 
                        nuisance_list = nuis)
   p <- plot(bm)
   d <- p$data[p$data$term == "drift", ]
-  expect_equal(as.vector(tapply(d$colour, d$label, `[`, 1)), .fd_cat[1:5])
+  expect_equal(as.vector(tapply(d$colour, d$label, `[`, 1)), .fd_cat()[1:5])
   expect_null(p$labels$y)
   expect_match(p$labels$caption, "units supplied")
   expect_match(p$labels$caption, "no interior knots")

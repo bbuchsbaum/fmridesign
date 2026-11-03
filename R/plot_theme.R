@@ -16,12 +16,19 @@ NULL
 # Categorical order validated for colour-vision deficiency (adjacent-pair
 # CVD separation >= 8 dE in OKLab) and a normal-vision floor >= 15. Hues are
 # assigned in this fixed order and never cycled.
-.fd_cat <- c("#0072B2", "#D55E00", "#009E73", "#C28A00",
+.fd_cat_default <- c("#0072B2", "#D55E00", "#009E73", "#C28A00",
              "#7B5CB8", "#4FA3D9", "#B04A7A")
 
 # Diverging ramp: cool pole, neutral warm-grey midpoint, warm pole.
-.fd_div <- c("#1D4F7A", "#5D8FBF", "#B9D0E6", "#F7F6F4",
+.fd_div_default <- c("#1D4F7A", "#5D8FBF", "#B9D0E6", "#F7F6F4",
              "#EDBBA6", "#C8664A", "#8A2A1C")
+
+# A host application (a web app, a report) can set the palettes of every
+# figure through options shared with the other neuroimaging packages:
+# `neuro.palette.categorical` (condition hues, in order) and
+# `neuro.palette.diverging` (a ramp from the negative to the positive pole).
+.fd_cat <- function() getOption("neuro.palette.categorical", .fd_cat_default)
+.fd_div <- function() getOption("neuro.palette.diverging", .fd_div_default)
 
 # Ink and surface tokens.
 .fd_ink <- list(
@@ -52,16 +59,16 @@ NULL
 fmridesign_palette <- function(type = c("categorical", "diverging"), n = NULL) {
   type <- match.arg(type)
   if (type == "categorical") {
-    if (is.null(n)) return(.fd_cat)
-    if (n > length(.fd_cat)) {
-      stop("The categorical palette has ", length(.fd_cat),
+    if (is.null(n)) return(.fd_cat())
+    if (n > length(.fd_cat())) {
+      stop("The categorical palette has ", length(.fd_cat()),
            " distinct hues; ", n, " were requested. ",
            "Group series or use small multiples instead.", call. = FALSE)
     }
-    return(.fd_cat[seq_len(n)])
+    return(.fd_cat()[seq_len(n)])
   }
-  if (is.null(n)) return(.fd_div)
-  grDevices::colorRampPalette(.fd_div, space = "Lab")(n)
+  if (is.null(n)) return(.fd_div())
+  grDevices::colorRampPalette(.fd_div(), space = "Lab")(n)
 }
 
 # Tints of a base colour, from full strength towards white; used to separate
@@ -79,8 +86,8 @@ fmridesign_palette <- function(type = c("categorical", "diverging"), n = NULL) {
 .fd_colour_map <- function(keys, ramp = c("#9DB7D5", "#0072B2", "#12324F")) {
   keys <- unique(as.character(keys))
   n <- length(keys)
-  cols <- if (n <= length(.fd_cat)) {
-    .fd_cat[seq_len(n)]
+  cols <- if (n <= length(.fd_cat())) {
+    .fd_cat()[seq_len(n)]
   } else {
     grDevices::colorRampPalette(ramp, space = "Lab")(n)
   }
@@ -98,10 +105,11 @@ fmridesign_palette <- function(type = c("categorical", "diverging"), n = NULL) {
 #' use it; add it to your own plots to match.
 #'
 #' @param base_size Base font size in points. Defaults to the option
-#'   `fmridesign.base_size` (11), so a host application can set the size of
-#'   every fmridesign figure at once.
+#'   `fmridesign.base_size`, then the shared `neuro.base_size`, then 11, so a
+#'   host application can set the size of every figure at once.
 #' @param base_family Base font family. Defaults to the option
-#'   `fmridesign.base_family` (`""`, the device's default sans).
+#'   `fmridesign.base_family`, then `neuro.base_family`, then `""` (the
+#'   device's default sans).
 #' @return A ggplot2 theme object.
 #' @examples
 #' if (requireNamespace("ggplot2", quietly = TRUE)) {
@@ -110,8 +118,8 @@ fmridesign_palette <- function(type = c("categorical", "diverging"), n = NULL) {
 #'     theme_fmridesign()
 #' }
 #' @export
-theme_fmridesign <- function(base_size = getOption("fmridesign.base_size", 11),
-                             base_family = getOption("fmridesign.base_family", "")) {
+theme_fmridesign <- function(base_size = getOption("fmridesign.base_size", getOption("neuro.base_size", 11)),
+                             base_family = getOption("fmridesign.base_family", getOption("neuro.base_family", ""))) {
   ink <- .fd_ink
   ggplot2::theme_minimal(base_size = base_size, base_family = base_family) +
     ggplot2::theme(
@@ -347,7 +355,7 @@ theme_fmridesign <- function(base_size = getOption("fmridesign.base_size", 11),
 
 # Signed quantities: diverging ramp, symmetric about zero.
 .fd_scale_signed <- function(limit = 1, name = NULL, ...) {
-  .fd_scale_ramp(.fd_div, -1, limit, name, ...)
+  .fd_scale_ramp(.fd_div(), -1, limit, name, ...)
 }
 
 # Unsigned magnitudes: neutral (zero) to the warm pole of the diverging ramp,
@@ -418,8 +426,8 @@ theme_fmridesign <- function(base_size = getOption("fmridesign.base_size", 11),
     }
   }
   hues <- unique(hue_key)
-  if (length(hues) > length(.fd_cat)) return(NULL)
-  base <- stats::setNames(.fd_cat[seq_along(hues)], hues)
+  if (length(hues) > length(.fd_cat())) return(NULL)
+  base <- stats::setNames(.fd_cat()[seq_along(hues)], hues)
   cols <- vapply(seq_along(rows), function(i) {
     b <- base[[hue_key[i]]]
     if (shade_n[i] <= 1L) return(b)

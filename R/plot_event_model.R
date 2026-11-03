@@ -322,8 +322,8 @@ plot.event_model <- function(x,
   n_reg <- ncol(DM)
   reg_levels <- colnames(DM)
   reg_lab <- stats::setNames(disp, reg_levels)
-  reg_pal <- if (n_reg <= length(.fd_cat)) {
-    stats::setNames(.fd_cat[seq_len(n_reg)], reg_levels)
+  reg_pal <- if (n_reg <= length(.fd_cat())) {
+    stats::setNames(.fd_cat()[seq_len(n_reg)], reg_levels)
   } else {
     stats::setNames(unname(pal[as.character(colour_of_row[row_key])]), reg_levels)
   }
@@ -543,7 +543,7 @@ plot.event_model <- function(x,
       ggplot2::geom_text(data = rdf, ggplot2::aes(x = x, y = Regressor, label = lab,
                                                   colour = r >= 0.5),
                          inherit.aes = FALSE, hjust = 0, size = strip_text_size / ggplot2::.pt * 0.95) +
-      ggplot2::scale_colour_manual(values = c(`FALSE` = .fd_ink$muted, `TRUE` = .fd_cat[2]),
+      ggplot2::scale_colour_manual(values = c(`FALSE` = .fd_ink$muted, `TRUE` = .fd_cat()[2]),
                                    guide = "none") +
       ggplot2::annotate("text", x = x_right + 0.012 * span, y = n + 0.9, label = "max r",
                         hjust = 0, vjust = 0, size = strip_text_size / ggplot2::.pt,

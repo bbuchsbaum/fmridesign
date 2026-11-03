@@ -599,7 +599,7 @@ plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),
     p <- ggplot2::ggplot(runs) +
       ggplot2::geom_rect(ggplot2::aes(xmin = .data$start, xmax = .data$end,
                                       ymin = .data$y - half, ymax = .data$y + half),
-                         fill = .fd_cat[1], colour = NA)
+                         fill = .fd_cat()[1], colour = NA)
     if (isTRUE(show_ticks)) {
       ticks <- do.call(rbind, lapply(seq_len(n_runs), function(r) {
         if (runs$scans[r] <= tick_every) return(NULL)
@@ -649,7 +649,7 @@ plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),
     p <- ggplot2::ggplot(runs) +
       ggplot2::geom_rect(ggplot2::aes(xmin = .data$start, xmax = .data$end,
                                       ymin = 0.6, ymax = 1.4),
-                         fill = .fd_cat[1], colour = "#FFFFFF", linewidth = 0.8)
+                         fill = .fd_cat()[1], colour = "#FFFFFF", linewidth = 0.8)
     if (!two_line) {
       p <- p + ggplot2::geom_segment(
         ggplot2::aes(x = .data$mid, xend = .data$lx, y = 1.42, yend = .data$ly - 0.05),
@@ -691,7 +691,7 @@ plot.sampling_frame <- function(x, style = c("timeline", "grid", "lane"),
       data.frame(y = runs$y[r], scan = s,
                  grp = ((s - 1L) %/% tick_every) %% 2L)
     }))
-    cells$fill <- ifelse(cells$grp == 0L, .fd_cat[1], "#5D9BCB")
+    cells$fill <- ifelse(cells$grp == 0L, .fd_cat()[1], "#5D9BCB")
     fine <- max(runs$scans) <= 60
     n_max <- max(runs$scans)
     runs$lx <- runs$scans + 0.5 + n_max * 0.01
