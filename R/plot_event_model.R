@@ -474,7 +474,9 @@ plot.event_model <- function(x,
     shared = "All rows share one scale (right axis)")
   if (is.null(ev)) return(paste0(scale_txt, "."))
   dur <- any(ev$duration > 0)
-  paste0(scale_txt, ". Ticks mark event onsets",
+  # One sentence per line: a caption cannot wrap itself, and the pair is
+  # wider than a figure set beside another.
+  paste0(scale_txt, ".\nTicks mark event onsets",
          if (dur) "; bars show event durations" else "", ".")
 }
 
