@@ -75,9 +75,11 @@ event <- function(value, name, onsets, blockids, durations = 0, subset = NULL) {
       val_mat   <- basis_subset$y
       meta_list <- list(basis = basis_subset)
   } else if (is.factor(value) || is.character(value)) {
-      # Keep the ORIGINAL levels (unique values for character input), even
-      # those that no retained event uses
-      original_levels <- if (is.factor(value)) levels(value) else unique(as.character(value))
+      # Keep the ORIGINAL levels, even those that no retained event uses.
+      # Factor input keeps its levels as given; character input gets sorted
+      # levels (base factor() semantics), so regressor order depends only on
+      # the level set, not on which condition happens to appear first.
+      original_levels <- if (is.factor(value)) levels(value) else sort(unique(as.character(value)))
       f <- factor(as.character(value)[keep_indices], levels = original_levels)
       val_mat <- if (length(f) == 0) {
           matrix(numeric(0), nrow = 0, ncol = 1L)

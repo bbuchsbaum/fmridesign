@@ -4,12 +4,19 @@
 \alias{theme_fmridesign}
 \title{ggplot2 theme for fmridesign plots}
 \usage{
-theme_fmridesign(base_size = 11, base_family = "")
+theme_fmridesign(
+  base_size = getOption("fmridesign.base_size", getOption("neuro.base_size", 11)),
+  base_family = getOption("fmridesign.base_family", getOption("neuro.base_family", ""))
+)
 }
 \arguments{
-\item{base_size}{Base font size in points.}
+\item{base_size}{Base font size in points. Defaults to the option
+\code{fmridesign.base_size}, then the shared \code{neuro.base_size}, then 11, so a
+host application can set the size of every figure at once.}
 
-\item{base_family}{Base font family.}
+\item{base_family}{Base font family. Defaults to the option
+\code{fmridesign.base_family}, then \code{neuro.base_family}, then \code{""} (the
+device's default sans).}
 }
 \value{
 A ggplot2 theme object.
