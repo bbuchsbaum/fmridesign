@@ -7,18 +7,24 @@ the package use it; add it to your own plots to match.
 ## Usage
 
 ``` r
-theme_fmridesign(base_size = 11, base_family = "")
+theme_fmridesign(
+  base_size = getOption("fmridesign.base_size", getOption("neuro.base_size", 11)),
+  base_family = getOption("fmridesign.base_family", getOption("neuro.base_family", ""))
+)
 ```
 
 ## Arguments
 
 - base_size:
 
-  Base font size in points.
+  Base font size in points. Defaults to the option
+  `fmridesign.base_size`, then the shared `neuro.base_size`, then 11, so
+  a host application can set the size of every figure at once.
 
 - base_family:
 
-  Base font family.
+  Base font family. Defaults to the option `fmridesign.base_family`,
+  then `neuro.base_family`, then `""` (the device's default sans).
 
 ## Value
 

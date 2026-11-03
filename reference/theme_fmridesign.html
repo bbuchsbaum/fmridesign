@@ -55,7 +55,10 @@ use it; add it to your own plots to match.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">theme_fmridesign</span><span class="op">(</span>base_size <span class="op">=</span> <span class="fl">11</span>, base_family <span class="op">=</span> <span class="st">""</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">theme_fmridesign</span><span class="op">(</span></span>
+<span>  base_size <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"fmridesign.base_size"</span>, <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"neuro.base_size"</span>, <span class="fl">11</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  base_family <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"fmridesign.base_family"</span>, <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"neuro.base_family"</span>, <span class="st">""</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -63,11 +66,15 @@ use it; add it to your own plots to match.</p>
 
 
 <dl><dt id="arg-base-size">base_size<a class="anchor" aria-label="anchor" href="#arg-base-size"></a></dt>
-<dd><p>Base font size in points.</p></dd>
+<dd><p>Base font size in points. Defaults to the option
+<code>fmridesign.base_size</code>, then the shared <code>neuro.base_size</code>, then 11, so a
+host application can set the size of every figure at once.</p></dd>
 
 
 <dt id="arg-base-family">base_family<a class="anchor" aria-label="anchor" href="#arg-base-family"></a></dt>
-<dd><p>Base font family.</p></dd>
+<dd><p>Base font family. Defaults to the option
+<code>fmridesign.base_family</code>, then <code>neuro.base_family</code>, then <code>""</code> (the
+device's default sans).</p></dd>
 
 </dl></div>
     <div class="section level2">
