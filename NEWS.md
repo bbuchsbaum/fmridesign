@@ -2,6 +2,13 @@
 
 ## Changes that affect results
 
+- Character condition variables now get their levels in sorted order, as
+  base `factor()` does, instead of in order of first appearance (#54).
+  Regressor (column) order therefore depends only on the set of conditions,
+  so it is the same across subjects and runs whatever the first trial is.
+  Factor input keeps its levels as given. Designs built from character
+  columns whose first-appearance order was not alphabetical will have their
+  condition columns reordered; named contrasts are unaffected.
 - `hrf(..., basis = "fir", nbasis = k)` with `k` other than 12 now builds a
   true FIR basis (`k` indicator bins over 24 s, as
   `fmrihrf::hrf_fir_generator()`). It used to build overlapping tent
