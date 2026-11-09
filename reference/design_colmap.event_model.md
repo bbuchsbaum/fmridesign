@@ -80,6 +80,14 @@ A tibble with columns:
 - `modulation_id` (character): modulator identifier when applicable
   (e.g., "RT", "RT_by_group")
 
+- `band` (character): feature band the column belongs to. Set with
+  `feature(band = )`; for every other term, and for feature terms
+  without a declared band, it is the `term_tag`
+
+- `subband` (character): sub-band within the band, set with
+  `feature(subband = )`; `NA` when none was declared. See
+  [`design_bands()`](https://bbuchsbaum.github.io/fmridesign/reference/design_bands.md)
+
 ## Examples
 
 ``` r
@@ -95,21 +103,21 @@ emod <- event_model(onset ~ hrf(cond), data = des, block = ~run, sampling_frame 
 # Get column metadata
 colmap <- design_colmap(emod)
 head(colmap)
-#> # A tibble: 2 × 16
+#> # A tibble: 2 × 18
 #>     col name   term_tag term_index condition   run role  model_source basis_name
 #>   <int> <chr>  <chr>         <int> <chr>     <int> <chr> <chr>        <chr>     
 #> 1     1 cond_… cond              1 cond.A       NA task  event        spmg1     
 #> 2     2 cond_… cond              1 cond.B       NA task  event        spmg1     
-#> # ℹ 7 more variables: basis_ix <int>, basis_total <int>, basis_label <chr>,
+#> # ℹ 9 more variables: basis_ix <int>, basis_total <int>, basis_label <chr>,
 #> #   is_block_diagonal <lgl>, modulation_type <chr>, modulation_id <chr>,
-#> #   pretty_name <chr>
+#> #   band <chr>, subband <chr>, pretty_name <chr>
 
 # Query columns by condition
 colmap[colmap$condition == "A", ]
-#> # A tibble: 0 × 16
-#> # ℹ 16 variables: col <int>, name <chr>, term_tag <chr>, term_index <int>,
+#> # A tibble: 0 × 18
+#> # ℹ 18 variables: col <int>, name <chr>, term_tag <chr>, term_index <int>,
 #> #   condition <chr>, run <int>, role <chr>, model_source <chr>,
 #> #   basis_name <chr>, basis_ix <int>, basis_total <int>, basis_label <chr>,
 #> #   is_block_diagonal <lgl>, modulation_type <chr>, modulation_id <chr>,
-#> #   pretty_name <chr>
+#> #   band <chr>, subband <chr>, pretty_name <chr>
 ```

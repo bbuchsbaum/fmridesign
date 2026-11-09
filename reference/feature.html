@@ -70,7 +70,11 @@ this is a time series, not a list of trials.</p>
 <span>  precision <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  prefix <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  prefix <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  durations <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  band <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  subband <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  contrasts <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -117,6 +121,31 @@ Centering and scaling are applied per run.</p></dd>
 <dd><p>Term identifier used for column names. If omitted,
 the name of <code>x</code> is used.</p></dd>
 
+
+<dt id="arg-durations">durations<a class="anchor" aria-label="anchor" href="#arg-durations"></a></dt>
+<dd><p>Optional event durations in seconds, only valid with
+<code>times</code>: a single number, a vector with one entry per sample, or a list
+of those with one element per run (parallel to <code>times</code>). <code>NULL</code> (default)
+keeps the zero-order hold. Requires a version of fmrihrf whose
+<code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html" class="external-link">feature_regressor()</a></code> has a <code>durations</code> argument.</p></dd>
+
+
+<dt id="arg-band">band<a class="anchor" aria-label="anchor" href="#arg-band"></a></dt>
+<dd><p>Optional single string naming the feature band this term
+belongs to. Defaults to the term's tag (its <code>id</code>).</p></dd>
+
+
+<dt id="arg-subband">subband<a class="anchor" aria-label="anchor" href="#arg-subband"></a></dt>
+<dd><p>Optional sub-band labels: <code>NULL</code> (none), a single string
+(every feature column), or a character vector with one entry per feature
+column of <code>x</code>.</p></dd>
+
+
+<dt id="arg-contrasts">contrasts<a class="anchor" aria-label="anchor" href="#arg-contrasts"></a></dt>
+<dd><p>Optional contrast specification(s) for the term: a
+<code>contrast_spec</code>, a <code><a href="contrast_set.html">contrast_set()</a></code>, or a list of <code>contrast_spec</code>
+objects, as in <code><a href="hrf.html">hrf()</a></code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -129,16 +158,50 @@ formula or in the list interface.</p>
 list of those with one element per <code>sampling_frame</code> block. Supply exactly
 one of <code>dt</code> or <code>times</code>. Feature-only models are allowed:
 <code>event_model(~ feature(x, dt = 0.1, id = "rms"), sampling_frame = sframe)</code>.</p>
+<p>A series given with <code>dt</code> or <code>times</code> alone is a zero-order hold: each value
+lasts until the next sample. If such a series stops more than one TR
+before the run does, the scans after its end get no contribution from it (as if the feature
+were 0 there, after centering), and a warning says so.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="event-timed-features">Event-timed features<a class="anchor" aria-label="anchor" href="#event-timed-features"></a></h2>
+
+
+<p>For a sparse feature tied to events (word surprisal, per-phone features),
+supply <code>times</code> (onsets) and <code>durations</code>. Row <code>i</code> of <code>x</code> is then an event
+starting at <code>times[i]</code> and lasting <code>durations[i]</code> seconds (<code>0</code> is an
+impulse) with amplitude <code>x[i, ]</code>, and no value is held across the gap to
+the next event. <code>times</code> need only be non-decreasing, and events may
+overlap (their responses add). <code>center</code> and <code>scale</code> act across the events
+of a run, the parametric-modulator convention. See
+<code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html" class="external-link">fmrihrf::feature_regressor()</a></code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="bands-sub-bands-and-contrasts">Bands, sub-bands and contrasts<a class="anchor" aria-label="anchor" href="#bands-sub-bands-and-contrasts"></a></h2>
+
+
+<p><code>band</code> and <code>subband</code> label the columns of the term for banded (grouped)
+models; they are recorded in the <code>band</code> and <code>subband</code> columns of
+<code><a href="design_colmap.html">design_colmap()</a></code> and collected by <code><a href="design_bands.html">design_bands()</a></code>. Several terms may
+share a band.</p>
+<p><code><a href="Fcontrasts.html">Fcontrasts()</a></code> gives a feature term an omnibus F-contrast over all of its
+columns, and one F-contrast per declared sub-band. Each tests its feature
+columns jointly in every basis function. <code>contrasts</code> attaches contrast
+specifications to the term, as in <code><a href="hrf.html">hrf()</a></code>. Feature terms have no
+categorical cells, so use <code><a href="column_contrast.html">column_contrast()</a></code>, whose patterns select
+design-matrix columns by name (for example
+<code>column_contrast("^env_alpha$", "^env_beta$", name = "a_vs_b")</code>).</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html" class="external-link">fmrihrf::feature_regressor()</a></code>, <code><a href="hrf.html">hrf()</a></code>, <code><a href="event_model.html">event_model()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html" class="external-link">fmrihrf::feature_regressor()</a></code>, <code><a href="hrf.html">hrf()</a></code>, <code><a href="event_model.html">event_model()</a></code>,
+<code><a href="design_bands.html">design_bands()</a></code></p></div>
     </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dt</span> <span class="op">&lt;-</span> <span class="fl">0.5</span></span></span>
-<span class="r-in"><span><span class="va">rms</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">20</span>, by <span class="op">=</span> <span class="va">dt</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">rms</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Trig.html" class="external-link">sin</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">29.5</span>, by <span class="op">=</span> <span class="va">dt</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">sframe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/sampling_frame.html" class="external-link">sampling_frame</a></span><span class="op">(</span>blocklens <span class="op">=</span> <span class="fl">15</span>, TR <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">emod</span> <span class="op">&lt;-</span> <span class="fu"><a href="event_model.html">event_model</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="op">~</span> <span class="fu">feature</span><span class="op">(</span><span class="va">rms</span>, dt <span class="op">=</span> <span class="va">dt</span>, id <span class="op">=</span> <span class="st">"rms"</span>, center <span class="op">=</span> <span class="cn">FALSE</span>, scale <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span>,</span></span>
@@ -146,6 +209,24 @@ one of <code>dt</code> or <code>times</code>. Feature-only models are allowed:
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">ncol</a></span><span class="op">(</span><span class="fu"><a href="design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">emod</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Two-column feature with sub-bands and a column contrast</span></span></span>
+<span class="r-in"><span><span class="va">env</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>low <span class="op">=</span> <span class="va">rms</span>, high <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rev.html" class="external-link">rev</a></span><span class="op">(</span><span class="va">rms</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">emod2</span> <span class="op">&lt;-</span> <span class="fu"><a href="event_model.html">event_model</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="op">~</span> <span class="fu">feature</span><span class="op">(</span><span class="va">env</span>, dt <span class="op">=</span> <span class="va">dt</span>, id <span class="op">=</span> <span class="st">"env"</span>, band <span class="op">=</span> <span class="st">"acoustic"</span>,</span></span>
+<span class="r-in"><span>            subband <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"low"</span>, <span class="st">"high"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>            contrasts <span class="op">=</span> <span class="fu"><a href="column_contrast.html">column_contrast</a></span><span class="op">(</span><span class="st">"^env_low$"</span>, <span class="st">"^env_high$"</span>,</span></span>
+<span class="r-in"><span>                                        name <span class="op">=</span> <span class="st">"low_vs_high"</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="Fcontrasts.html">Fcontrasts</a></span><span class="op">(</span><span class="va">emod2</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "env#env"  "env#low"  "env#high"</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">emod2</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "env#low_vs_high"</span>
+<span class="r-in"><span><span class="fu"><a href="design_bands.html">design_bands</a></span><span class="op">(</span><span class="va">emod2</span><span class="op">)</span><span class="op">$</span><span class="va">families</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $acoustic</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "low"  "high"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

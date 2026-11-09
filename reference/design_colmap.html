@@ -86,23 +86,23 @@ structured metadata (term, condition, basis, role, run, etc.).</p>
 <span class="r-in"><span><span class="co"># Extract column metadata</span></span></span>
 <span class="r-in"><span><span class="va">colmap</span> <span class="op">&lt;-</span> <span class="fu">design_colmap</span><span class="op">(</span><span class="va">emod</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">colmap</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 2 × 16</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 2 × 18</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     col name   term_tag term_index condition   run role  model_source basis_name</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span> <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>        <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>     </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     1 cond_… cond              1 cond.A       <span style="color: #BB0000;">NA</span> task  event        spmg1     </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     2 cond_… cond              1 cond.B       <span style="color: #BB0000;">NA</span> task  event        spmg1     </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 7 more variables: basis_ix &lt;int&gt;, basis_total &lt;int&gt;, basis_label &lt;chr&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 9 more variables: basis_ix &lt;int&gt;, basis_total &lt;int&gt;, basis_label &lt;chr&gt;,</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   is_block_diagonal &lt;lgl&gt;, modulation_type &lt;chr&gt;, modulation_id &lt;chr&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   pretty_name &lt;chr&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   band &lt;chr&gt;, subband &lt;chr&gt;, pretty_name &lt;chr&gt;</span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Query specific columns</span></span></span>
 <span class="r-in"><span><span class="va">colmap</span><span class="op">[</span><span class="va">colmap</span><span class="op">$</span><span class="va">condition</span> <span class="op">==</span> <span class="st">"A"</span>, <span class="op">]</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 0 × 16</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 16 variables: col &lt;int&gt;, name &lt;chr&gt;, term_tag &lt;chr&gt;, term_index &lt;int&gt;,</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 0 × 18</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># ℹ 18 variables: col &lt;int&gt;, name &lt;chr&gt;, term_tag &lt;chr&gt;, term_index &lt;int&gt;,</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   condition &lt;chr&gt;, run &lt;int&gt;, role &lt;chr&gt;, model_source &lt;chr&gt;,</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   basis_name &lt;chr&gt;, basis_ix &lt;int&gt;, basis_total &lt;int&gt;, basis_label &lt;chr&gt;,</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   is_block_diagonal &lt;lgl&gt;, modulation_type &lt;chr&gt;, modulation_id &lt;chr&gt;,</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   pretty_name &lt;chr&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;">#   band &lt;chr&gt;, subband &lt;chr&gt;, pretty_name &lt;chr&gt;</span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

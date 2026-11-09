@@ -128,6 +128,9 @@
 - [`covariate()`](https://bbuchsbaum.github.io/fmridesign/reference/covariate.md)
   : Construct a Covariate Term
 
+- [`design_bands()`](https://bbuchsbaum.github.io/fmridesign/reference/design_bands.md)
+  : Design matrix grouped into feature bands
+
 - [`design_colmap()`](https://bbuchsbaum.github.io/fmridesign/reference/design_colmap.md)
   : Column Metadata Map
 

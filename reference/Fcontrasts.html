@@ -87,10 +87,23 @@ term-level contrast \(C\) (one row per condition) is expanded to
 tested jointly in every basis function, so a term with \(k\) conditions
 and \(nb\) basis functions yields a \((k \cdot nb) \times ((k-1) \cdot nb)\)
 matrix for its main effect. Columns are named <code>&lt;contrast column&gt;_b##</code>.</p>
-<p>Terms with no categorical variable (e.g. <code>hrf(rt)</code>, covariates, feature
-terms) contribute no F-contrasts; a model made only of such terms returns
-an empty list. Calling <code>Fcontrasts()</code> directly on such an <code>event_term</code>
-still signals an error.</p>
+<p>Terms with no categorical variable (e.g. <code>hrf(rt)</code>, covariates) contribute
+no F-contrasts; a model made only of such terms returns an empty list.
+Calling <code>Fcontrasts()</code> directly on such an <code>event_term</code> still signals an
+error.</p>
+<p>A <code><a href="feature.html">feature()</a></code> term contributes an omnibus F-contrast over all of its
+columns, named <code>&lt;term&gt;#&lt;term&gt;</code>, and one F-contrast per declared sub-band,
+named <code>&lt;term&gt;#&lt;subband&gt;</code>.</p>
+<p>For a <code>feature_term</code> the result has the same structure as for an
+<code>event_term</code>: a named list of matrices with one row per feature column
+(row names are the term's condition tags, <code>conditions(x)</code>), before
+expansion across basis functions. The first element, named after the term,
+is the omnibus contrast (an identity matrix: all feature columns are tested
+jointly). It is followed by one element per distinct sub-band declared with
+<code>feature(subband = )</code>, named after the sub-band, whose columns pick out
+that sub-band's feature columns. A sub-band that has the term's own name is
+not repeated. <code>Fcontrasts()</code> on the <code>event_model</code> expands these across the
+HRF basis and embeds them in the full design, as for any other term.</p>
     </div>
 
     <div class="section level2">

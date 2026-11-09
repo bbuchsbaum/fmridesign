@@ -91,6 +91,44 @@
 
 ### New features
 
+- [`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.md)
+  gains `durations` for sparse, event-timed features such as word
+  surprisal or per-phone features. With `times` and `durations` (a
+  number, a vector, or a per-run list parallel to `times`), each sample
+  is an event with its own onset, duration and amplitude, and its value
+  is no longer held until the next sample (which filled the following
+  pause). It is passed to
+  [`fmrihrf::feature_regressor()`](https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html)
+  and needs an fmrihrf whose
+  [`feature_regressor()`](https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html)
+  has a `durations` argument; otherwise an error says so. Without
+  `durations` nothing changes.
+- [`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.md)
+  gains `band` and `subband` to label a term’s columns for banded
+  (grouped) models.
+  [`design_colmap()`](https://bbuchsbaum.github.io/fmridesign/reference/design_colmap.md)
+  has two new columns, `band` and `subband`, for every term type: other
+  terms are a band of their own (their `term_tag`) with `subband` `NA`.
+- New
+  [`design_bands()`](https://bbuchsbaum.github.io/fmridesign/reference/design_bands.md)
+  returns the event-model design as a plain list for banded regression:
+  the matrix `X`, the `band` and `subband` of each column, `families`
+  (the sub-bands of each band that has several) and the matching
+  `colmap` rows. `terms` and `bands` restrict the columns.
+- [`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.md)
+  gains `contrasts`, as in
+  [`hrf()`](https://bbuchsbaum.github.io/fmridesign/reference/hrf.md).
+  [`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md)
+  patterns select a feature term’s design columns, and
+  [`contrast_weights()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_weights.md)
+  on the model returns them.
+- [`Fcontrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.md)
+  now covers feature terms: an omnibus F-contrast over all of the term’s
+  columns (`<term>#<term>`) and one per declared sub-band
+  (`<term>#<subband>`), each tested jointly across the HRF basis.
+  Feature terms used to contribute none, so
+  [`Fcontrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/Fcontrasts.md)
+  on a model with a feature term now returns more elements.
 - Added
   [`check_estimability()`](https://bbuchsbaum.github.io/fmridesign/reference/check_estimability.md)
   for full-design rank, exact condition numbers, named weak directions,
@@ -212,6 +250,11 @@
 
 ### Bug fixes
 
+- Basis filtering and F-contrast expansion now see the right number of
+  basis functions for a multi-basis
+  [`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.md)
+  term. The internal helper read the HRF from an attribute feature terms
+  do not carry and assumed one basis function.
 - [`contrast_set()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_set.md)
   now combines individual specifications with nested contrast sets,
   including those returned by

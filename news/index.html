@@ -68,7 +68,16 @@
 </ul></div>
 <div class="section level3">
 <h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
-<ul><li>Added <code><a href="../reference/check_estimability.html">check_estimability()</a></code> for full-design rank, exact condition numbers, named weak directions, and contrast-specific estimability and variance factors. Event models include run intercepts by default and report event coverage per run; an explicit baseline/nuisance design can also be supplied. <code><a href="../reference/check_collinearity.html">check_collinearity()</a></code> now documents the limitations of pairwise checks (<a href="https://github.com/bbuchsbaum/fmridesign/issues/32" class="external-link">#32</a>).</li>
+<ul><li>
+<code><a href="../reference/feature.html">feature()</a></code> gains <code>durations</code> for sparse, event-timed features such as word surprisal or per-phone features. With <code>times</code> and <code>durations</code> (a number, a vector, or a per-run list parallel to <code>times</code>), each sample is an event with its own onset, duration and amplitude, and its value is no longer held until the next sample (which filled the following pause). It is passed to <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html" class="external-link">fmrihrf::feature_regressor()</a></code> and needs an fmrihrf whose <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html" class="external-link">feature_regressor()</a></code> has a <code>durations</code> argument; otherwise an error says so. Without <code>durations</code> nothing changes.</li>
+<li>
+<code><a href="../reference/feature.html">feature()</a></code> gains <code>band</code> and <code>subband</code> to label a term’s columns for banded (grouped) models. <code><a href="../reference/design_colmap.html">design_colmap()</a></code> has two new columns, <code>band</code> and <code>subband</code>, for every term type: other terms are a band of their own (their <code>term_tag</code>) with <code>subband</code> <code>NA</code>.</li>
+<li>New <code><a href="../reference/design_bands.html">design_bands()</a></code> returns the event-model design as a plain list for banded regression: the matrix <code>X</code>, the <code>band</code> and <code>subband</code> of each column, <code>families</code> (the sub-bands of each band that has several) and the matching <code>colmap</code> rows. <code>terms</code> and <code>bands</code> restrict the columns.</li>
+<li>
+<code><a href="../reference/feature.html">feature()</a></code> gains <code>contrasts</code>, as in <code><a href="../reference/hrf.html">hrf()</a></code>. <code><a href="../reference/column_contrast.html">column_contrast()</a></code> patterns select a feature term’s design columns, and <code><a href="../reference/contrast_weights.html">contrast_weights()</a></code> on the model returns them.</li>
+<li>
+<code><a href="../reference/Fcontrasts.html">Fcontrasts()</a></code> now covers feature terms: an omnibus F-contrast over all of the term’s columns (<code>&lt;term&gt;#&lt;term&gt;</code>) and one per declared sub-band (<code>&lt;term&gt;#&lt;subband&gt;</code>), each tested jointly across the HRF basis. Feature terms used to contribute none, so <code><a href="../reference/Fcontrasts.html">Fcontrasts()</a></code> on a model with a feature term now returns more elements.</li>
+<li>Added <code><a href="../reference/check_estimability.html">check_estimability()</a></code> for full-design rank, exact condition numbers, named weak directions, and contrast-specific estimability and variance factors. Event models include run intercepts by default and report event coverage per run; an explicit baseline/nuisance design can also be supplied. <code><a href="../reference/check_collinearity.html">check_collinearity()</a></code> now documents the limitations of pairwise checks (<a href="https://github.com/bbuchsbaum/fmridesign/issues/32" class="external-link">#32</a>).</li>
 </ul></div>
 <div class="section level3">
 <h3 id="cran-compliance-development-version">CRAN compliance<a class="anchor" aria-label="anchor" href="#cran-compliance-development-version"></a></h3>
@@ -85,7 +94,8 @@
 </ul></div>
 <div class="section level3">
 <h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
-<ul><li>
+<ul><li>Basis filtering and F-contrast expansion now see the right number of basis functions for a multi-basis <code><a href="../reference/feature.html">feature()</a></code> term. The internal helper read the HRF from an attribute feature terms do not carry and assumed one basis function.</li>
+<li>
 <code><a href="../reference/contrast_set.html">contrast_set()</a></code> now combines individual specifications with nested contrast sets, including those returned by <code><a href="../reference/one_against_all_contrast.html">one_against_all_contrast()</a></code>. It preserves leaf names and order, and reports invalid entries by argument path (<a href="https://github.com/bbuchsbaum/fmridesign/issues/33" class="external-link">#33</a>).</li>
 <li>
 <code>hrf(..., summate = FALSE)</code> is honoured again for sustained events. The shared-HRF fast path ignored <code>summate</code> and always produced the <code>summate = TRUE</code> design.</li>
