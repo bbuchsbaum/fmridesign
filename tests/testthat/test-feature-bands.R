@@ -148,36 +148,6 @@ test_that("durations validation", {
 })
 
 
-# --- zero-fill warning -------------------------------------------------------
-
-test_that("a held series shorter than the run warns; values are unchanged", {
-  dt <- 0.5
-  rms <- abs(sin(seq(0, 12, by = dt)))
-  sframe <- fmrihrf::sampling_frame(blocklens = 20, TR = 1)
-  expect_warning(
-    emod <- event_model(
-      ~ feature(rms, dt = dt, id = "rms", center = FALSE, scale = "none"),
-      sampling_frame = sframe
-    ),
-    "series ends at 12.5 s but the run lasts 20.0 s"
-  )
-  feat <- fmrihrf::feature_regressor(rms, dt = dt, center = FALSE,
-                                     scale = "none")
-  grid <- fmrihrf::samples(sframe, global = FALSE)
-  expect_equal(as.numeric(design_matrix(emod)[[1]]),
-               as.numeric(fmrihrf::evaluate(feat, grid, precision = 0.3)),
-               tolerance = 1e-8)
-
-  full <- abs(sin(seq(0, 19.5, by = dt)))
-  expect_no_warning(
-    event_model(
-      ~ feature(full, dt = dt, id = "rms", center = FALSE, scale = "none"),
-      sampling_frame = sframe
-    )
-  )
-})
-
-
 # --- bands in the column metadata --------------------------------------------
 
 test_that("existing column names are unchanged by bands and contrasts", {

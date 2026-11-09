@@ -483,7 +483,7 @@ feature <- function(x,
 #' @keywords internal
 #' @noRd
 .validate_feature_alignment <- function(values, times, dt, start, sampling_frame,
-                                        id, event_timed = FALSE) {
+                                        id) {
   bl <- fmrihrf::blocklens(sampling_frame)
   TR <- sampling_frame$TR
   if (is.null(TR)) {
@@ -506,23 +506,6 @@ feature <- function(x,
         "feature '%s' block %d: %d sample(s) at or after run end (%.1f s).",
         id, b, n_after, run_end[[b]]
       ), call. = FALSE)
-    }
-    # A held (zero-order-hold) series that stops more than one TR before the
-    # run does leaves the remaining scans with no contribution from the
-    # feature. Event-timed features are sparse by design and are not checked.
-    if (!event_timed) {
-      last_bin <- if (n >= 2L) tvec[[n]] - tvec[[n - 1L]] else dt %||% 0
-      series_end <- tvec[[n]] + last_bin
-      if (series_end < run_end[[b]] - TR[[b]] - sqrt(.Machine$double.eps)) {
-        warning(sprintf(
-          paste0(
-            "feature '%s' block %d: the series ends at %.1f s but the run ",
-            "lasts %.1f s; scans after the end of the series get no ",
-            "contribution from it (zero-filled)."
-          ),
-          id, b, series_end, run_end[[b]]
-        ), call. = FALSE)
-      }
     }
   }
   invisible(NULL)
@@ -548,8 +531,7 @@ construct.featurespec <- function(x, model_spec, ...) {
   durations <- .normalize_feature_durations(x$durations, n_blocks, n_samples, id)
   mask <- .normalize_feature_mask(x$mask, n_blocks, n_samples, id)
   bands <- .normalize_feature_bands(x$band, x$subband, unpacked$cond_tags, id)
-  .validate_feature_alignment(unpacked$values, times, x$dt, x$start, sframe, id,
-                              event_timed = !is.null(durations))
+  .validate_feature_alignment(unpacked$values, times, x$dt, x$start, sframe, id)
 
   ret <- list(
     varname = id,

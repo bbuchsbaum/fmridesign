@@ -159,10 +159,6 @@
 
 ## Bug fixes
 
-- A `feature()` series given with `dt` or `times` that stops more than one TR
-  before the end of its run now gives a warning. The remaining scans were,
-  and still are, filled as if the feature were zero there; this used to be
-  silent.
 - Basis filtering and F-contrast expansion now see the right number of basis
   functions for a multi-basis `feature()` term. The internal helper read the
   HRF from an attribute feature terms do not carry and assumed one basis
