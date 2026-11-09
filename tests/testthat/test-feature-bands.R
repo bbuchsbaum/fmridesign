@@ -326,3 +326,47 @@ test_that("a column_contrast on a feature term resolves", {
   expect_named(spec$contrasts, "x_on")
   expect_error(feature(1:4, dt = 1, contrasts = "nope"), "contrast_spec")
 })
+
+
+# --- feature names that collide with naming conventions ----------------------
+
+test_that("a feature named like a basis suffix still gets a full F-contrast", {
+  sframe <- fmrihrf::sampling_frame(blocklens = 60, TR = 1)
+  set.seed(11)
+  x <- rnorm(60)
+  emod <- event_model(
+    ~ feature(cbind(energy_b01 = x), dt = 1, id = "env", basis = "spmg2"),
+    sampling_frame = sframe
+  )
+  expect_equal(colnames(design_matrix(emod)),
+               c("env_energy_b01_b01", "env_energy_b01_b02"))
+  expect_no_warning(Fc <- Fcontrasts(emod))
+  omnibus <- unclass(as.matrix(Fc[["env#env"]]))
+  expect_equal(dim(omnibus), c(2L, 2L))
+  expect_equal(unname(omnibus[, , drop = FALSE]), diag(2), ignore_attr = TRUE)
+  expect_equal(rownames(omnibus), colnames(design_matrix(emod)))
+})
+
+test_that("feature contrast weights are placed by term-level name only", {
+  sframe <- fmrihrf::sampling_frame(blocklens = 60, TR = 1)
+  set.seed(12)
+  x <- rnorm(60)
+  # the term-level name of the second column ("env_a") equals the full
+  # design-matrix name of the first
+  emod <- event_model(
+    ~ feature(cbind(a = x, env_a = rev(x)), dt = 1, id = "env",
+              subband = c("one", "two"),
+              contrasts = column_contrast("^a$", "^env_env_a$", name = "diff")),
+    sampling_frame = sframe
+  )
+  expect_equal(colnames(design_matrix(emod)), c("env_a", "env_env_a"))
+  expect_no_warning(cw <- contrast_weights(emod))
+  expect_equal(cw[["env#diff"]]$offset_weights[, "diff"],
+               c(env_a = 1, env_env_a = -1))
+
+  expect_no_warning(Fc <- Fcontrasts(emod))
+  expect_equal(as.numeric(as.matrix(Fc[["env#one"]])), c(1, 0))
+  expect_equal(as.numeric(as.matrix(Fc[["env#two"]])), c(0, 1))
+  expect_equal(unname(unclass(as.matrix(Fc[["env#env"]]))[, , drop = FALSE]),
+               diag(2), ignore_attr = TRUE)
+})
