@@ -458,8 +458,13 @@ contrast_weights.event_model <- function(x, ...) {
       return(NULL)
     }
     
-    # Get contrasts defined *within* the term (from hrfspec)
-    term_contrasts <- attr(term, "hrfspec")$contrasts
+    # Get contrasts defined *within* the term (from hrfspec; a feature term
+    # keeps its featurespec in `term$spec`)
+    term_contrasts <- if (inherits(term, "feature_term")) {
+      term$spec$contrasts
+    } else {
+      attr(term, "hrfspec")$contrasts
+    }
     term_indices_vec <- tind[[ names(terms(x))[i] ]]
     
     if (!is.null(term_contrasts) && length(term_contrasts) > 0) {
@@ -476,7 +481,8 @@ contrast_weights.event_model <- function(x, ...) {
                                        term_indices_vec, tnames[i],
                                        label = sprintf("Contrast '%s'", cw$name),
                                        strip_if_any_na = FALSE,
-                                       col_prefix = attr(term, "term_tag") %||% tnames[i])
+                                       col_prefix = attr(term, "term_tag") %||% tnames[i],
+                                       local_names = .feature_local_names(term))
             if (is.null(emb)) return(NULL)
             if (!is.null(rownames(cw$weights))) {
                 cw$weights <- cw$weights[emb$keep, , drop=FALSE]
@@ -540,10 +546,14 @@ contrast_weights.event_model <- function(x, ...) {
 #' and \eqn{nb} basis functions yields a \eqn{(k \cdot nb) \times ((k-1) \cdot nb)}
 #' matrix for its main effect. Columns are named `<contrast column>_b##`.
 #'
-#' Terms with no categorical variable (e.g. `hrf(rt)`, covariates, feature
-#' terms) contribute no F-contrasts; a model made only of such terms returns
-#' an empty list. Calling `Fcontrasts()` directly on such an `event_term`
-#' still signals an error.
+#' Terms with no categorical variable (e.g. `hrf(rt)`, covariates) contribute
+#' no F-contrasts; a model made only of such terms returns an empty list.
+#' Calling `Fcontrasts()` directly on such an `event_term` still signals an
+#' error.
+#'
+#' A [feature()] term contributes an omnibus F-contrast over all of its
+#' columns, named `<term>#<term>`, and one F-contrast per declared sub-band,
+#' named `<term>#<subband>`.
 Fcontrasts.event_model <- function(x, ...) {
   tnames <- names(terms(x))
   tind <- attr(x$design_matrix, "col_indices") 
@@ -557,20 +567,24 @@ Fcontrasts.event_model <- function(x, ...) {
     
     # Terms without a categorical variable (e.g. hrf(rt), covariates), or
     # whose factors have a single level, have no omnibus condition F-test;
-    # skip them rather than failing the whole model.
-    if (!.has_categorical_event(term_i)) return(NULL)
+    # skip them rather than failing the whole model. Feature terms have no
+    # categorical variable but do have F-contrasts (omnibus and sub-bands).
+    if (!inherits(term_i, "feature_term") &&
+        !.has_categorical_event(term_i)) return(NULL)
 
     # Calculate Fcontrasts relative to the term itself
     fcon_local <- Fcontrasts(term_i)
     
     if (!is.null(fcon_local) && length(fcon_local) > 0) {
         ret_mapped <- lapply(stats::setNames(nm = names(fcon_local)), function(con_name) {
-            cw <- .expand_fcontrast_basis(fcon_local[[con_name]], term_i)
+            cw <- .expand_fcontrast_basis(fcon_local[[con_name]], term_i,
+                                          force = inherits(term_i, "feature_term"))
             emb <- .embed_term_weights(cw, colnames(x$design_matrix),
                                        term_indices_vec, tnames[i],
                                        label = sprintf("F-contrast '%s'", con_name),
                                        strip_if_any_na = TRUE,
-                                       col_prefix = attr(term_i, "term_tag") %||% tnames[i])
+                                       col_prefix = attr(term_i, "term_tag") %||% tnames[i],
+                                       local_names = .feature_local_names(term_i))
             if (is.null(emb)) return(NULL)
             out <- emb$out
             attr(out, "term_indices") <- as.vector(term_indices_vec)
@@ -616,12 +630,18 @@ Fcontrasts.event_model <- function(x, ...) {
 #'   (rather than all) row names fail to match.
 #' @param col_prefix The term's column prefix: its `term_tag`, which differs
 #'   from `term_name` when the model de-duplicated the term names.
+#' @param local_names Optional term-level names of the term's columns, in
+#'   design-matrix order. When supplied, row names are matched against these
+#'   only. Feature terms use this: their column names are user-supplied, so a
+#'   term-level name can equal another column's full design-matrix name, and
+#'   matching in both namespaces would place weights on the wrong column.
 #' @return `NULL`, or a list with the embedded matrix `out` and the logical
 #'   `keep` (which rows of `W` were placed).
 #' @keywords internal
 #' @noRd
 .embed_term_weights <- function(W, dm_colnames, term_idx, term_name, label,
-                                strip_if_any_na = FALSE, col_prefix = term_name) {
+                                strip_if_any_na = FALSE, col_prefix = term_name,
+                                local_names = NULL) {
   out <- matrix(0, length(dm_colnames), ncol(W))
   colnames(out) <- colnames(W)
   rownames(out) <- dm_colnames
@@ -638,12 +658,16 @@ Fcontrasts.event_model <- function(x, ...) {
   }
 
   term_cols <- dm_colnames[term_idx]
-  m <- match(rn, term_cols)
-  retry <- if (strip_if_any_na) anyNA(m) else all(is.na(m))
-  if (retry && length(term_cols) > 0) {
-    prefix <- paste0(col_prefix, "_")
-    if (all(startsWith(term_cols, prefix))) {
-      m <- match(rn, substring(term_cols, nchar(prefix) + 1L))
+  if (!is.null(local_names) && length(local_names) == length(term_idx)) {
+    m <- match(rn, local_names)
+  } else {
+    m <- match(rn, term_cols)
+    retry <- if (strip_if_any_na) anyNA(m) else all(is.na(m))
+    if (retry && length(term_cols) > 0) {
+      prefix <- paste0(col_prefix, "_")
+      if (all(startsWith(term_cols, prefix))) {
+        m <- match(rn, substring(term_cols, nchar(prefix) + 1L))
+      }
     }
   }
   if (anyNA(m)) {
@@ -655,6 +679,17 @@ Fcontrasts.event_model <- function(x, ...) {
     out[term_idx[m[keep]], ] <- W[keep, , drop = FALSE]
   }
   list(out = out, keep = keep)
+}
+
+#' Term-level names of a feature term's design columns, in column order
+#'
+#' `NULL` for any other term, which keeps the name matching those terms have
+#' always had.
+#' @keywords internal
+#' @noRd
+.feature_local_names <- function(term) {
+  if (!inherits(term, "feature_term")) return(NULL)
+  .condnames(term, expanded = TRUE)
 }
 
 #' Does a term contain a categorical event variable with an effect to test
@@ -680,16 +715,20 @@ Fcontrasts.event_model <- function(x, ...) {
 #'
 #' @param cw Term-level F-contrast matrix with base-condition row names.
 #' @param term The `event_term` the contrast belongs to.
+#' @param force Expand even when row names end in `_b##`. Whether a matrix is
+#'   already expanded is otherwise inferred from that suffix, which is unsafe
+#'   for feature terms: their term-level contrasts are never expanded, and a
+#'   user-supplied feature name may itself end in `_b01`.
 #' @return `cw` unchanged for single-basis terms or rows already carrying
 #'   basis suffixes; otherwise the basis-expanded matrix.
 #' @keywords internal
 #' @noRd
-.expand_fcontrast_basis <- function(cw, term) {
+.expand_fcontrast_basis <- function(cw, term, force = FALSE) {
   if (!is.matrix(cw)) return(cw)
   nb <- .term_nbasis(term)
   if (nb <= 1L) return(cw)
   rn <- rownames(cw)
-  if (is.null(rn) || any(grepl("_b[0-9]+$", rn))) return(cw)
+  if (is.null(rn) || (!force && any(grepl("_b[0-9]+$", rn)))) return(cw)
 
   out <- kronecker(cw, diag(nb))
   cn <- colnames(cw) %||% paste0("c", seq_len(ncol(cw)))

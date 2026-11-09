@@ -37,10 +37,25 @@ tested jointly in every basis function, so a term with \eqn{k} conditions
 and \eqn{nb} basis functions yields a \eqn{(k \cdot nb) \times ((k-1) \cdot nb)}
 matrix for its main effect. Columns are named \verb{<contrast column>_b##}.
 
-Terms with no categorical variable (e.g. \code{hrf(rt)}, covariates, feature
-terms) contribute no F-contrasts; a model made only of such terms returns
-an empty list. Calling \code{Fcontrasts()} directly on such an \code{event_term}
-still signals an error.
+Terms with no categorical variable (e.g. \code{hrf(rt)}, covariates) contribute
+no F-contrasts; a model made only of such terms returns an empty list.
+Calling \code{Fcontrasts()} directly on such an \code{event_term} still signals an
+error.
+
+A \code{\link[=feature]{feature()}} term contributes an omnibus F-contrast over all of its
+columns, named \verb{<term>#<term>}, and one F-contrast per declared sub-band,
+named \verb{<term>#<subband>}.
+
+For a \code{feature_term} the result has the same structure as for an
+\code{event_term}: a named list of matrices with one row per feature column
+(row names are the term's condition tags, \code{conditions(x)}), before
+expansion across basis functions. The first element, named after the term,
+is the omnibus contrast (an identity matrix: all feature columns are tested
+jointly). It is followed by one element per distinct sub-band declared with
+\code{feature(subband = )}, named after the sub-band, whose columns pick out
+that sub-band's feature columns. A sub-band that has the term's own name is
+not repeated. \code{Fcontrasts()} on the \code{event_model} expands these across the
+HRF basis and embeds them in the full design, as for any other term.
 }
 \examples{
 des <- data.frame(

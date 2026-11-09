@@ -97,15 +97,16 @@
 
 #' Number of basis functions of a term's HRF
 #'
-#' @param term An event_term, possibly carrying an `hrfspec` attribute.
+#' @param term An event_term, possibly carrying an `hrfspec` attribute, or a
+#'   feature_term (which keeps its HRF on the term; see `nbasis.feature_term()`).
 #' @return `fmrihrf::nbasis()` of the term's HRF when it is greater than one;
 #'   otherwise (single-basis, no HRF, or an error) `1L`.
 #' @keywords internal
 #' @noRd
 .term_nbasis <- function(term) {
-  hrf <- attr(term, "hrfspec")$hrf
+  hrf <- if (inherits(term, "feature_term")) term else attr(term, "hrfspec")$hrf
   if (is.null(hrf)) return(1L)
-  nb <- try(fmrihrf::nbasis(hrf), silent = TRUE)
+  nb <- try(nbasis(hrf), silent = TRUE)
   if (!inherits(nb, "try-error") && is.numeric(nb) && nb > 1) nb else 1L
 }
 

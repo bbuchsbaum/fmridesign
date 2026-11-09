@@ -36,6 +36,11 @@
 #'   - `is_block_diagonal` (logical): TRUE when the regressor is per-run/block
 #'   - `modulation_type` (character): "amplitude", "parametric", "covariate", or "feature"
 #'   - `modulation_id` (character): modulator identifier when applicable (e.g., "RT", "RT_by_group")
+#'   - `band` (character): feature band the column belongs to. Set with
+#'     `feature(band = )`; for every other term, and for feature terms without
+#'     a declared band, it is the `term_tag`
+#'   - `subband` (character): sub-band within the band, set with
+#'     `feature(subband = )`; `NA` when none was declared. See [design_bands()]
 #' @examples
 #' # Create event model
 #' des <- data.frame(
@@ -153,8 +158,20 @@ design_colmap.event_model <- function(x, ...) {
     basis_label = basis_label,
     is_block_diagonal = rep(FALSE, n_cols),
     modulation_type = per_term_mod_type[term_index_by_col],
-    modulation_id   = per_term_mod_id[term_index_by_col]
+    modulation_id   = per_term_mod_id[term_index_by_col],
+    band = term_tag_by_col,
+    subband = rep(NA_character_, n_cols)
   )
+
+  # Bands declared on feature terms
+  for (i in seq_along(terms_list)) {
+    ti <- terms_list[[i]]
+    idx <- which(term_index_by_col == i)
+    if (!inherits(ti, "feature_term") || length(idx) == 0L) next
+    if (!is.null(ti$band)) out$band[idx] <- ti$band
+    sb <- rep(ti$subband %||% NA_character_, each = fmrihrf::nbasis(ti$hrf))
+    if (length(sb) == length(idx)) out$subband[idx] <- sb
+  }
 
   # A covariate term contains independent, already-sampled regressors. In
   # legacy matrices without construction-time metadata, recover each
@@ -333,6 +350,8 @@ design_colmap.baseline_model <- function(x, ...) {
     basis_label = basis_label,
     is_block_diagonal = is_block_diag,
     modulation_type = rep(NA_character_, n_cols),
-    modulation_id   = rep(NA_character_, n_cols)
+    modulation_id   = rep(NA_character_, n_cols),
+    band = term_tag_by_col,
+    subband = rep(NA_character_, n_cols)
   )
 }

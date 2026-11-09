@@ -57,7 +57,9 @@
     basis_label      = character(0),
     is_block_diagonal = logical(0),
     modulation_type  = character(0),
-    modulation_id    = character(0)
+    modulation_id    = character(0),
+    band             = character(0),
+    subband          = character(0)
   ), n = 0L)
 }
 
@@ -238,7 +240,9 @@
                                model_source    = "event",
                                modulation_type = "amplitude",
                                modulation_id   = NA_character_,
-                               is_block_diagonal = FALSE) {
+                               is_block_diagonal = FALSE,
+                               band            = NA_character_,
+                               subband         = NA_character_) {
   n <- length(name)
   .new_meta_tibble(list(
     col              = seq_len(n),  # replaced with absolute positions by combiner
@@ -255,7 +259,9 @@
     basis_label      = basis_label,
     is_block_diagonal = is_block_diagonal,
     modulation_type  = modulation_type,
-    modulation_id    = modulation_id
+    modulation_id    = modulation_id,
+    band             = band,     # NA is replaced by the term tag by the combiner
+    subband          = subband
   ), n = n)
 }
 
@@ -284,6 +290,9 @@
     if (length(term_names) >= i && !is.na(term_names[i])) {
       md$term_tag <- term_names[i]
     }
+    # A term without a declared band is its own band.
+    no_band <- is.na(md$band)
+    md$band[no_band] <- md$term_tag[no_band]
     md$col <- cursor + seq_len(nrow(md))
     cursor <- cursor + nrow(md)
     parts[[i]] <- md
@@ -330,4 +339,42 @@
 design_meta <- function(x) {
   dm <- if (inherits(x, "data.frame") || is.matrix(x)) x else design_matrix(x)
   attr(dm, "col_metadata")
+}
+
+#' @rdname design_bands
+#' @param terms Optional character vector of term tags (`names(terms(x))`);
+#'   only columns of these terms are returned.
+#' @param bands Optional character vector of band names; only columns in
+#'   these bands are returned. With both `terms` and `bands`, a column must
+#'   satisfy both.
+#' @export
+design_bands.event_model <- function(x, terms = NULL, bands = NULL, ...) {
+  cm <- design_colmap(x)
+  keep <- rep(TRUE, nrow(cm))
+  restrict <- function(values, pool, what) {
+    if (is.null(values)) return(keep)
+    if (!is.character(values) || anyNA(values)) {
+      stop(sprintf("`%s` must be a character vector.", what), call. = FALSE)
+    }
+    unknown <- setdiff(values, pool)
+    if (length(unknown) > 0L) {
+      stop(sprintf("Unknown %s: %s. Available: %s.", what,
+                   paste(unknown, collapse = ", "),
+                   paste(unique(pool), collapse = ", ")), call. = FALSE)
+    }
+    keep & pool %in% values
+  }
+  keep <- restrict(terms, cm$term_tag, "terms")
+  keep <- restrict(bands, cm$band, "bands")
+  cm <- cm[keep, , drop = FALSE]
+
+  X <- as.matrix(design_matrix(x))[, cm$col, drop = FALSE]
+  attr(X, "col_metadata") <- NULL
+  subband <- ifelse(is.na(cm$subband), cm$band, cm$subband)
+  families <- lapply(split(subband, factor(cm$band, levels = unique(cm$band))),
+                     unique)
+  families <- families[lengths(families) > 1L]
+
+  list(X = X, band = cm$band, subband = subband, families = families,
+       colmap = cm)
 }

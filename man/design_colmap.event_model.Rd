@@ -42,6 +42,11 @@ name for nuisance regressors)
 \item \code{is_block_diagonal} (logical): TRUE when the regressor is per-run/block
 \item \code{modulation_type} (character): "amplitude", "parametric", "covariate", or "feature"
 \item \code{modulation_id} (character): modulator identifier when applicable (e.g., "RT", "RT_by_group")
+\item \code{band} (character): feature band the column belongs to. Set with
+\code{feature(band = )}; for every other term, and for feature terms without
+a declared band, it is the \code{term_tag}
+\item \code{subband} (character): sub-band within the band, set with
+\code{feature(subband = )}; \code{NA} when none was declared. See \code{\link[=design_bands]{design_bands()}}
 }
 }
 \description{

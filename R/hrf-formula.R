@@ -176,35 +176,7 @@ hrf <- function(..., basis="spmg1", hrf_fun=NULL, onsets=NULL, durations=NULL, p
   # final_id remains NULL if neither id nor name provided, hrfspec will generate default
   
   # --- Check contrasts argument --- 
-  if (!is.null(contrasts)) {
-    # Accept a single contrast_spec directly (even though it inherits from list)
-    if (inherits(contrasts, "contrast_spec")) {
-      contrasts <- stats::setNames(list(contrasts), contrasts$name %||% "contrast1")
-    } else if (is.list(contrasts)) {
-      # A contrast_set is already a list of contrast_specs; a bare list is checked
-      if (!inherits(contrasts, "contrast_set") &&
-          !all(vapply(contrasts, inherits, logical(1), "contrast_spec"))) {
-        stop("If `contrasts=` is a list, all elements must be contrast_spec objects.\n",
-             "  Hint: Use functions like contrast(), pair_contrast(), contrast_set() to define contrasts.", 
-             call. = FALSE)
-      }
-      # Ensure names, falling back to each spec's name and then "contrast<i>"
-      if (is.null(names(contrasts)) || any(names(contrasts) == "")) {
-        cnames <- vapply(contrasts, function(cs) cs$name %||% "", character(1))
-        blanks <- which(cnames == "")
-        cnames[blanks] <- paste0("contrast", blanks)
-        if (any(duplicated(cnames))) {
-          stop("If `contrasts=` is a list, it must be a named list with unique names.", call. = FALSE)
-        }
-        names(contrasts) <- cnames
-      }
-    } else {
-      stop("`contrasts=` argument must be a contrast_spec, a contrast_set, or a list of contrast_spec objects.\n",
-           "  Detected type: ", class(contrasts)[1], "\n",
-           "  Hint: Use functions like contrast(), pair_contrast(), contrast_set() to define contrasts.",
-           call. = FALSE)
-    }
-  }
+  contrasts <- .validate_contrasts_arg(contrasts)
   # -----------------------------
 
   # --- Handle hrf_fun parameter ---
@@ -594,4 +566,47 @@ weighted_hrf_gen <- function(times_col = "sub_times", weights_col = "sub_weights
                             method = method, normalize = normalize)
     }, d[[times_col]], d[[weights_col]], d$onset)
   }
+}
+
+
+#' Validate the `contrasts=` argument of a term specification
+#'
+#' Shared by [hrf()] and [feature()].
+#'
+#' @param contrasts `NULL`, a `contrast_spec`, a `contrast_set`, or a list of
+#'   `contrast_spec` objects.
+#' @return `NULL` or a named list of contrast specs.
+#' @keywords internal
+#' @noRd
+.validate_contrasts_arg <- function(contrasts) {
+  if (!is.null(contrasts)) {
+    # Accept a single contrast_spec directly (even though it inherits from list)
+    if (inherits(contrasts, "contrast_spec")) {
+      contrasts <- stats::setNames(list(contrasts), contrasts$name %||% "contrast1")
+    } else if (is.list(contrasts)) {
+      # A contrast_set is already a list of contrast_specs; a bare list is checked
+      if (!inherits(contrasts, "contrast_set") &&
+          !all(vapply(contrasts, inherits, logical(1), "contrast_spec"))) {
+        stop("If `contrasts=` is a list, all elements must be contrast_spec objects.\n",
+             "  Hint: Use functions like contrast(), pair_contrast(), contrast_set() to define contrasts.", 
+             call. = FALSE)
+      }
+      # Ensure names, falling back to each spec's name and then "contrast<i>"
+      if (is.null(names(contrasts)) || any(names(contrasts) == "")) {
+        cnames <- vapply(contrasts, function(cs) cs$name %||% "", character(1))
+        blanks <- which(cnames == "")
+        cnames[blanks] <- paste0("contrast", blanks)
+        if (any(duplicated(cnames))) {
+          stop("If `contrasts=` is a list, it must be a named list with unique names.", call. = FALSE)
+        }
+        names(contrasts) <- cnames
+      }
+    } else {
+      stop("`contrasts=` argument must be a contrast_spec, a contrast_set, or a list of contrast_spec objects.\n",
+           "  Detected type: ", class(contrasts)[1], "\n",
+           "  Hint: Use functions like contrast(), pair_contrast(), contrast_set() to define contrasts.",
+           call. = FALSE)
+    }
+  }
+  contrasts
 }
