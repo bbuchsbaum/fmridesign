@@ -19,7 +19,11 @@ feature(
   precision = NULL,
   id = NULL,
   name = NULL,
-  prefix = NULL
+  prefix = NULL,
+  durations = NULL,
+  band = NULL,
+  subband = NULL,
+  contrasts = NULL
 )
 }
 \arguments{
@@ -46,6 +50,23 @@ Centering and scaling are applied per run.}
 
 \item{id, name, prefix}{Term identifier used for column names. If omitted,
 the name of \code{x} is used.}
+
+\item{durations}{Optional event durations in seconds, only valid with
+\code{times}: a single number, a vector with one entry per sample, or a list
+of those with one element per run (parallel to \code{times}). \code{NULL} (default)
+keeps the zero-order hold. Requires a version of fmrihrf whose
+\code{feature_regressor()} has a \code{durations} argument.}
+
+\item{band}{Optional single string naming the feature band this term
+belongs to. Defaults to the term's tag (its \code{id}).}
+
+\item{subband}{Optional sub-band labels: \code{NULL} (none), a single string
+(every feature column), or a character vector with one entry per feature
+column of \code{x}.}
+
+\item{contrasts}{Optional contrast specification(s) for the term: a
+\code{contrast_spec}, a \code{\link[=contrast_set]{contrast_set()}}, or a list of \code{contrast_spec}
+objects, as in \code{\link[=hrf]{hrf()}}.}
 }
 \value{
 A \code{featurespec} object for use on the RHS of an \code{\link[=event_model]{event_model()}}
@@ -61,10 +82,43 @@ this is a time series, not a list of trials.
 list of those with one element per \code{sampling_frame} block. Supply exactly
 one of \code{dt} or \code{times}. Feature-only models are allowed:
 \code{event_model(~ feature(x, dt = 0.1, id = "rms"), sampling_frame = sframe)}.
+
+A series given with \code{dt} or \code{times} alone is a zero-order hold: each value
+lasts until the next sample. If such a series stops more than one TR
+before the run does, the scans after its end get no contribution from it (as if the feature
+were 0 there, after centering), and a warning says so.
 }
+\section{Event-timed features}{
+
+For a sparse feature tied to events (word surprisal, per-phone features),
+supply \code{times} (onsets) and \code{durations}. Row \code{i} of \code{x} is then an event
+starting at \code{times[i]} and lasting \code{durations[i]} seconds (\code{0} is an
+impulse) with amplitude \code{x[i, ]}, and no value is held across the gap to
+the next event. \code{times} need only be non-decreasing, and events may
+overlap (their responses add). \code{center} and \code{scale} act across the events
+of a run, the parametric-modulator convention. See
+\code{\link[fmrihrf:feature_regressor]{fmrihrf::feature_regressor()}}.
+}
+
+\section{Bands, sub-bands and contrasts}{
+
+\code{band} and \code{subband} label the columns of the term for banded (grouped)
+models; they are recorded in the \code{band} and \code{subband} columns of
+\code{\link[=design_colmap]{design_colmap()}} and collected by \code{\link[=design_bands]{design_bands()}}. Several terms may
+share a band.
+
+\code{Fcontrasts()} gives a feature term an omnibus F-contrast over all of its
+columns, and one F-contrast per declared sub-band. Each tests its feature
+columns jointly in every basis function. \code{contrasts} attaches contrast
+specifications to the term, as in \code{\link[=hrf]{hrf()}}. Feature terms have no
+categorical cells, so use \code{\link[=column_contrast]{column_contrast()}}, whose patterns select
+design-matrix columns by name (for example
+\code{column_contrast("^env_alpha$", "^env_beta$", name = "a_vs_b")}).
+}
+
 \examples{
 dt <- 0.5
-rms <- abs(sin(seq(0, 20, by = dt)))
+rms <- abs(sin(seq(0, 29.5, by = dt)))
 sframe <- sampling_frame(blocklens = 15, TR = 2)
 emod <- event_model(
   ~ feature(rms, dt = dt, id = "rms", center = FALSE, scale = "none"),
@@ -72,7 +126,21 @@ emod <- event_model(
 )
 ncol(design_matrix(emod))
 
+# Two-column feature with sub-bands and a column contrast
+env <- cbind(low = rms, high = rev(rms))
+emod2 <- event_model(
+  ~ feature(env, dt = dt, id = "env", band = "acoustic",
+            subband = c("low", "high"),
+            contrasts = column_contrast("^env_low$", "^env_high$",
+                                        name = "low_vs_high")),
+  sampling_frame = sframe
+)
+names(Fcontrasts(emod2))
+names(contrast_weights(emod2))
+design_bands(emod2)$families
+
 }
 \seealso{
-\code{\link[fmrihrf:feature_regressor]{fmrihrf::feature_regressor()}}, \code{\link[=hrf]{hrf()}}, \code{\link[=event_model]{event_model()}}
+\code{\link[fmrihrf:feature_regressor]{fmrihrf::feature_regressor()}}, \code{\link[=hrf]{hrf()}}, \code{\link[=event_model]{event_model()}},
+\code{\link[=design_bands]{design_bands()}}
 }

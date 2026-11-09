@@ -19,7 +19,9 @@ ref_make_col_metadata <- function(name,
                                    model_source    = "event",
                                    modulation_type = "amplitude",
                                    modulation_id   = NA_character_,
-                                   is_block_diagonal = FALSE) {
+                                   is_block_diagonal = FALSE,
+                                   band            = NA_character_,
+                                   subband         = NA_character_) {
   n <- length(name)
   tibble::tibble(
     col              = seq_len(n),
@@ -36,7 +38,9 @@ ref_make_col_metadata <- function(name,
     basis_label      = basis_label,
     is_block_diagonal = is_block_diagonal,
     modulation_type  = modulation_type,
-    modulation_id    = modulation_id
+    modulation_id    = modulation_id,
+    band             = band,
+    subband          = subband
   )
 }
 
@@ -100,6 +104,7 @@ test_that(".combine_col_metadata equals dplyr::bind_rows for clean parts", {
   ref_parts <- Map(function(md, i, nm) {
     md$term_index <- as.integer(i)
     md$term_tag <- nm
+    md$band <- nm  # a term without a declared band is its own band
     md
   }, parts, c(1L, 2L), names(parts))
   cursor <- 0L

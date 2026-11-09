@@ -458,8 +458,13 @@ contrast_weights.event_model <- function(x, ...) {
       return(NULL)
     }
     
-    # Get contrasts defined *within* the term (from hrfspec)
-    term_contrasts <- attr(term, "hrfspec")$contrasts
+    # Get contrasts defined *within* the term (from hrfspec; a feature term
+    # keeps its featurespec in `term$spec`)
+    term_contrasts <- if (inherits(term, "feature_term")) {
+      term$spec$contrasts
+    } else {
+      attr(term, "hrfspec")$contrasts
+    }
     term_indices_vec <- tind[[ names(terms(x))[i] ]]
     
     if (!is.null(term_contrasts) && length(term_contrasts) > 0) {
@@ -540,10 +545,14 @@ contrast_weights.event_model <- function(x, ...) {
 #' and \eqn{nb} basis functions yields a \eqn{(k \cdot nb) \times ((k-1) \cdot nb)}
 #' matrix for its main effect. Columns are named `<contrast column>_b##`.
 #'
-#' Terms with no categorical variable (e.g. `hrf(rt)`, covariates, feature
-#' terms) contribute no F-contrasts; a model made only of such terms returns
-#' an empty list. Calling `Fcontrasts()` directly on such an `event_term`
-#' still signals an error.
+#' Terms with no categorical variable (e.g. `hrf(rt)`, covariates) contribute
+#' no F-contrasts; a model made only of such terms returns an empty list.
+#' Calling `Fcontrasts()` directly on such an `event_term` still signals an
+#' error.
+#'
+#' A [feature()] term contributes an omnibus F-contrast over all of its
+#' columns, named `<term>#<term>`, and one F-contrast per declared sub-band,
+#' named `<term>#<subband>`.
 Fcontrasts.event_model <- function(x, ...) {
   tnames <- names(terms(x))
   tind <- attr(x$design_matrix, "col_indices") 
@@ -557,8 +566,10 @@ Fcontrasts.event_model <- function(x, ...) {
     
     # Terms without a categorical variable (e.g. hrf(rt), covariates), or
     # whose factors have a single level, have no omnibus condition F-test;
-    # skip them rather than failing the whole model.
-    if (!.has_categorical_event(term_i)) return(NULL)
+    # skip them rather than failing the whole model. Feature terms have no
+    # categorical variable but do have F-contrasts (omnibus and sub-bands).
+    if (!inherits(term_i, "feature_term") &&
+        !.has_categorical_event(term_i)) return(NULL)
 
     # Calculate Fcontrasts relative to the term itself
     fcon_local <- Fcontrasts(term_i)

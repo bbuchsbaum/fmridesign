@@ -62,6 +62,30 @@
 
 ## New features
 
+- `feature()` gains `durations` for sparse, event-timed features such as
+  word surprisal or per-phone features. With `times` and `durations` (a
+  number, a vector, or a per-run list parallel to `times`), each sample is an
+  event with its own onset, duration and amplitude, and its value is no
+  longer held until the next sample (which filled the following pause). It
+  is passed to `fmrihrf::feature_regressor()` and needs an fmrihrf whose
+  `feature_regressor()` has a `durations` argument; otherwise an error says
+  so. Without `durations` nothing changes.
+- `feature()` gains `band` and `subband` to label a term's columns for banded
+  (grouped) models. `design_colmap()` has two new columns, `band` and
+  `subband`, for every term type: other terms are a band of their own (their
+  `term_tag`) with `subband` `NA`.
+- New `design_bands()` returns the event-model design as a plain list for
+  banded regression: the matrix `X`, the `band` and `subband` of each column,
+  `families` (the sub-bands of each band that has several) and the matching
+  `colmap` rows. `terms` and `bands` restrict the columns.
+- `feature()` gains `contrasts`, as in `hrf()`. `column_contrast()` patterns
+  select a feature term's design columns, and `contrast_weights()` on the
+  model returns them.
+- `Fcontrasts()` now covers feature terms: an omnibus F-contrast over all of
+  the term's columns (`<term>#<term>`) and one per declared sub-band
+  (`<term>#<subband>`), each tested jointly across the HRF basis. Feature
+  terms used to contribute none, so `Fcontrasts()` on a model with a feature
+  term now returns more elements.
 - Added `check_estimability()` for full-design rank, exact condition numbers,
   named weak directions, and contrast-specific estimability and variance
   factors. Event models include run intercepts by default and report event
@@ -135,6 +159,14 @@
 
 ## Bug fixes
 
+- A `feature()` series given with `dt` or `times` that stops more than one TR
+  before the end of its run now gives a warning. The remaining scans were,
+  and still are, filled as if the feature were zero there; this used to be
+  silent.
+- Basis filtering and F-contrast expansion now see the right number of basis
+  functions for a multi-basis `feature()` term. The internal helper read the
+  HRF from an attribute feature terms do not carry and assumed one basis
+  function.
 - `contrast_set()` now combines individual specifications with nested contrast
   sets, including those returned by `one_against_all_contrast()`. It preserves
   leaf names and order, and reports invalid entries by argument path (#33).
