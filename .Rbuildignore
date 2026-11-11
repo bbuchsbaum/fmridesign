@@ -5,6 +5,7 @@
 ^AGENTS\.md$
 ^.*\.Rcheck$
 ^README\.Rmd$
+^\.git$
 ^\.github$
 ^_pkgdown\.yml$
 ^docs$

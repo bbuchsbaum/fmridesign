@@ -54,8 +54,8 @@ the name of \code{x} is used.}
 \item{durations}{Optional event durations in seconds, only valid with
 \code{times}: a single number, a vector with one entry per sample, or a list
 of those with one element per run (parallel to \code{times}). \code{NULL} (default)
-keeps the zero-order hold. Requires a version of fmrihrf whose
-\code{feature_regressor()} has a \code{durations} argument.}
+keeps the zero-order hold. Event durations are supported by fmrihrf
+(>= 0.5.0), the minimum required version.}
 
 \item{band}{Optional single string naming the feature band this term
 belongs to. Defaults to the term's tag (its \code{id}).}

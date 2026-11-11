@@ -56,8 +56,8 @@ is_timing_spec <- function(spec) {
 #' @param durations Optional event durations in seconds, only valid with
 #'   `times`: a single number, a vector with one entry per sample, or a list
 #'   of those with one element per run (parallel to `times`). `NULL` (default)
-#'   keeps the zero-order hold. Requires a version of fmrihrf whose
-#'   `feature_regressor()` has a `durations` argument.
+#'   keeps the zero-order hold. Event durations are supported by fmrihrf
+#'   (>= 0.5.0), the minimum required version.
 #' @param start Start time in seconds used only when `dt` is supplied.
 #'   Defaults to 0.
 #' @param center,scale,mask,span Passed to [fmrihrf::feature_regressor()].

@@ -119,7 +119,10 @@ test_that("NaN in a modulator falls back and still convolves without error", {
   ons  <- c(5, 20, 35, 5, 20, 35)
   bids <- c(1, 1, 1,   2, 2, 2)
   sf   <- fmrihrf::sampling_frame(blocklens = c(60, 60), TR = 1)
-  term <- event_term(list(cond = cond, mod = mod), onsets = ons, blockids = bids)
+  expect_warning(
+    term <- event_term(list(cond = cond, mod = mod), onsets = ons, blockids = bids),
+    "NA values detected in input `value` for event variable 'mod'", fixed = TRUE
+  )
   expect_no_error(conv <- convolve(term, fmrihrf::HRF_SPMG1, sf))
   expect_equal(nrow(convolve(term, fmrihrf::HRF_SPMG1, sf)), 120L)
 })
