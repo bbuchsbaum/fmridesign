@@ -194,8 +194,9 @@ test_that("name-based contrasts on multi-basis terms target the right data", {
 
   w_all <- cw[["task#fs_all"]]$offset_weights[, 1]
   expect_equal(unname(drop(X %*% w_all)),
-               unname(rowSums(truth[, grep("face", colnames(truth))]) -
-                        rowSums(truth[, grep("scene", colnames(truth))])),
+               # the average over the three basis functions
+               unname(rowMeans(truth[, grep("face", colnames(truth))]) -
+                        rowMeans(truth[, grep("scene", colnames(truth))])),
                tolerance = 1e-8)
 })
 
@@ -360,7 +361,8 @@ test_that("unit_contrast and formula contrast target the right basis columns", {
       out <- 0
       for (cond in names(bw)) {
         nms <- if (nb == 1) paste0(pre, cond) else sprintf("%s%s_b%02d", pre, cond, seq_len(nb))
-        for (nm in nms) out <- out + bw[[cond]] * truth[, nm]
+        # weights are averaged over the basis functions
+        for (nm in nms) out <- out + bw[[cond]] * truth[, nm] / nb
       }
       out
     }
@@ -395,11 +397,11 @@ test_that("unit_contrast and formula contrast on a factorial multi-basis term", 
   expect_no_warning(cw <- contrast_weights(em))
   expect_equal(unname(drop(X %*% cw[["cat_load#unit"]]$offset_weights)),
                unname(.expected_signal(truth, "cat_load_",
-                                       c(cat.face_load.hi = 0.5, cat.face_load.lo = 0.5), 2)),
+                                       c(cat.face_load.hi = 0.5, cat.face_load.lo = 0.5), 2)) / 2,
                tolerance = 1e-8)
   expect_equal(unname(drop(X %*% cw[["cat_load#form"]]$offset_weights)),
                unname(.expected_signal(truth, "cat_load_",
-                                       c(cat.face_load.hi = 1, cat.obj_load.hi = -1), 2)),
+                                       c(cat.face_load.hi = 1, cat.obj_load.hi = -1), 2)) / 2,
                tolerance = 1e-8)
 })
 
@@ -421,7 +423,10 @@ test_that("remaining contrast constructors target the right basis columns", {
                      fmrihrf::HRF_SPMG3, sf, prefix = "lev_")
   expect_no_warning(cw <- contrast_weights(em))
   sig <- function(name) unname(drop(X %*% cw[[paste0("lev#", name)]]$offset_weights))
-  exp <- function(bw, bases = 1:3) unname(.expected_signal(truth, "lev_", bw, 3, bases))
+  # cell-based contrasts average over the selected basis functions
+  exp <- function(bw, bases = 1:3) {
+    unname(.expected_signal(truth, "lev_", bw, 3, bases)) / length(bases)
+  }
 
   lin <- stats::contr.poly(3)[, 1]
   lin_sig <- sig("lin")

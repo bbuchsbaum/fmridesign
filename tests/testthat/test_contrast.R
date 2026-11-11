@@ -398,11 +398,11 @@ test_that("cell-based contrasts map onto factor-by-modulator columns", {
   }
   expect_equal(rownames(cw_pm[[1]]$weights), conditions(terms(pm)[[1]]))
 
-  # Multi-basis: replicated on every basis column of the modulated regressors
+  # Multi-basis: averaged over the basis columns of the modulated regressors
   pm2 <- event_model(onset ~ hrf(cond, RT, basis = "spmg2", contrasts = cset),
                      data = des, block = ~run, sampling_frame = sframe)
   ab2 <- contrast_weights(pm2)[[1]]
-  expect_equal(unname(ab2$offset_weights[, 1]), c(1, 1, -1, -1, 0, 0))
+  expect_equal(unname(ab2$offset_weights[, 1]), c(1, 1, -1, -1, 0, 0) / 2)
 })
 
 test_that("formula contrasts work on continuous terms with several variables", {
@@ -1152,4 +1152,44 @@ test_that("basis_weights preserves sum-to-zero property", {
     expect_equal(sum(cw$weights), 0, tolerance = 1e-8,
                 info = paste("Pattern", i, "failed sum-to-zero"))
   }
+})
+
+test_that("basis selection averages, unit_contrast takes basis, per_basis_contrasts splits", {
+  set.seed(8)
+  des <- data.frame(onset = sort(runif(30, 0, 280)), run = 1,
+                    cond = factor(rep(c("A", "B"), 15)))
+  sframe <- fmrihrf::sampling_frame(blocklens = 150, TR = 2)
+  em <- event_model(onset ~ hrf(cond, basis = "fir", nbasis = 6), data = des,
+                    block = ~run, sampling_frame = sframe)
+  term <- terms(em)[[1]]
+  w <- function(spec) contrast_weights(spec, term)$weights[, 1]
+  bins <- function(cond, k) sprintf("cond.%s_b%02d", cond, k)
+
+  # Same scale whatever the number of basis functions, and as column_contrast()
+  all6 <- w(pair_contrast(~ cond == "A", ~ cond == "B", name = "ab"))
+  expect_equal(unname(all6), rep(c(1, -1) / 6, each = 6))
+  sel <- w(pair_contrast(~ cond == "A", ~ cond == "B", name = "ab", basis = 2:3))
+  expect_equal(unname(sel[bins("A", 2:3)]), c(0.5, 0.5))
+  expect_equal(unname(sel[bins("B", 2:3)]), c(-0.5, -0.5))
+  expect_equal(sum(abs(sel)), 2)
+  col <- w(column_contrast("cond\\.A_b0[23]$", "cond\\.B_b0[23]$", name = "col"))
+  expect_equal(unname(sel), unname(col))
+
+  expect_no_warning(u_all <- w(unit_contrast(~ cond == "A", name = "u")))
+  expect_equal(unname(u_all[bins("A", 1:6)]), rep(1 / 6, 6))
+  u4 <- w(unit_contrast(~ cond == "A", name = "u4", basis = 4))
+  expect_equal(names(u4)[u4 != 0], bins("A", 4))
+  expect_equal(sum(u4), 1)
+  uw <- w(unit_contrast(~ cond == "A", name = "uw", basis = 2:3, basis_weights = c(0.25, 0.75)))
+  expect_equal(unname(uw[bins("A", 2:3)]), c(0.25, 0.75))
+
+  pb <- per_basis_contrasts(pair_contrast(~ cond == "A", ~ cond == "B", name = "ab"), 1:6)
+  expect_s3_class(pb, "contrast_set")
+  expect_equal(vapply(pb, function(z) z$name, ""), sprintf("ab_b%02d", 1:6))
+  em2 <- event_model(onset ~ hrf(cond, basis = "fir", nbasis = 6, contrasts = pb),
+                     data = des, block = ~run, sampling_frame = sframe)
+  W <- sapply(contrast_weights(em2), function(z) z$offset_weights[, 1])
+  expect_equal(unname(W), rbind(diag(6), -diag(6)))
+  expect_error(per_basis_contrasts(column_contrast("a", name = "x"), 1:2), "basis")
+  expect_error(per_basis_contrasts(pb[[1]], 0), "positive integer")
 })

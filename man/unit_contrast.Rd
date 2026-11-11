@@ -4,17 +4,21 @@
 \alias{unit_contrast}
 \title{Unit Contrast}
 \usage{
-unit_contrast(A, name, where = NULL)
+unit_contrast(A, name, where = NULL, basis = NULL, basis_weights = NULL)
 }
 \arguments{
 \item{A}{A formula selecting the cells to average. A logical expression
 (e.g. \code{~ cond == "A"}) selects the matching cells; a bare factor name
 (e.g. \code{~ cond}) selects every cell. For a multi-basis HRF the weights are
-repeated on every basis function of the selected cells.}
+averaged over the basis functions of the selected cells (see \code{basis}).}
 
 \item{name}{A character string specifying the name of the contrast.}
 
 \item{where}{An optional formula specifying the subset of conditions to apply the contrast to.}
+
+\item{basis, basis_weights}{Which basis functions of a multi-basis HRF to
+use and how to weight them; see \code{\link[=pair_contrast]{pair_contrast()}}. For example
+\code{basis = 4} gives the selected cells' response in the fourth FIR bin.}
 }
 \value{
 A unit_contrast_spec object containing the contrast that sums to 1.

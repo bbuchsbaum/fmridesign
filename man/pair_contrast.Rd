@@ -18,7 +18,10 @@ pair_contrast(A, B, name, where = NULL, basis = NULL, basis_weights = NULL)
 \item{basis}{NULL (default: use all basis functions), an integer vector specifying
 which basis function indices to include (e.g., \code{1}, \code{2:3}, \code{c(1,3)}), or \code{"all"}.
 Only relevant when the HRF uses multiple basis functions (e.g., bspline, FIR, Fourier).
-Basis indices are 1-based (1 = first basis function, 2 = second, etc.).}
+Basis indices are 1-based (1 = first basis function, 2 = second, etc.).
+The contrast is the average over the selected basis functions, so its
+scale does not depend on how many are selected. See
+\code{\link[=per_basis_contrasts]{per_basis_contrasts()}} for one contrast per basis function.}
 
 \item{basis_weights}{NULL (default: equal weights), or a numeric vector of weights to apply
 to the selected basis functions. Must have one weight per selected basis function (all of
