@@ -79,7 +79,10 @@ particularly useful for comparing specific conditions or combinations of conditi
 <dd><p>NULL (default: use all basis functions), an integer vector specifying
 which basis function indices to include (e.g., <code>1</code>, <code>2:3</code>, <code>c(1,3)</code>), or <code>"all"</code>.
 Only relevant when the HRF uses multiple basis functions (e.g., bspline, FIR, Fourier).
-Basis indices are 1-based (1 = first basis function, 2 = second, etc.).</p></dd>
+Basis indices are 1-based (1 = first basis function, 2 = second, etc.).
+The contrast is the average over the selected basis functions, so its
+scale does not depend on how many are selected. See
+<code><a href="per_basis_contrasts.html">per_basis_contrasts()</a></code> for one contrast per basis function.</p></dd>
 
 
 <dt id="arg-basis-weights">basis_weights<a class="anchor" aria-label="anchor" href="#arg-basis-weights"></a></dt>

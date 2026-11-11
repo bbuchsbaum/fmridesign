@@ -35,7 +35,11 @@ pair_contrast(A, B, name, where = NULL, basis = NULL, basis_weights = NULL)
   which basis function indices to include (e.g., `1`, `2:3`, `c(1,3)`),
   or `"all"`. Only relevant when the HRF uses multiple basis functions
   (e.g., bspline, FIR, Fourier). Basis indices are 1-based (1 = first
-  basis function, 2 = second, etc.).
+  basis function, 2 = second, etc.). The contrast is the average over
+  the selected basis functions, so its scale does not depend on how many
+  are selected. See
+  [`per_basis_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/per_basis_contrasts.md)
+  for one contrast per basis function.
 
 - basis_weights:
 

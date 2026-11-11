@@ -6,7 +6,7 @@ against the baseline.
 ## Usage
 
 ``` r
-unit_contrast(A, name, where = NULL)
+unit_contrast(A, name, where = NULL, basis = NULL, basis_weights = NULL)
 ```
 
 ## Arguments
@@ -16,7 +16,7 @@ unit_contrast(A, name, where = NULL)
   A formula selecting the cells to average. A logical expression (e.g.
   `~ cond == "A"`) selects the matching cells; a bare factor name (e.g.
   `~ cond`) selects every cell. For a multi-basis HRF the weights are
-  repeated on every basis function of the selected cells.
+  averaged over the basis functions of the selected cells (see `basis`).
 
 - name:
 
@@ -26,6 +26,14 @@ unit_contrast(A, name, where = NULL)
 
   An optional formula specifying the subset of conditions to apply the
   contrast to.
+
+- basis, basis_weights:
+
+  Which basis functions of a multi-basis HRF to use and how to weight
+  them; see
+  [`pair_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.md).
+  For example `basis = 4` gives the selected cells' response in the
+  fourth FIR bin.
 
 ## Value
 

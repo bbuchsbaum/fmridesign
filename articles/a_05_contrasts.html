@@ -483,10 +483,20 @@ prefer orthogonal sets when possible.</p>
 <div class="section level3">
 <h3 id="custom-contrast-functions">Custom Contrast Functions<a class="anchor" aria-label="anchor" href="#custom-contrast-functions"></a>
 </h3>
-<p>You can generate complex patterns via helper generators that return
-contrast specifications. For example, a sliding-window set that compares
-adjacent, disjoint windows across an ordered factor:</p>
+<p>A contrast “generator” is just a function that returns a
+<code><a href="../reference/contrast_set.html">contrast_set()</a></code> of contrast specifications, so one call can
+attach many related contrasts to a term. fmridesign ships one,
+<code><a href="../reference/sliding_window_contrasts.html">sliding_window_contrasts()</a></code>, which compares adjacent,
+disjoint windows across an ordered factor. For window size
+<code>k</code>, contrast <code>i</code> compares levels
+<code>i:(i+k-1)</code> against levels <code>(i+k):(i+2k-1)</code>:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># What the generator returns: one pair_contrast() per window position</span></span>
+<span><span class="va">sw</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/sliding_window_contrasts.html">sliding_window_contrasts</a></span><span class="op">(</span>levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"L"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span>, facname <span class="op">=</span> <span class="st">"level"</span>, window_size <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">sw</span>, <span class="kw">function</span><span class="op">(</span><span class="va">spec</span><span class="op">)</span> <span class="va">spec</span><span class="op">$</span><span class="va">name</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "win_L1_vs_L2" "win_L2_vs_L3" "win_L3_vs_L4" "win_L4_vs_L5"</span></span></code></pre></div>
+<p>Attached to a model, each specification becomes a weight vector:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Five ordered levels</span></span>
 <span><span class="va">lvl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"L"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span></span>
 <span></span>
@@ -503,13 +513,285 @@ adjacent, disjoint windows across an ordered factor:</p>
 <span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Inspect the generated contrasts</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">emod_sliding</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "level#win_L1_vs_L2" "level#win_L2_vs_L3" "level#win_L3_vs_L4"</span></span>
-<span><span class="co">#&gt; [4] "level#win_L4_vs_L5"</span></span></code></pre></div>
-<p>For more targeted patterns (e.g., specific basis functions or
-continuous terms), use <code><a href="../reference/column_contrast.html">column_contrast()</a></code> with regex to
-match design-matrix columns.</p>
+<span><span class="co"># Inspect the generated contrasts: one column of weights per window</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">emod_sliding</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">cw</span><span class="op">)</span> <span class="va">cw</span><span class="op">$</span><span class="va">weights</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="co">#&gt;          level#win_L1_vs_L2 level#win_L2_vs_L3 level#win_L3_vs_L4</span></span>
+<span><span class="co">#&gt; level.L1                  1                  0                  0</span></span>
+<span><span class="co">#&gt; level.L2                 -1                  1                  0</span></span>
+<span><span class="co">#&gt; level.L3                  0                 -1                  1</span></span>
+<span><span class="co">#&gt; level.L4                  0                  0                 -1</span></span>
+<span><span class="co">#&gt; level.L5                  0                  0                  0</span></span>
+<span><span class="co">#&gt;          level#win_L4_vs_L5</span></span>
+<span><span class="co">#&gt; level.L1                  0</span></span>
+<span><span class="co">#&gt; level.L2                  0</span></span>
+<span><span class="co">#&gt; level.L3                  0</span></span>
+<span><span class="co">#&gt; level.L4                  1</span></span>
+<span><span class="co">#&gt; level.L5                 -1</span></span></code></pre></div>
+<p>Writing your own generator follows the same pattern: build the
+specifications in a loop and pass them to <code><a href="../reference/contrast_set.html">contrast_set()</a></code>.
+Here, every level against a reference level (the treatment-style
+contrasts of <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code>):</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">vs_reference</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">levels</span>, <span class="va">facname</span>, <span class="va">ref</span> <span class="op">=</span> <span class="va">levels</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">specs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sets.html" class="external-link">setdiff</a></span><span class="op">(</span><span class="va">levels</span>, <span class="va">ref</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">l</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span></span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/stats/formula.html" class="external-link">as.formula</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">'~ %s == "%s"'</span>, <span class="va">facname</span>, <span class="va">l</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>      <span class="fu"><a href="https://rdrr.io/r/stats/formula.html" class="external-link">as.formula</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">'~ %s == "%s"'</span>, <span class="va">facname</span>, <span class="va">ref</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>      name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%s_vs_%s"</span>, <span class="va">l</span>, <span class="va">ref</span><span class="op">)</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">}</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="va">contrast_set</span>, <span class="va">specs</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">emod_ref</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">level</span>, contrasts <span class="op">=</span> <span class="fu">vs_reference</span><span class="op">(</span><span class="va">lvl</span>, <span class="st">"level"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>    onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">50</span>, <span class="fl">0</span>, <span class="fl">350</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    level <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sample.html" class="external-link">sample</a></span><span class="op">(</span><span class="va">lvl</span>, <span class="fl">50</span>, replace <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>, levels <span class="op">=</span> <span class="va">lvl</span><span class="op">)</span>,</span>
+<span>    block <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">50</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  block <span class="op">=</span> <span class="op">~</span> <span class="va">block</span>,</span>
+<span>  sampling_frame <span class="op">=</span> <span class="va">sframe</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">emod_ref</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">cw</span><span class="op">)</span> <span class="va">cw</span><span class="op">$</span><span class="va">weights</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="co">#&gt;          level#L2_vs_L1 level#L3_vs_L1 level#L4_vs_L1 level#L5_vs_L1</span></span>
+<span><span class="co">#&gt; level.L1             -1             -1             -1             -1</span></span>
+<span><span class="co">#&gt; level.L2              1              0              0              0</span></span>
+<span><span class="co">#&gt; level.L3              0              1              0              0</span></span>
+<span><span class="co">#&gt; level.L4              0              0              1              0</span></span>
+<span><span class="co">#&gt; level.L5              0              0              0              1</span></span></code></pre></div>
+<p>For patterns over design-matrix columns rather than conditions, use
+<code><a href="../reference/column_contrast.html">column_contrast()</a></code> with a regular expression; the next
+section shows it with basis functions.</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="contrasts-for-multi-basis-hrfs">Contrasts for Multi-Basis HRFs<a class="anchor" aria-label="anchor" href="#contrasts-for-multi-basis-hrfs"></a>
+</h2>
+<p>With a multi-basis HRF (FIR, B-spline, tent,
+<code>"spmg2"</code>/<code>"spmg3"</code>, …) each condition gets one
+column per basis function, named
+<code>&lt;term&gt;_&lt;condition&gt;_b01</code>, <code>_b02</code>, and
+so on. The contrast constructors work on conditions and then expand
+across basis functions, and <code><a href="../reference/pair_contrast.html">pair_contrast()</a></code>,
+<code><a href="../reference/oneway_contrast.html">oneway_contrast()</a></code> and <code><a href="../reference/poly_contrast.html">poly_contrast()</a></code> take
+<code>basis</code> and <code>basis_weights</code> arguments to choose
+and weight them.</p>
+<div class="section level3">
+<h3 id="fir-averaging-selecting-and-tracking-time-bins">FIR: averaging, selecting and tracking time bins<a class="anchor" aria-label="anchor" href="#fir-averaging-selecting-and-tracking-time-bins"></a>
+</h3>
+<p>An FIR basis with 8 bins of 3 s covers the first 24 s after each
+event, one column per bin:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">21</span><span class="op">)</span></span>
+<span><span class="va">fir_events</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">40</span>, <span class="fl">0</span>, <span class="fl">360</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  cond  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span><span class="op">)</span>, <span class="fl">20</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  block <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">fir_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">cond</span>, basis <span class="op">=</span> <span class="st">"fir"</span>, nbasis <span class="op">=</span> <span class="fl">8</span><span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">fir_events</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">block</span>, sampling_frame <span class="op">=</span> <span class="va">sframe</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="fu"><a href="../reference/design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">fir_model</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;  [1] "cond_cond.A_b01" "cond_cond.A_b02" "cond_cond.A_b03" "cond_cond.A_b04"</span></span>
+<span><span class="co">#&gt;  [5] "cond_cond.A_b05" "cond_cond.A_b06" "cond_cond.A_b07" "cond_cond.A_b08"</span></span>
+<span><span class="co">#&gt;  [9] "cond_cond.B_b01" "cond_cond.B_b02" "cond_cond.B_b03" "cond_cond.B_b04"</span></span>
+<span><span class="co">#&gt; [13] "cond_cond.B_b05" "cond_cond.B_b06" "cond_cond.B_b07" "cond_cond.B_b08"</span></span></code></pre></div>
+<p>By default a contrast is the average over all bins.
+<code>basis</code> keeps only some bins, for example the window around
+the response peak, and averages over those; <code>basis_weights</code>
+replaces the plain average with a weighted one (the weights are rescaled
+to sum to 1):</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fir_term</span> <span class="op">&lt;-</span> <span class="va">fir_model</span><span class="op">$</span><span class="va">terms</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">AvB</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">...</span><span class="op">)</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">cond</span> <span class="op">==</span> <span class="st">"A"</span>, <span class="op">~</span> <span class="va">cond</span> <span class="op">==</span> <span class="st">"B"</span>, name <span class="op">=</span> <span class="st">"AvB"</span>, <span class="va">...</span><span class="op">)</span>, <span class="va">fir_term</span></span>
+<span><span class="op">)</span><span class="op">$</span><span class="va">weights</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
+<span>  all_bins   <span class="op">=</span> <span class="fu">AvB</span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  peak       <span class="op">=</span> <span class="fu">AvB</span><span class="op">(</span>basis <span class="op">=</span> <span class="fl">3</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span>,</span>
+<span>  peak_shape <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/warning.html" class="external-link">suppressWarnings</a></span><span class="op">(</span><span class="fu">AvB</span><span class="op">(</span>basis_weights <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">3</span>, <span class="fl">2</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt;            cond.A_b01 cond.A_b02 cond.A_b03 cond.A_b04 cond.A_b05 cond.A_b06</span></span>
+<span><span class="co">#&gt; all_bins        0.125      0.125      0.125      0.125      0.125      0.125</span></span>
+<span><span class="co">#&gt; peak            0.000      0.000      0.333      0.333      0.333      0.000</span></span>
+<span><span class="co">#&gt; peak_shape      0.000      0.083      0.167      0.250      0.250      0.167</span></span>
+<span><span class="co">#&gt;            cond.A_b07 cond.A_b08 cond.B_b01 cond.B_b02 cond.B_b03 cond.B_b04</span></span>
+<span><span class="co">#&gt; all_bins        0.125      0.125     -0.125     -0.125     -0.125     -0.125</span></span>
+<span><span class="co">#&gt; peak            0.000      0.000      0.000      0.000     -0.333     -0.333</span></span>
+<span><span class="co">#&gt; peak_shape      0.083      0.000      0.000     -0.083     -0.167     -0.250</span></span>
+<span><span class="co">#&gt;            cond.B_b05 cond.B_b06 cond.B_b07 cond.B_b08</span></span>
+<span><span class="co">#&gt; all_bins       -0.125     -0.125     -0.125     -0.125</span></span>
+<span><span class="co">#&gt; peak           -0.333      0.000      0.000      0.000</span></span>
+<span><span class="co">#&gt; peak_shape     -0.250     -0.167     -0.083      0.000</span></span></code></pre></div>
+<p>Because the selected bins are averaged, every row is on the same
+scale: the contrast estimate is a mean A-minus-B difference whatever the
+number of bins, so estimates from different windows, or from models with
+different numbers of bins, are comparable.</p>
+<p>The A-minus-B time course is one contrast per bin.
+<code><a href="../reference/per_basis_contrasts.html">per_basis_contrasts()</a></code> turns a contrast into that set:</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">per_bin</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/per_basis_contrasts.html">per_basis_contrasts</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/pair_contrast.html">pair_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">cond</span> <span class="op">==</span> <span class="st">"A"</span>, <span class="op">~</span> <span class="va">cond</span> <span class="op">==</span> <span class="st">"B"</span>, name <span class="op">=</span> <span class="st">"AvB"</span><span class="op">)</span>,</span>
+<span>  basis <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">8</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">fir_model_tc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">cond</span>, basis <span class="op">=</span> <span class="st">"fir"</span>, nbasis <span class="op">=</span> <span class="fl">8</span>, contrasts <span class="op">=</span> <span class="va">per_bin</span><span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">fir_events</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">block</span>, sampling_frame <span class="op">=</span> <span class="va">sframe</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">tc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span><span class="va">fir_model_tc</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">cw</span><span class="op">)</span> <span class="va">cw</span><span class="op">$</span><span class="va">offset_weights</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">tc</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">]</span></span>
+<span><span class="co">#&gt;                 cond#AvB_b01 cond#AvB_b02 cond#AvB_b03</span></span>
+<span><span class="co">#&gt; cond_cond.A_b01            1            0            0</span></span>
+<span><span class="co">#&gt; cond_cond.A_b02            0            1            0</span></span>
+<span><span class="co">#&gt; cond_cond.A_b03            0            0            1</span></span>
+<span><span class="co">#&gt; cond_cond.A_b04            0            0            0</span></span>
+<span><span class="co">#&gt; cond_cond.A_b05            0            0            0</span></span>
+<span><span class="co">#&gt; cond_cond.A_b06            0            0            0</span></span>
+<span><span class="co">#&gt; cond_cond.A_b07            0            0            0</span></span>
+<span><span class="co">#&gt; cond_cond.A_b08            0            0            0</span></span>
+<span><span class="co">#&gt; cond_cond.B_b01           -1            0            0</span></span>
+<span><span class="co">#&gt; cond_cond.B_b02            0           -1            0</span></span>
+<span><span class="co">#&gt; cond_cond.B_b03            0            0           -1</span></span>
+<span><span class="co">#&gt; cond_cond.B_b04            0            0            0</span></span>
+<span><span class="co">#&gt; cond_cond.B_b05            0            0            0</span></span>
+<span><span class="co">#&gt; cond_cond.B_b06            0            0            0</span></span>
+<span><span class="co">#&gt; cond_cond.B_b07            0            0            0</span></span>
+<span><span class="co">#&gt; cond_cond.B_b08            0            0            0</span></span></code></pre></div>
+<p>To test whether A and B differ anywhere in the time course, use the
+F-contrast, which tests all bins jointly (one row per column, one column
+per bin):</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="fu"><a href="../reference/Fcontrasts.html">Fcontrasts</a></span><span class="op">(</span><span class="va">fir_model</span><span class="op">)</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 16  8</span></span></code></pre></div>
+<p><code><a href="../reference/unit_contrast.html">unit_contrast()</a></code> takes <code>basis</code> too, for one
+condition against baseline in a subset of bins (e.g. A’s response at
+6-12 s, bins 3 and 4). <code><a href="../reference/column_contrast.html">column_contrast()</a></code> reaches the same
+columns by regular expression, which is useful for patterns the
+constructors do not cover:</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">by_basis</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/unit_contrast.html">unit_contrast</a></span><span class="op">(</span><span class="op">~</span> <span class="va">cond</span> <span class="op">==</span> <span class="st">"A"</span>, name <span class="op">=</span> <span class="st">"A_6to12s"</span>, basis <span class="op">=</span> <span class="fl">3</span><span class="op">:</span><span class="fl">4</span><span class="op">)</span>, <span class="va">fir_term</span></span>
+<span><span class="op">)</span><span class="op">$</span><span class="va">weights</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span></span>
+<span><span class="va">by_regex</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/contrast_weights.html">contrast_weights</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/column_contrast.html">column_contrast</a></span><span class="op">(</span>pattern_A <span class="op">=</span> <span class="st">"cond\\.A_b0[34]$"</span>, name <span class="op">=</span> <span class="st">"A_6to12s"</span><span class="op">)</span>, <span class="va">fir_term</span></span>
+<span><span class="op">)</span><span class="op">$</span><span class="va">weights</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">by_basis</span>, <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="co">#&gt; cond.A_b01 cond.A_b02 cond.A_b03 cond.A_b04 cond.A_b05 cond.A_b06 cond.A_b07 </span></span>
+<span><span class="co">#&gt;        0.0        0.0        0.5        0.5        0.0        0.0        0.0 </span></span>
+<span><span class="co">#&gt; cond.A_b08 cond.B_b01 cond.B_b02 cond.B_b03 cond.B_b04 cond.B_b05 cond.B_b06 </span></span>
+<span><span class="co">#&gt;        0.0        0.0        0.0        0.0        0.0        0.0        0.0 </span></span>
+<span><span class="co">#&gt; cond.B_b07 cond.B_b08 </span></span>
+<span><span class="co">#&gt;        0.0        0.0</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">by_basis</span>, <span class="va">by_regex</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="canonical-plus-derivative-amplitude-and-latency">Canonical plus derivative: amplitude and latency<a class="anchor" aria-label="anchor" href="#canonical-plus-derivative-amplitude-and-latency"></a>
+</h3>
+<p>With <code>basis = "spmg2"</code> each condition has a canonical
+column (<code>_b01</code>) and a temporal-derivative column
+(<code>_b02</code>). The derivative absorbs small differences in
+response timing, but a response that peaks late also lowers the
+canonical coefficient, so comparing canonical coefficients alone mixes
+amplitude with latency. Two classic summaries use both coefficients:</p>
+<ul>
+<li>
+<strong>Derivative-boosted amplitude</strong> (Calhoun et al.,
+2004): <code>sign(b1) * sqrt(b1^2 + b2^2)</code>, computed with the two
+regressors on a common scale, recovers amplitude lost to a latency
+shift.</li>
+<li>
+<strong>Latency from the coefficient ratio</strong> (Henson et al.,
+2002; see also Liao et al., 2002): for small shifts the ratio
+<code>b2 / b1</code> is a monotone function of the response’s
+delay.</li>
+</ul>
+<p>Both are non-linear in the coefficients, so they are not contrast
+weights: you fit the model, then compute them per voxel (and take them
+to the group level). The example below simulates a voxel where A and B
+have the same amplitude but B peaks 1 s later.</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">3</span><span class="op">)</span></span>
+<span><span class="va">lat_events</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">60</span>, <span class="fl">0</span>, <span class="fl">380</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  cond  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span><span class="op">)</span>, <span class="fl">30</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  block <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co"># Simulated data: unit-amplitude canonical responses, B delayed by 1 s</span></span>
+<span><span class="va">shifted</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/transform.html" class="external-link">transform</a></span><span class="op">(</span><span class="va">lat_events</span>, onset <span class="op">=</span> <span class="va">onset</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">cond</span> <span class="op">==</span> <span class="st">"B"</span>, <span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">shifted</span> <span class="op">&lt;-</span> <span class="va">shifted</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="va">shifted</span><span class="op">$</span><span class="va">onset</span><span class="op">)</span>, <span class="op">]</span></span>
+<span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">rowSums</a></span><span class="op">(</span><span class="fu"><a href="../reference/design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">cond</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">shifted</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">block</span>, sampling_frame <span class="op">=</span> <span class="va">sframe</span></span>
+<span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">200</span>, sd <span class="op">=</span> <span class="fl">0.02</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Model with canonical + temporal derivative, plus drift</span></span>
+<span><span class="va">lat_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/event_model.html">event_model</a></span><span class="op">(</span></span>
+<span>  <span class="va">onset</span> <span class="op">~</span> <span class="fu"><a href="../reference/hrf.html">hrf</a></span><span class="op">(</span><span class="va">cond</span>, basis <span class="op">=</span> <span class="st">"spmg2"</span><span class="op">)</span>,</span>
+<span>  data <span class="op">=</span> <span class="va">lat_events</span>, block <span class="op">=</span> <span class="op">~</span> <span class="va">block</span>, sampling_frame <span class="op">=</span> <span class="va">sframe</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">X</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fu"><a href="../reference/design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">lat_model</span><span class="op">)</span>,</span>
+<span>                     <span class="fu"><a href="../reference/design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="fu"><a href="../reference/baseline_model.html">baseline_model</a></span><span class="op">(</span>basis <span class="op">=</span> <span class="st">"poly"</span>, degree <span class="op">=</span> <span class="fl">2</span>, sframe <span class="op">=</span> <span class="va">sframe</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/qr.html" class="external-link">qr.solve</a></span><span class="op">(</span><span class="va">X</span>, <span class="va">y</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">X</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Pick each condition's canonical and derivative coefficient by basis index</span></span>
+<span><span class="va">cmap</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="../reference/design_colmap.html">design_colmap</a></span><span class="op">(</span><span class="va">lat_model</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">b1</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">beta</span><span class="op">[</span><span class="va">cmap</span><span class="op">$</span><span class="va">name</span><span class="op">[</span><span class="va">cmap</span><span class="op">$</span><span class="va">basis_ix</span> <span class="op">==</span> <span class="fl">1</span><span class="op">]</span><span class="op">]</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">b2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">beta</span><span class="op">[</span><span class="va">cmap</span><span class="op">$</span><span class="va">name</span><span class="op">[</span><span class="va">cmap</span><span class="op">$</span><span class="va">basis_ix</span> <span class="op">==</span> <span class="fl">2</span><span class="op">]</span><span class="op">]</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"A"</span>, <span class="st">"B"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>canonical <span class="op">=</span> <span class="va">b1</span>, derivative <span class="op">=</span> <span class="va">b2</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                 A      B</span></span>
+<span><span class="co">#&gt; canonical   1.025  0.902</span></span>
+<span><span class="co">#&gt; derivative -0.056 -0.880</span></span></code></pre></div>
+<p>The canonical coefficient makes B look weaker than A. To put the two
+coefficients on a common scale, weight the derivative by the ratio of
+the basis functions’ norms; the boosted amplitudes are then much
+closer:</p>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tt</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">32</span>, by <span class="op">=</span> <span class="fl">0.01</span><span class="op">)</span></span>
+<span><span class="va">basis_fine</span> <span class="op">&lt;-</span> <span class="fu">fmrihrf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/evaluate.html" class="external-link">evaluate</a></span><span class="op">(</span><span class="fu">fmrihrf</span><span class="fu">::</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html" class="external-link">HRF_SPMG2</a></span>, <span class="va">tt</span><span class="op">)</span></span>
+<span><span class="va">norm_ratio</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">basis_fine</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">basis_fine</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">boosted</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sign.html" class="external-link">sign</a></span><span class="op">(</span><span class="va">b1</span><span class="op">)</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">sqrt</a></span><span class="op">(</span><span class="va">b1</span><span class="op">^</span><span class="fl">2</span> <span class="op">+</span> <span class="op">(</span><span class="va">norm_ratio</span> <span class="op">*</span> <span class="va">b2</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>canonical <span class="op">=</span> <span class="va">b1</span>, boosted <span class="op">=</span> <span class="va">boosted</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt;               A     B</span></span>
+<span><span class="co">#&gt; canonical 1.025 0.902</span></span>
+<span><span class="co">#&gt; boosted   1.025 0.950</span></span></code></pre></div>
+<p>For latency, calibrate the ratio against known shifts of the
+canonical HRF and invert the curve. With fmrihrf’s SPMG2 basis the
+derivative is in seconds, so <code>-b2 / b1</code> is already close to
+the delay; the calibration corrects the curvature at larger shifts:</p>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">shifts</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="op">-</span><span class="fl">3</span>, <span class="fl">3</span>, by <span class="op">=</span> <span class="fl">0.25</span><span class="op">)</span></span>
+<span><span class="va">ratio_at</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">shifts</span>, <span class="kw">function</span><span class="op">(</span><span class="va">s</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">cf</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/qr.html" class="external-link">qr.solve</a></span><span class="op">(</span><span class="va">basis_fine</span>, <span class="fu">fmrihrf</span><span class="fu">::</span><span class="fu"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/evaluate.html" class="external-link">evaluate</a></span><span class="op">(</span><span class="fu">fmrihrf</span><span class="fu">::</span><span class="va"><a href="https://bbuchsbaum.github.io/fmrihrf/reference/HRF_objects.html" class="external-link">HRF_SPMG1</a></span>, <span class="va">tt</span> <span class="op">-</span> <span class="va">s</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="va">cf</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span> <span class="op">/</span> <span class="va">cf</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span>
+<span><span class="op">}</span><span class="op">)</span></span>
+<span><span class="va">latency</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/approxfun.html" class="external-link">approx</a></span><span class="op">(</span><span class="va">ratio_at</span>, <span class="va">shifts</span>, xout <span class="op">=</span> <span class="va">b2</span> <span class="op">/</span> <span class="va">b1</span><span class="op">)</span><span class="op">$</span><span class="va">y</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">latency</span>, <span class="fl">2</span><span class="op">)</span>  <span class="co"># seconds later than the canonical HRF</span></span>
+<span><span class="co">#&gt; [1] 0.06 0.99</span></span></code></pre></div>
+<p>Both estimates assume small shifts (within about 1-2 s): beyond that
+the first-order derivative no longer describes the delay, and the
+boosted amplitude only partly corrects the loss. Voxels with a canonical
+coefficient near zero give unstable ratios and are usually masked
+out.</p>
+<p>References:</p>
+<ul>
+<li>Calhoun, V. D., Stevens, M. C., Pearlson, G. D., &amp; Kiehl, K. A.
+(2004). fMRI analysis with the general linear model: removal of
+latency-induced amplitude bias by incorporation of hemodynamic
+derivative terms. <em>NeuroImage</em>, 22(1), 252-257. <a href="https://doi.org/10.1016/j.neuroimage.2003.12.029" class="external-link uri">https://doi.org/10.1016/j.neuroimage.2003.12.029</a>
+</li>
+<li>Henson, R. N. A., Price, C. J., Rugg, M. D., Turner, R., &amp;
+Friston, K. J. (2002). Detecting latency differences in event-related
+BOLD responses: application to words versus nonwords and initial versus
+repeated face presentations. <em>NeuroImage</em>, 15(1), 83-97. <a href="https://doi.org/10.1006/nimg.2001.0940" class="external-link uri">https://doi.org/10.1006/nimg.2001.0940</a>
+</li>
+<li>Liao, C. H., Worsley, K. J., Poline, J.-B., Aston, J. A. D., Duncan,
+G. H., &amp; Evans, A. C. (2002). Estimating the delay of the fMRI
+response. <em>NeuroImage</em>, 16(3), 593-606. <a href="https://doi.org/10.1006/nimg.2002.1096" class="external-link uri">https://doi.org/10.1006/nimg.2002.1096</a>
+</li>
+</ul>
 </div>
 </div>
 <div class="section level2">
@@ -518,7 +800,7 @@ match design-matrix columns.</p>
 <div class="section level3">
 <h3 id="rank-deficient-contrasts">1. Rank-Deficient Contrasts<a class="anchor" aria-label="anchor" href="#rank-deficient-contrasts"></a>
 </h3>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># This will cause issues - contrast is not estimable</span></span>
 <span><span class="va">bad_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  onset <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="fl">30</span><span class="op">)</span>,</span>
@@ -541,7 +823,7 @@ match design-matrix columns.</p>
 <div class="section level3">
 <h3 id="multicollinearity-in-contrasts">2. Multicollinearity in Contrasts<a class="anchor" aria-label="anchor" href="#multicollinearity-in-contrasts"></a>
 </h3>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check for multicollinearity in your design matrix</span></span>
 <span><span class="va">cc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/check_collinearity.html">check_collinearity</a></span><span class="op">(</span><span class="fu"><a href="../reference/design_matrix.html">design_matrix</a></span><span class="op">(</span><span class="va">emodel_with_contrast</span><span class="op">)</span>, threshold <span class="op">=</span> <span class="fl">0.9</span><span class="op">)</span></span>
 <span><span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="va">cc</span><span class="op">$</span><span class="va">ok</span><span class="op">)</span> <span class="va">cc</span><span class="op">$</span><span class="va">pairs</span></span></code></pre></div>

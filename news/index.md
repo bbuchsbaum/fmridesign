@@ -14,6 +14,22 @@
   from character columns whose first-appearance order was not
   alphabetical will have their condition columns reordered; named
   contrasts are unaffected.
+- Contrasts on multi-basis HRF terms are now the **average** over the
+  basis functions they use, instead of the sum.
+  [`pair_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.md),
+  [`unit_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.md),
+  [`oneway_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/oneway_contrast.md),
+  [`poly_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/poly_contrast.md),
+  [`interaction_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/interaction_contrast.md)
+  and formula contrasts put `w / k` on each of the `k` basis functions
+  selected by `basis` (all of them by default), so a contrast has the
+  same scale whatever the number of basis functions, and the same scale
+  as
+  [`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md)
+  and as a contrast with `basis_weights`. For example A - B on bins 3 to
+  5 of an FIR term has weights of 1/3 and -1/3 (they were 1 and -1). t
+  and F statistics are unchanged; contrast estimates for multi-basis
+  terms are divided by `k`. Single-basis terms are unaffected.
 - `hrf(..., basis = "fir", nbasis = k)` with `k` other than 12 now
   builds a true FIR basis (`k` indicator bins over 24 s, as
   [`fmrihrf::hrf_fir_generator()`](https://bbuchsbaum.github.io/fmrihrf/reference/hrf_fir_generator.html)).
@@ -91,6 +107,16 @@
 
 ### New features
 
+- [`unit_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.md)
+  gains `basis` and `basis_weights`, as
+  [`pair_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.md)
+  has, e.g. `unit_contrast(~ cond == "A", name = "A_bin4", basis = 4)`
+  for one condition in one FIR bin.
+- New
+  [`per_basis_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/per_basis_contrasts.md)
+  turns a contrast into a set with one contrast per basis function,
+  e.g. the A - B time course over the bins of an FIR basis:
+  `per_basis_contrasts(pair_contrast(~ cond == "A", ~ cond == "B", name = "AvB"), basis = 1:8)`.
 - [`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.md)
   gains `durations` for sparse, event-timed features such as word
   surprisal or per-phone features. With `times` and `durations` (a

@@ -419,9 +419,24 @@ print(sum(scaled_contrast))  # Should be ~0
 
 ### Custom Contrast Functions
 
-You can generate complex patterns via helper generators that return
-contrast specifications. For example, a sliding-window set that compares
-adjacent, disjoint windows across an ordered factor:
+A contrast “generator” is just a function that returns a
+[`contrast_set()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_set.md)
+of contrast specifications, so one call can attach many related
+contrasts to a term. fmridesign ships one,
+[`sliding_window_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/sliding_window_contrasts.md),
+which compares adjacent, disjoint windows across an ordered factor. For
+window size `k`, contrast `i` compares levels `i:(i+k-1)` against levels
+`(i+k):(i+2k-1)`:
+
+``` r
+
+# What the generator returns: one pair_contrast() per window position
+sw <- sliding_window_contrasts(levels = paste0("L", 1:5), facname = "level", window_size = 1)
+vapply(sw, function(spec) spec$name, character(1))
+#> [1] "win_L1_vs_L2" "win_L2_vs_L3" "win_L3_vs_L4" "win_L4_vs_L5"
+```
+
+Attached to a model, each specification becomes a weight vector:
 
 ``` r
 
@@ -441,16 +456,317 @@ emod_sliding <- event_model(
   sampling_frame = sframe
 )
 
-# Inspect the generated contrasts
-names(contrast_weights(emod_sliding))
-#> [1] "level#win_L1_vs_L2" "level#win_L2_vs_L3" "level#win_L3_vs_L4"
-#> [4] "level#win_L4_vs_L5"
+# Inspect the generated contrasts: one column of weights per window
+sapply(contrast_weights(emod_sliding), function(cw) cw$weights[, 1])
+#>          level#win_L1_vs_L2 level#win_L2_vs_L3 level#win_L3_vs_L4
+#> level.L1                  1                  0                  0
+#> level.L2                 -1                  1                  0
+#> level.L3                  0                 -1                  1
+#> level.L4                  0                  0                 -1
+#> level.L5                  0                  0                  0
+#>          level#win_L4_vs_L5
+#> level.L1                  0
+#> level.L2                  0
+#> level.L3                  0
+#> level.L4                  1
+#> level.L5                 -1
 ```
 
-For more targeted patterns (e.g., specific basis functions or continuous
-terms), use
+Writing your own generator follows the same pattern: build the
+specifications in a loop and pass them to
+[`contrast_set()`](https://bbuchsbaum.github.io/fmridesign/reference/contrast_set.md).
+Here, every level against a reference level (the treatment-style
+contrasts of [`lm()`](https://rdrr.io/r/stats/lm.html)):
+
+``` r
+
+vs_reference <- function(levels, facname, ref = levels[1]) {
+  specs <- lapply(setdiff(levels, ref), function(l) {
+    pair_contrast(
+      as.formula(sprintf('~ %s == "%s"', facname, l)),
+      as.formula(sprintf('~ %s == "%s"', facname, ref)),
+      name = sprintf("%s_vs_%s", l, ref)
+    )
+  })
+  do.call(contrast_set, specs)
+}
+
+emod_ref <- event_model(
+  onset ~ hrf(level, contrasts = vs_reference(lvl, "level")),
+  data = data.frame(
+    onset = sort(runif(50, 0, 350)),
+    level = factor(sample(lvl, 50, replace = TRUE), levels = lvl),
+    block = factor(rep(1, 50))
+  ),
+  block = ~ block,
+  sampling_frame = sframe
+)
+sapply(contrast_weights(emod_ref), function(cw) cw$weights[, 1])
+#>          level#L2_vs_L1 level#L3_vs_L1 level#L4_vs_L1 level#L5_vs_L1
+#> level.L1             -1             -1             -1             -1
+#> level.L2              1              0              0              0
+#> level.L3              0              1              0              0
+#> level.L4              0              0              1              0
+#> level.L5              0              0              0              1
+```
+
+For patterns over design-matrix columns rather than conditions, use
 [`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md)
-with regex to match design-matrix columns.
+with a regular expression; the next section shows it with basis
+functions.
+
+## Contrasts for Multi-Basis HRFs
+
+With a multi-basis HRF (FIR, B-spline, tent, `"spmg2"`/`"spmg3"`, …)
+each condition gets one column per basis function, named
+`<term>_<condition>_b01`, `_b02`, and so on. The contrast constructors
+work on conditions and then expand across basis functions, and
+[`pair_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/pair_contrast.md),
+[`oneway_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/oneway_contrast.md)
+and
+[`poly_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/poly_contrast.md)
+take `basis` and `basis_weights` arguments to choose and weight them.
+
+### FIR: averaging, selecting and tracking time bins
+
+An FIR basis with 8 bins of 3 s covers the first 24 s after each event,
+one column per bin:
+
+``` r
+
+set.seed(21)
+fir_events <- data.frame(
+  onset = sort(runif(40, 0, 360)),
+  cond  = factor(rep(c("A", "B"), 20)),
+  block = factor(1)
+)
+fir_model <- event_model(
+  onset ~ hrf(cond, basis = "fir", nbasis = 8),
+  data = fir_events, block = ~ block, sampling_frame = sframe
+)
+colnames(design_matrix(fir_model))
+#>  [1] "cond_cond.A_b01" "cond_cond.A_b02" "cond_cond.A_b03" "cond_cond.A_b04"
+#>  [5] "cond_cond.A_b05" "cond_cond.A_b06" "cond_cond.A_b07" "cond_cond.A_b08"
+#>  [9] "cond_cond.B_b01" "cond_cond.B_b02" "cond_cond.B_b03" "cond_cond.B_b04"
+#> [13] "cond_cond.B_b05" "cond_cond.B_b06" "cond_cond.B_b07" "cond_cond.B_b08"
+```
+
+By default a contrast is the average over all bins. `basis` keeps only
+some bins, for example the window around the response peak, and averages
+over those; `basis_weights` replaces the plain average with a weighted
+one (the weights are rescaled to sum to 1):
+
+``` r
+
+fir_term <- fir_model$terms[[1]]
+AvB <- function(...) contrast_weights(
+  pair_contrast(~ cond == "A", ~ cond == "B", name = "AvB", ...), fir_term
+)$weights[, 1]
+
+round(rbind(
+  all_bins   = AvB(),
+  peak       = AvB(basis = 3:5),
+  peak_shape = suppressWarnings(AvB(basis_weights = c(0, 1, 2, 3, 3, 2, 1, 0)))
+), 3)
+#>            cond.A_b01 cond.A_b02 cond.A_b03 cond.A_b04 cond.A_b05 cond.A_b06
+#> all_bins        0.125      0.125      0.125      0.125      0.125      0.125
+#> peak            0.000      0.000      0.333      0.333      0.333      0.000
+#> peak_shape      0.000      0.083      0.167      0.250      0.250      0.167
+#>            cond.A_b07 cond.A_b08 cond.B_b01 cond.B_b02 cond.B_b03 cond.B_b04
+#> all_bins        0.125      0.125     -0.125     -0.125     -0.125     -0.125
+#> peak            0.000      0.000      0.000      0.000     -0.333     -0.333
+#> peak_shape      0.083      0.000      0.000     -0.083     -0.167     -0.250
+#>            cond.B_b05 cond.B_b06 cond.B_b07 cond.B_b08
+#> all_bins       -0.125     -0.125     -0.125     -0.125
+#> peak           -0.333      0.000      0.000      0.000
+#> peak_shape     -0.250     -0.167     -0.083      0.000
+```
+
+Because the selected bins are averaged, every row is on the same scale:
+the contrast estimate is a mean A-minus-B difference whatever the number
+of bins, so estimates from different windows, or from models with
+different numbers of bins, are comparable.
+
+The A-minus-B time course is one contrast per bin.
+[`per_basis_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/per_basis_contrasts.md)
+turns a contrast into that set:
+
+``` r
+
+per_bin <- per_basis_contrasts(
+  pair_contrast(~ cond == "A", ~ cond == "B", name = "AvB"),
+  basis = 1:8
+)
+fir_model_tc <- event_model(
+  onset ~ hrf(cond, basis = "fir", nbasis = 8, contrasts = per_bin),
+  data = fir_events, block = ~ block, sampling_frame = sframe
+)
+tc <- sapply(contrast_weights(fir_model_tc), function(cw) cw$offset_weights[, 1])
+tc[, 1:3]
+#>                 cond#AvB_b01 cond#AvB_b02 cond#AvB_b03
+#> cond_cond.A_b01            1            0            0
+#> cond_cond.A_b02            0            1            0
+#> cond_cond.A_b03            0            0            1
+#> cond_cond.A_b04            0            0            0
+#> cond_cond.A_b05            0            0            0
+#> cond_cond.A_b06            0            0            0
+#> cond_cond.A_b07            0            0            0
+#> cond_cond.A_b08            0            0            0
+#> cond_cond.B_b01           -1            0            0
+#> cond_cond.B_b02            0           -1            0
+#> cond_cond.B_b03            0            0           -1
+#> cond_cond.B_b04            0            0            0
+#> cond_cond.B_b05            0            0            0
+#> cond_cond.B_b06            0            0            0
+#> cond_cond.B_b07            0            0            0
+#> cond_cond.B_b08            0            0            0
+```
+
+To test whether A and B differ anywhere in the time course, use the
+F-contrast, which tests all bins jointly (one row per column, one column
+per bin):
+
+``` r
+
+dim(Fcontrasts(fir_model)[[1]])
+#> [1] 16  8
+```
+
+[`unit_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/unit_contrast.md)
+takes `basis` too, for one condition against baseline in a subset of
+bins (e.g. A’s response at 6-12 s, bins 3 and 4).
+[`column_contrast()`](https://bbuchsbaum.github.io/fmridesign/reference/column_contrast.md)
+reaches the same columns by regular expression, which is useful for
+patterns the constructors do not cover:
+
+``` r
+
+by_basis <- contrast_weights(
+  unit_contrast(~ cond == "A", name = "A_6to12s", basis = 3:4), fir_term
+)$weights[, 1]
+by_regex <- contrast_weights(
+  column_contrast(pattern_A = "cond\\.A_b0[34]$", name = "A_6to12s"), fir_term
+)$weights[, 1]
+round(by_basis, 2)
+#> cond.A_b01 cond.A_b02 cond.A_b03 cond.A_b04 cond.A_b05 cond.A_b06 cond.A_b07 
+#>        0.0        0.0        0.5        0.5        0.0        0.0        0.0 
+#> cond.A_b08 cond.B_b01 cond.B_b02 cond.B_b03 cond.B_b04 cond.B_b05 cond.B_b06 
+#>        0.0        0.0        0.0        0.0        0.0        0.0        0.0 
+#> cond.B_b07 cond.B_b08 
+#>        0.0        0.0
+all.equal(by_basis, by_regex)
+#> [1] TRUE
+```
+
+### Canonical plus derivative: amplitude and latency
+
+With `basis = "spmg2"` each condition has a canonical column (`_b01`)
+and a temporal-derivative column (`_b02`). The derivative absorbs small
+differences in response timing, but a response that peaks late also
+lowers the canonical coefficient, so comparing canonical coefficients
+alone mixes amplitude with latency. Two classic summaries use both
+coefficients:
+
+- **Derivative-boosted amplitude** (Calhoun et al., 2004):
+  `sign(b1) * sqrt(b1^2 + b2^2)`, computed with the two regressors on a
+  common scale, recovers amplitude lost to a latency shift.
+- **Latency from the coefficient ratio** (Henson et al., 2002; see also
+  Liao et al., 2002): for small shifts the ratio `b2 / b1` is a monotone
+  function of the response’s delay.
+
+Both are non-linear in the coefficients, so they are not contrast
+weights: you fit the model, then compute them per voxel (and take them
+to the group level). The example below simulates a voxel where A and B
+have the same amplitude but B peaks 1 s later.
+
+``` r
+
+set.seed(3)
+lat_events <- data.frame(
+  onset = sort(runif(60, 0, 380)),
+  cond  = factor(rep(c("A", "B"), 30)),
+  block = factor(1)
+)
+# Simulated data: unit-amplitude canonical responses, B delayed by 1 s
+shifted <- transform(lat_events, onset = onset + ifelse(cond == "B", 1, 0))
+shifted <- shifted[order(shifted$onset), ]
+y <- rowSums(design_matrix(event_model(
+  onset ~ hrf(cond), data = shifted, block = ~ block, sampling_frame = sframe
+))) + rnorm(200, sd = 0.02)
+
+# Model with canonical + temporal derivative, plus drift
+lat_model <- event_model(
+  onset ~ hrf(cond, basis = "spmg2"),
+  data = lat_events, block = ~ block, sampling_frame = sframe
+)
+X <- as.matrix(cbind(design_matrix(lat_model),
+                     design_matrix(baseline_model(basis = "poly", degree = 2, sframe = sframe))))
+beta <- setNames(qr.solve(X, y), colnames(X))
+
+# Pick each condition's canonical and derivative coefficient by basis index
+cmap <- as.data.frame(design_colmap(lat_model))
+b1 <- setNames(beta[cmap$name[cmap$basis_ix == 1]], c("A", "B"))
+b2 <- setNames(beta[cmap$name[cmap$basis_ix == 2]], c("A", "B"))
+round(rbind(canonical = b1, derivative = b2), 3)
+#>                 A      B
+#> canonical   1.025  0.902
+#> derivative -0.056 -0.880
+```
+
+The canonical coefficient makes B look weaker than A. To put the two
+coefficients on a common scale, weight the derivative by the ratio of
+the basis functions’ norms; the boosted amplitudes are then much closer:
+
+``` r
+
+tt <- seq(0, 32, by = 0.01)
+basis_fine <- fmrihrf::evaluate(fmrihrf::HRF_SPMG2, tt)
+norm_ratio <- sqrt(sum(basis_fine[, 2]^2) / sum(basis_fine[, 1]^2))
+boosted <- sign(b1) * sqrt(b1^2 + (norm_ratio * b2)^2)
+round(rbind(canonical = b1, boosted = boosted), 3)
+#>               A     B
+#> canonical 1.025 0.902
+#> boosted   1.025 0.950
+```
+
+For latency, calibrate the ratio against known shifts of the canonical
+HRF and invert the curve. With fmrihrf’s SPMG2 basis the derivative is
+in seconds, so `-b2 / b1` is already close to the delay; the calibration
+corrects the curvature at larger shifts:
+
+``` r
+
+shifts <- seq(-3, 3, by = 0.25)
+ratio_at <- sapply(shifts, function(s) {
+  cf <- qr.solve(basis_fine, fmrihrf::evaluate(fmrihrf::HRF_SPMG1, tt - s))
+  cf[2] / cf[1]
+})
+latency <- approx(ratio_at, shifts, xout = b2 / b1)$y
+round(latency, 2)  # seconds later than the canonical HRF
+#> [1] 0.06 0.99
+```
+
+Both estimates assume small shifts (within about 1-2 s): beyond that the
+first-order derivative no longer describes the delay, and the boosted
+amplitude only partly corrects the loss. Voxels with a canonical
+coefficient near zero give unstable ratios and are usually masked out.
+
+References:
+
+- Calhoun, V. D., Stevens, M. C., Pearlson, G. D., & Kiehl, K. A.
+  (2004). fMRI analysis with the general linear model: removal of
+  latency-induced amplitude bias by incorporation of hemodynamic
+  derivative terms. *NeuroImage*, 22(1), 252-257.
+  <https://doi.org/10.1016/j.neuroimage.2003.12.029>
+- Henson, R. N. A., Price, C. J., Rugg, M. D., Turner, R., &
+  Friston, K. J. (2002). Detecting latency differences in event-related
+  BOLD responses: application to words versus nonwords and initial
+  versus repeated face presentations. *NeuroImage*, 15(1), 83-97.
+  <https://doi.org/10.1006/nimg.2001.0940>
+- Liao, C. H., Worsley, K. J., Poline, J.-B., Aston, J. A. D.,
+  Duncan, G. H., & Evans, A. C. (2002). Estimating the delay of the fMRI
+  response. *NeuroImage*, 16(3), 593-606.
+  <https://doi.org/10.1006/nimg.2002.1096>
 
 ## Troubleshooting Common Issues
 

@@ -264,6 +264,9 @@
 - [`pairwise_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/pairwise_contrasts.md)
   : Pairwise Contrasts
 
+- [`per_basis_contrasts()`](https://bbuchsbaum.github.io/fmridesign/reference/per_basis_contrasts.md)
+  : One Contrast per Basis Function
+
 - [`plot(`*`<baseline_model>`*`)`](https://bbuchsbaum.github.io/fmridesign/reference/plot.baseline_model.md)
   : Plot a Baseline Model
 

@@ -345,7 +345,10 @@ parametric modulator term (tag: <code>RT_centered</code>).</p>
 <code><a href="../reference/feature.html">feature()</a></code> so each sample is a zero-order-hold bin of width
 <code>dt</code>, then convolve with
 <code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html" class="external-link">fmrihrf::feature_regressor()</a></code>. That is a different model
-from <code>hrf(RT)</code>, which is one amplitude per event.</p>
+from <code>hrf(RT)</code>, which is one amplitude per event. It also
+differs from <code><a href="../reference/covariate.html">covariate()</a></code>, which enters a per-scan series
+without convolution (see <a href="#covariate-or-feature"><code>covariate()</code> or
+<code>feature()</code>?</a>).</p>
 <p>Feature-only models do not need an event table:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dt</span> <span class="op">&lt;-</span> <span class="fl">0.2</span></span>
@@ -699,6 +702,56 @@ column names, while unnamed matrices use <code>f01</code>,
 <p>Normally, one would add <code>motion</code> regressors to the
 <code>baseline_model</code> but we use it as an illustrative
 example.</p>
+<div class="section level3">
+<h3 id="covariate-or-feature">
+<code>covariate()</code> or <code>feature()</code>?<a class="anchor" aria-label="anchor" href="#covariate-or-feature"></a>
+</h3>
+<p>Both take a continuous series rather than a list of trials, but they
+model different things:</p>
+<table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
+<thead><tr class="header">
+<th></th>
+<th><code><a href="../reference/covariate.html">covariate()</a></code></th>
+<th>
+<code><a href="../reference/feature.html">feature()</a></code> (see <a href="#continuous-features">Continuous Features</a>)</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>What the series describes</td>
+<td>Something already in BOLD time: motion, physiology, global signal, a
+regressor you convolved yourself</td>
+<td>The stimulus or a neural-level quantity: acoustic envelope,
+luminance, word surprisal</td>
+</tr>
+<tr class="even">
+<td>Sampling</td>
+<td>Exactly one value per scan (<code>sum(blocklens)</code> rows)</td>
+<td>Its own clock (<code>dt</code> or <code>times</code>), at any rate;
+resampled to the scan grid</td>
+</tr>
+<tr class="odd">
+<td>HRF convolution</td>
+<td>None: values enter the design matrix as given</td>
+<td>Yes, with the term’s <code>basis</code> (default
+<code>"spmg1"</code>)</td>
+</tr>
+<tr class="even">
+<td>Centring</td>
+<td>None</td>
+<td>Per run by default (<code>center = TRUE</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>The question to ask is whether the signal still needs the hemodynamic
+delay and smoothing. A stimulus series entered with
+<code><a href="../reference/covariate.html">covariate()</a></code> would be fitted without that lag, and motion
+entered with <code><a href="../reference/feature.html">feature()</a></code> would be wrongly smeared by an
+HRF.</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># Create covariates aligned to the sampling frame</span></span>
@@ -721,6 +774,7 @@ example.</p>
 covariates use the compact term tag <code>cov</code> (for example,
 <code>cov_mx</code>). If the covariate rows do not match the number of
 scans, construction will error with a helpful message.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="accessing-model-components">Accessing Model Components<a class="anchor" aria-label="anchor" href="#accessing-model-components"></a>

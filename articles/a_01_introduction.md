@@ -271,12 +271,22 @@ X <- cbind(design_matrix(emodel), design_matrix(bmodel))
 write.table(X, "design_matrix.txt", row.names = FALSE, col.names = TRUE)
 
 # For use with R-based analysis
-# Assuming Y is your fMRI time series data
-# fit <- lm(Y ~ X - 1)  # -1 removes intercept as it's in the design
+# Assuming Y is your fMRI data, a time-by-voxel matrix (300 scans x voxels):
+# fit <- lm(Y ~ X - 1)  # -1 because the baseline model has run intercepts
+# coef(fit)             # one row per design column, one column per voxel
 
-# Or use with specialized fMRI packages
-# library(fmri)
-# results <- fmri_glm(Y, X)
+# Or fit the GLM directly from fmridesign's models with fmrireg, which is
+# not on CRAN; install it from GitHub:
+# install.packages("remotes")
+# remotes::install_github("bbuchsbaum/fmrireg")
+# library(fmrireg)
+# events <- data.frame(onset = onsets, Condition = factor(conditions),
+#                      block = factor(blockids))
+# dset <- matrix_frame(Y, TR = TR, run_length = c(150, 150),
+#                      event_table = events)
+# fit <- fmri_lm(onset ~ hrf(Condition, basis = "spmg1"), block = ~ block,
+#                baseline_model = bmodel, dataset = dset)
+# coef(fit)
 ```
 
 ## Best Practices

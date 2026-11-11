@@ -317,7 +317,10 @@ so each sample is a zero-order-hold bin of width `dt`, then convolve
 with
 [`fmrihrf::feature_regressor()`](https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html).
 That is a different model from `hrf(RT)`, which is one amplitude per
-event.
+event. It also differs from
+[`covariate()`](https://bbuchsbaum.github.io/fmridesign/reference/covariate.md),
+which enters a per-scan series without convolution (see [`covariate()`
+or `feature()`?](#covariate-or-feature)).
 
 Feature-only models do not need an event table:
 
@@ -712,6 +715,25 @@ matrices use `f01`, `f02`, and so on.
 
 Normally, one would add `motion` regressors to the `baseline_model` but
 we use it as an illustrative example.
+
+### `covariate()` or `feature()`?
+
+Both take a continuous series rather than a list of trials, but they
+model different things:
+
+|  | [`covariate()`](https://bbuchsbaum.github.io/fmridesign/reference/covariate.md) | [`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.md) (see [Continuous Features](#continuous-features)) |
+|----|----|----|
+| What the series describes | Something already in BOLD time: motion, physiology, global signal, a regressor you convolved yourself | The stimulus or a neural-level quantity: acoustic envelope, luminance, word surprisal |
+| Sampling | Exactly one value per scan (`sum(blocklens)` rows) | Its own clock (`dt` or `times`), at any rate; resampled to the scan grid |
+| HRF convolution | None: values enter the design matrix as given | Yes, with the term’s `basis` (default `"spmg1"`) |
+| Centring | None | Per run by default (`center = TRUE`) |
+
+The question to ask is whether the signal still needs the hemodynamic
+delay and smoothing. A stimulus series entered with
+[`covariate()`](https://bbuchsbaum.github.io/fmridesign/reference/covariate.md)
+would be fitted without that lag, and motion entered with
+[`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.md)
+would be wrongly smeared by an HRF.
 
 ``` r
 

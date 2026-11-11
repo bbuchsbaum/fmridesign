@@ -329,12 +329,22 @@ with various fMRI analysis approaches:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/write.table.html" class="external-link">write.table</a></span><span class="op">(</span><span class="va">X</span>, <span class="st">"design_matrix.txt"</span>, row.names <span class="op">=</span> <span class="cn">FALSE</span>, col.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># For use with R-based analysis</span></span>
-<span><span class="co"># Assuming Y is your fMRI time series data</span></span>
-<span><span class="co"># fit &lt;- lm(Y ~ X - 1)  # -1 removes intercept as it's in the design</span></span>
+<span><span class="co"># Assuming Y is your fMRI data, a time-by-voxel matrix (300 scans x voxels):</span></span>
+<span><span class="co"># fit &lt;- lm(Y ~ X - 1)  # -1 because the baseline model has run intercepts</span></span>
+<span><span class="co"># coef(fit)             # one row per design column, one column per voxel</span></span>
 <span></span>
-<span><span class="co"># Or use with specialized fMRI packages</span></span>
-<span><span class="co"># library(fmri)</span></span>
-<span><span class="co"># results &lt;- fmri_glm(Y, X)</span></span></code></pre></div>
+<span><span class="co"># Or fit the GLM directly from fmridesign's models with fmrireg, which is</span></span>
+<span><span class="co"># not on CRAN; install it from GitHub:</span></span>
+<span><span class="co"># install.packages("remotes")</span></span>
+<span><span class="co"># remotes::install_github("bbuchsbaum/fmrireg")</span></span>
+<span><span class="co"># library(fmrireg)</span></span>
+<span><span class="co"># events &lt;- data.frame(onset = onsets, Condition = factor(conditions),</span></span>
+<span><span class="co">#                      block = factor(blockids))</span></span>
+<span><span class="co"># dset &lt;- matrix_frame(Y, TR = TR, run_length = c(150, 150),</span></span>
+<span><span class="co">#                      event_table = events)</span></span>
+<span><span class="co"># fit &lt;- fmri_lm(onset ~ hrf(Condition, basis = "spmg1"), block = ~ block,</span></span>
+<span><span class="co">#                baseline_model = bmodel, dataset = dset)</span></span>
+<span><span class="co"># coef(fit)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="best-practices">Best Practices<a class="anchor" aria-label="anchor" href="#best-practices"></a>
