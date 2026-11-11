@@ -1,4 +1,4 @@
-# fmridesign (development version)
+# fmridesign 0.7.0
 
 ## Changes that affect results
 
@@ -159,6 +159,13 @@
 
 ## Bug fixes
 
+- Plot labels and captions no longer warn or fail on the base `pdf()` and
+  `postscript()` devices. The minus sign, en dash, sigma and greater-or-equal
+  glyphs, which those devices cannot encode, are drawn as ASCII there (as
+  `design_map()` and the other heatmaps already did); in a non-UTF-8 locale
+  `plot(<baseline_model>, drift_scale = "unit")` used to stop with a
+  conversion error. `options(fmridesign.plot_unicode = TRUE/FALSE)` overrides
+  the choice.
 - Basis filtering and F-contrast expansion now see the right number of basis
   functions for a multi-basis `feature()` term. The internal helper read the
   HRF from an attribute feature terms do not carry and assumed one basis
@@ -235,11 +242,13 @@
 
 ## Packaging and internal changes
 
-- `Remotes:` tracks `bbuchsbaum/fmrihrf` instead of a pre-release commit, so
-  GitHub installs and CI use the same fmrihrf as r-universe. fmridesign still
-  requires only fmrihrf (>= 0.4.0) and is tested against 0.4.0.
-- stringr is no longer imported; tidyr and Matrix move to Suggests (only the
-  vignettes and tests use them); ggplot2 (>= 3.4.0) is declared.
+- The `Remotes:` field is gone: fmridesign builds and is checked against the
+  CRAN release of fmrihrf (>= 0.4.0). `feature(durations = )` needs a later
+  fmrihrf and says so when it is missing.
+- stringr and tidyr are no longer used; Matrix moves to Suggests (only the
+  tests use it); ggplot2 (>= 3.4.0), grid and grDevices are declared. The
+  vignettes no longer attach packages they do not use, and call plotly only
+  when it is installed.
 - Large internal simplification: the contrast constructors and
   `contrast_weights()` methods share validation and packaging helpers,
   `contrast_weights()` and `Fcontrasts()` on event models share one

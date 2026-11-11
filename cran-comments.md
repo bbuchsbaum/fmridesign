@@ -1,18 +1,27 @@
 ## Resubmission
 
-This is a resubmission of fmridesign, previously submitted as version 0.5.0.
-Version 0.6.0 retains the changes requested during the previous review and adds
-construction-time validation for nuisance regressors, consistent interaction
-contrast keys, warnings for degenerate parametric modulators, and compatibility
-handling for spurious HRF-metadata warnings from `fmrihrf` 0.3.0.
+This is a resubmission of fmridesign, previously submitted as versions 0.5.0
+and 0.6.0. Version 0.7.0 keeps the changes requested in earlier reviews:
 
-The previous reviewer-requested changes remain in place:
-
-* Method references are included in the DESCRIPTION with DOI links.
+* Method references are given in the DESCRIPTION with DOI links.
 * Exported functions have runnable examples; internal-only functions do not
   expose examples as user-facing API.
 * There are no `\dontrun{}` examples. Longer examples use `\donttest{}`.
 * Vignettes restore any session options they change.
+
+Changes since 0.6.0 that concern CRAN policy:
+
+* The package no longer uses any unexported function of 'fmrihrf': design
+  columns are evaluated through the public `fmrihrf::regressor()` /
+  `fmrihrf::evaluate()` API, and HRF generators are called directly rather
+  than looked up in the 'fmrihrf' namespace.
+* fmridesign no longer registers a `print()` method for 'fmrihrf''s
+  `sampling_frame` class, so loading it no longer overwrites a method of
+  another package. Generics shared with 'fmrihrf' (`onsets()`, `durations()`,
+  `blockids()`, `nbasis()`) are re-exported rather than redefined, so
+  attaching fmridesign does not mask them.
+* The `Remotes` field is removed; the package is built and checked against the
+  CRAN release of 'fmrihrf' (0.4.0).
 
 ## R CMD check results
 
@@ -20,17 +29,12 @@ The previous reviewer-requested changes remain in place:
 
 * This is a new submission.
 
-The same source tarball produced this result under both R 4.6.1 and R-devel.
-
 ## Test environments
 
-* Ubuntu 24.04.4 LTS (aarch64-unknown-linux-gnu), R 4.6.1
-* Ubuntu 24.04.4 LTS (aarch64-unknown-linux-gnu), R-devel
-  (2026-06-21 r90185)
-* local macOS Sonoma 14.3 (aarch64-apple-darwin20), R 4.5.1
+* Ubuntu 24.04.5 LTS (x86_64-pc-linux-gnu), R 4.6.2, `--as-cran`
 
-All checks used the CRAN release of `fmrihrf` (0.3.0). The macOS check produced
-one additional local-tooling note because its installed HTML Tidy is too old
-for HTML-manual validation; that validation passed on both Ubuntu checks.
+All checks used the CRAN release of 'fmrihrf' (0.4.0).
 
-The source tarball is 1.9 MB and its installed `doc` directory is 2.5 MB.
+## Reverse dependencies
+
+There are no reverse dependencies on CRAN (new package).

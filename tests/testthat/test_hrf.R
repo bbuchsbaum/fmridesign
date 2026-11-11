@@ -413,16 +413,12 @@ test_that("block_hrf correctly blocks an HRF object", {
   expect_false(identical(blocked_hl(t), blocked_hrf_sum(t)))
   expect_true(max(abs(blocked_hl(t))) < max(abs(blocked_hrf_sum(t)))) # Expect decay to reduce peak
 
-  # Test negligible width (below `precision`): fmrihrf 0.4.0 returns the
-  # unblocked HRF; later versions integrate every positive width, as evaluate()
-  # does for duration > 0.
+  # Test negligible width (below `precision`): fmrihrf (>= 0.4.0, as released
+  # on CRAN) integrates every positive width, as evaluate() does for
+  # duration > 0, rather than returning the unblocked HRF.
   blocked_negligible <- suppressWarnings(fmrihrf::block_hrf(base_hrf, width = 0.01, precision = 0.1))
-  expected_negligible <- if (utils::packageVersion("fmrihrf") <= "0.4.0") {
-    base_hrf(t)
-  } else {
-    fmrihrf::evaluate(base_hrf, t, duration = 0.01, precision = 0.1)
-  }
-  expect_equal(blocked_negligible(t), expected_negligible)
+  expect_equal(blocked_negligible(t),
+               fmrihrf::evaluate(base_hrf, t, duration = 0.01, precision = 0.1))
 })
 
 test_that("normalise_hrf correctly normalises an HRF object", {
