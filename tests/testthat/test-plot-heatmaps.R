@@ -167,3 +167,18 @@ test_that("within-run correlation_map says why there is nothing to show", {
                         sframe = fmrihrf::sampling_frame(c(40, 40), TR = 2))
   expect_match(correlation_map(bm0)$labels$subtitle, "No regressor varies")
 })
+
+test_that("plot glyphs fall back to ASCII where the device cannot encode them", {
+  glyphs <- "a{minus}b{ndash}c{ge}d {sigma} e{times}f{dot}g{pm}"
+  # Latin-1 glyphs (times, dot, pm) are kept either way; only those the
+  # pdf()/postscript() devices cannot encode are replaced.
+  withr::local_options(fmridesign.plot_unicode = FALSE)
+  expect_identical(fmridesign:::.fd_u(glyphs),
+                   paste0("a-b-c>=d sigma e", intToUtf8(c(0xD7, 0x66, 0xB7, 0x67, 0xB1))))
+  expect_identical(fmridesign:::.fd_hm_ascii(intToUtf8(c(0x2212, 0x31, 0x2013, 0x32, 0x2265, 0x3C3))),
+                   "-1-2>=sigma")
+
+  withr::local_options(fmridesign.plot_unicode = TRUE)
+  expect_identical(fmridesign:::.fd_u("{minus}{ndash}{ge}{sigma}"),
+                   intToUtf8(c(0x2212, 0x2013, 0x2265, 0x3C3)))
+})

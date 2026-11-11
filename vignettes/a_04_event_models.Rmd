@@ -39,8 +39,6 @@ suppressPackageStartupMessages({
   library(fmrihrf)
   library(dplyr)
   library(ggplot2)
-  library(tidyr)
-  library(plotly)
 })
 ggplot2::theme_set(ggplot2::theme_minimal(base_size = params$base_size))
 ```
@@ -124,7 +122,7 @@ We can plot the generated regressors using `plot()` (which uses `ggplot2`) or `p
 plot(emodel_simple)
 
 # Interactive plot via plotly (skipped in non-interactive builds)
-if (interactive()) {
+if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
   plotly::ggplotly(plot(emodel_simple))
 }
 ```
@@ -209,7 +207,7 @@ print(emodel_two_factor)
 
 # Plotting all interaction terms can be busy; consider plotly
 plot(emodel_two_factor)
-if (interactive()) {
+if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
   plotly::ggplotly(plot(emodel_two_factor))
 }
 ```
@@ -239,7 +237,7 @@ print(emodel_pmod)
 
 # Plot the RT parametric modulator term (using its term tag)
 plot(emodel_pmod, term_name = "RT_centered") 
-if (interactive()) {
+if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
   plotly::ggplotly(plot(emodel_pmod, term_name = "RT_centered"))
 }
 ```
@@ -285,7 +283,7 @@ print(emodel_pmod_int)
 
 # Plot the interaction term (using its term tag)
 plot(emodel_pmod_int, term_name = "stim_RT_centered")
-if (interactive()) {
+if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
   plotly::ggplotly(plot(emodel_pmod_int, term_name = "stim_RT_centered"))
 }
 ```
@@ -341,7 +339,7 @@ emodel_spmg3 <- event_model(onset ~ hrf(stim, basis=HRF_SPMG3),
 print(emodel_spmg3) # Note nbasis=3 for the hrf
 # Columns: stim_stim.face_b01, stim_stim.face_b02, ...
 plot(emodel_spmg3, term_name = "stim") # Plotting shows the 3 basis functions for one condition
-if (interactive()) {
+if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
   plotly::ggplotly(plot(emodel_spmg3)) # Better for exploring many conditions interactively
 }
 
@@ -478,7 +476,7 @@ print(emodel_trialwise)
 # Plotting trialwise models can be very dense!
 # It generates one condition per trial. Use label_mode/compactness controls.
 plot(emodel_trialwise, label_mode = "none")
-if (interactive()) {
+if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
   plotly::ggplotly(plot(emodel_trialwise, label_mode = "compact")) # Use plotly to explore interactively
 }
 ```

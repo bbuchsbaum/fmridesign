@@ -68,10 +68,10 @@
 
 .fd_hm_ascii <- function(s) {
   if (.fd_hm_unicode()) return(s)
-  s <- gsub(.fd_u("{minus}"), "-", s, fixed = TRUE)
-  s <- gsub(.fd_u("{ndash}"), "-", s, fixed = TRUE)
-  s <- gsub(.fd_u("{sigma}"), "sigma", s, fixed = TRUE)
-  gsub(.fd_u("{ge}"), ">=", s, fixed = TRUE)
+  for (nm in names(.fd_glyphs_ascii)) {
+    s <- gsub(intToUtf8(.fd_glyphs[[nm]]), .fd_glyphs_ascii[[nm]], s, fixed = TRUE)
+  }
+  s
 }
 
 # Compact numbers with a true minus sign (also the legend tick labeller);

@@ -38,8 +38,6 @@ suppressPackageStartupMessages({
   library(fmridesign)
   library(dplyr)
   library(ggplot2)
-  library(tidyr)
-  library(Matrix)
 })
 ggplot2::theme_set(ggplot2::theme_minimal(base_size = params$base_size))
 ```

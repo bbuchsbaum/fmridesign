@@ -382,9 +382,19 @@ theme_fmridesign <- function(base_size = getOption("fmridesign.base_size", getOp
 # Typographic glyphs, built from code points so sources stay ASCII.
 .fd_glyphs <- c(times = 0xD7, dot = 0xB7, minus = 0x2212, ndash = 0x2013,
                 sigma = 0x3C3, ge = 0x2265, pm = 0xB1)
+# ASCII stand-ins for the glyphs outside Latin-1, which the base pdf() and
+# postscript() devices cannot encode (a warning in UTF-8 locales, an error in
+# single-byte ones). The others (times, dot, pm) are Latin-1 and always safe.
+.fd_glyphs_ascii <- c(minus = "-", ndash = "-", sigma = "sigma", ge = ">=")
 .fd_u <- function(s) {
+  ascii <- !.fd_hm_unicode()
   for (nm in names(.fd_glyphs)) {
-    s <- gsub(paste0("{", nm, "}"), intToUtf8(.fd_glyphs[[nm]]), s, fixed = TRUE)
+    glyph <- if (ascii && nm %in% names(.fd_glyphs_ascii)) {
+      .fd_glyphs_ascii[[nm]]
+    } else {
+      intToUtf8(.fd_glyphs[[nm]])
+    }
+    s <- gsub(paste0("{", nm, "}"), glyph, s, fixed = TRUE)
   }
   s
 }

@@ -1,7 +1,7 @@
 Package: fmridesign
 Type: Package
 Title: Design Matrix Construction for fMRI Analysis
-Version: 0.6.1.9000
+Version: 0.7.0
 Authors@R: person("Bradley", "Buchsbaum", role = c("aut", "cre", "cph"), email = "brad.buchsbaum@gmail.com")
 Description: Constructs and inspects design matrices for functional magnetic
     resonance imaging (fMRI) analyses. Provides a formula interface for
@@ -27,11 +27,12 @@ Imports:
     tibble,
     splines,
     ggplot2 (>= 3.4.0),
+    grDevices,
+    grid,
     utils,
     cli
 Suggests:
     Matrix,
-    tidyr,
     testthat,
     knitr,
     rmarkdown,
@@ -39,8 +40,6 @@ Suggests:
     pkgdown,
     withr,
     plotly
-Remotes:
-    bbuchsbaum/fmrihrf
 VignetteBuilder: knitr
 Config/Needs/website: github::bbuchsbaum/albersdown
 URL: https://github.com/bbuchsbaum/fmridesign, https://bbuchsbaum.github.io/fmridesign/
