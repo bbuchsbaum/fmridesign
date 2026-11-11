@@ -1,11 +1,14 @@
 ## Release preparation
 
-This candidate has not been submitted. It requires 'fmrihrf' (>= 0.5.0),
-which has been submitted to CRAN and is awaiting publication. Advance checks
-use that exact submitted source archive (SHA-256:
-`de38381a4a744cf25e19310a0ed06ce858447a1e2dde93e06ad1fa2b45178d8f`).
-Before submitting fmridesign, repeat checks with dependencies installed
-cleanly from CRAN once fmrihrf 0.5.0 is available, and update these notes.
+This candidate has not been submitted. The required 'fmrihrf' 0.5.0 source
+was published on CRAN on 2026-11-11 at 16:50:02 UTC:
+<https://cran.r-project.org/package=fmrihrf>.
+The post-publication checks use a fresh library installed only from CRAN,
+including fmrihrf 0.5.0 installed from source. The published source archive
+has SHA-256:
+`3a65c79fc2e0c91697f1dbbc9a6b12d07ec6dfd19677226547eb9567aa2f9e10`.
+Cross-platform CI and current builder checks remain to be run before
+submission; update these notes with their results.
 
 ## Resubmission
 
@@ -33,8 +36,12 @@ Changes since 0.6.0 that concern CRAN policy:
 * The `Remotes` field is removed. The minimum 'fmrihrf' version is 0.5.0,
   which provides the event-duration API used by `feature()`. The four
   duration integration/validation tests no longer skip for older versions.
+* Contrast tests use their existing self-contained synthetic fixture instead
+  of silently loading an undeclared local fmrireg installation and its methods.
 
 ## R CMD check results
+
+Post-publication check against the fresh CRAN library:
 
 0 errors | 0 warnings | 3 notes
 
@@ -51,7 +58,9 @@ confirms that the package has no hidden-file note.
 ## Test environment
 
 * macOS 27.2 (aarch64-apple-darwin20), R 4.5.1, `R CMD check --as-cran`
-* Exact submitted fmrihrf 0.5.0 source archive, installed in an isolated library
+* Published CRAN fmrihrf 0.5.0, installed from source in a fresh library
+* 96 packages freshly installed from CRAN; every non-base dependency namespace
+  loaded during the full test suite was verified to come from that library
 
 ## Additional checks
 
@@ -61,7 +70,8 @@ confirms that the package has no hidden-file note.
 * Installation with the older local fmrihrf 0.4.0.9000 was rejected, confirming
   that the 0.5.0 dependency floor is enforced.
 * Package coverage: 92.98%, above the repository's 90% threshold.
-* Local pkgdown site build completed; no deployment was made.
+* Local pkgdown site build completed during advance preparation; no deployment
+  was made.
 
 ## Reverse dependencies
 

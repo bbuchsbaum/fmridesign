@@ -4,23 +4,15 @@ library(testthat)
 library(assertthat)
 library(fmrihrf)
 
-# Try to load face design from fmrireg if available; otherwise, synthesize a minimal dataset
-facedes <- NULL
-try({
-  suppressPackageStartupMessages(library(fmrireg))
-  facedes <- try(read.table(system.file("extdata", "face_design.txt", package = "fmrireg"), header=TRUE), silent = TRUE)
-  if (inherits(facedes, "try-error")) facedes <- NULL
-}, silent = TRUE)
-
-if (is.null(facedes)) {
-  set.seed(1)
-  n <- 10
-  facedes <- data.frame(
-    onset = seq(0, by = 4, length.out = n),
-    rep_num = sample(c(-1, 1, 2, 3, 4), n, replace = TRUE),
-    run = rep(1, n)
-  )
-}
+# Keep the contrast fixture self-contained: loading fmrireg here would make
+# tests depend on an undeclared package and its registered methods.
+set.seed(1)
+n <- 10
+facedes <- data.frame(
+  onset = seq(0, by = 4, length.out = n),
+  rep_num = sample(c(-1, 1, 2, 3, 4), n, replace = TRUE),
+  run = rep(1, n)
+)
 
 
 test_that("a 2-by-2 Fcontrast", {

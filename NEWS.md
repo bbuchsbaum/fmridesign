@@ -263,6 +263,8 @@
   `feature(durations = )` terms are supported by every compatible install.
   Their integration and validation tests run without capability-based skips.
   The `Remotes:` field remains absent.
+- Contrast tests always use their self-contained synthetic fixture instead
+  of loading an undeclared local fmrireg installation when one is present.
 - stringr and tidyr are no longer used; Matrix moves to Suggests (only the
   tests use it); ggplot2 (>= 3.4.0), grid and grDevices are declared. The
   vignettes no longer attach packages they do not use, and call plotly only
