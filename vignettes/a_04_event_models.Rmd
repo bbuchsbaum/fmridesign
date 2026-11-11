@@ -244,7 +244,7 @@ if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
 
 ## Continuous Features
 
-A sampled series such as acoustic RMS is not a list of trials. Use `feature()` so each sample is a zero-order-hold bin of width `dt`, then convolve with `fmrihrf::feature_regressor()`. That is a different model from `hrf(RT)`, which is one amplitude per event.
+A sampled series such as acoustic RMS is not a list of trials. Use `feature()` so each sample is a zero-order-hold bin of width `dt`, then convolve with `fmrihrf::feature_regressor()`. That is a different model from `hrf(RT)`, which is one amplitude per event. It also differs from `covariate()`, which enters a per-scan series without convolution (see [`covariate()` or `feature()`?](#covariate-or-feature)).
 
 Feature-only models do not need an event table:
 
@@ -486,6 +486,19 @@ if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
 Sometimes you want to include scan-by-scan regressors that should not be convolved with an HRF (e.g., motion, physiology). Use `covariate()` within the formula. Covariates must have one row per scan (sum of `blocklens`). A matrix-valued argument expands to one regressor per column; named matrices preserve their column names, while unnamed matrices use `f01`, `f02`, and so on.
 
 Normally, one would add `motion` regressors to the `baseline_model` but we use it as an illustrative example.
+
+### `covariate()` or `feature()`?
+
+Both take a continuous series rather than a list of trials, but they model different things:
+
+| | `covariate()` | `feature()` (see [Continuous Features](#continuous-features)) |
+|---|---|---|
+| What the series describes | Something already in BOLD time: motion, physiology, global signal, a regressor you convolved yourself | The stimulus or a neural-level quantity: acoustic envelope, luminance, word surprisal |
+| Sampling | Exactly one value per scan (`sum(blocklens)` rows) | Its own clock (`dt` or `times`), at any rate; resampled to the scan grid |
+| HRF convolution | None: values enter the design matrix as given | Yes, with the term's `basis` (default `"spmg1"`) |
+| Centring | None | Per run by default (`center = TRUE`) |
+
+The question to ask is whether the signal still needs the hemodynamic delay and smoothing. A stimulus series entered with `covariate()` would be fitted without that lag, and motion entered with `feature()` would be wrongly smeared by an HRF.
 
 
 ```{r covariates_example}
