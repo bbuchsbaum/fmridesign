@@ -39,6 +39,8 @@ jobs:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
+          # See newly published dependencies before mirrors have synchronized.
+          cran: https://cran.r-project.org
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
