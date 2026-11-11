@@ -133,7 +133,7 @@ time.](a_04_event_models_files/figure-html/plot_simple_model-1.png)
 
 
 # Interactive plot via plotly (skipped in non-interactive builds)
-if (interactive()) {
+if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
   plotly::ggplotly(plot(emodel_simple))
 }
 ```
@@ -252,7 +252,7 @@ time.](a_04_event_models_files/figure-html/create_two_factor_model-1.png)
 
 ``` r
 
-if (interactive()) {
+if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
   plotly::ggplotly(plot(emodel_two_factor))
 }
 ```
@@ -304,7 +304,7 @@ time.](a_04_event_models_files/figure-html/create_pmod_model-1.png)
 
 ``` r
 
-if (interactive()) {
+if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
   plotly::ggplotly(plot(emodel_pmod, term_name = "RT_centered"))
 }
 ```
@@ -382,7 +382,7 @@ time.](a_04_event_models_files/figure-html/create_pmod_interaction-1.png)
 
 ``` r
 
-if (interactive()) {
+if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
   plotly::ggplotly(plot(emodel_pmod_int, term_name = "stim_RT_centered"))
 }
 ```
@@ -437,8 +437,8 @@ list_available_hrfs()
 #> 8   fourier generator              5    FALSE
 #> 9  daguerre generator              3    FALSE
 #> 10      fir generator             12    FALSE
-#> 11      lwu generator              1    FALSE
-#> 12      gam    object              1     TRUE
+#> 11      lwu generator       variable    FALSE
+#> 12      gam    object              1    FALSE
 #> 13       bs generator              5     TRUE
 
 # Get detailed descriptions
@@ -454,8 +454,8 @@ list_available_hrfs(details = TRUE)
 #> 8   fourier generator              5    FALSE   fourier HRF (generator) 
 #> 9  daguerre generator              3    FALSE  daguerre HRF (generator) 
 #> 10      fir generator             12    FALSE       fir HRF (generator) 
-#> 11      lwu generator              1    FALSE       lwu HRF (generator) 
-#> 12      gam    object              1     TRUE   gam HRF (object) (alias)
+#> 11      lwu generator       variable    FALSE       lwu HRF (generator) 
+#> 12      gam    object              1    FALSE          gam HRF (object) 
 #> 13       bs generator              5     TRUE bs HRF (generator) (alias)
 ```
 
@@ -500,7 +500,7 @@ spline/tent).](a_04_event_models_files/figure-html/specify_hrf-2.png)
 
 ``` r
 
-if (interactive()) {
+if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
   plotly::ggplotly(plot(emodel_spmg3)) # Better for exploring many conditions interactively
 }
 
@@ -695,7 +695,7 @@ column.](a_04_event_models_files/figure-html/create_trialwise-1.png)
 
 ``` r
 
-if (interactive()) {
+if (interactive() && requireNamespace("plotly", quietly = TRUE)) {
   plotly::ggplotly(plot(emodel_trialwise, label_mode = "compact")) # Use plotly to explore interactively
 }
 ```
