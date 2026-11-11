@@ -451,37 +451,41 @@ explore all available HRF types using the
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># List basic information about available HRFs</span></span>
 <span><span class="fu">list_available_hrfs</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt;        name      type nbasis_default is_alias</span></span>
-<span><span class="co">#&gt; 1     spmg1    object              1    FALSE</span></span>
-<span><span class="co">#&gt; 2     spmg2    object              2    FALSE</span></span>
-<span><span class="co">#&gt; 3     spmg3    object              3    FALSE</span></span>
-<span><span class="co">#&gt; 4     gamma    object              1    FALSE</span></span>
-<span><span class="co">#&gt; 5  gaussian    object              1    FALSE</span></span>
-<span><span class="co">#&gt; 6   bspline generator              5    FALSE</span></span>
-<span><span class="co">#&gt; 7      tent generator              5    FALSE</span></span>
-<span><span class="co">#&gt; 8   fourier generator              5    FALSE</span></span>
-<span><span class="co">#&gt; 9  daguerre generator              3    FALSE</span></span>
-<span><span class="co">#&gt; 10      fir generator             12    FALSE</span></span>
-<span><span class="co">#&gt; 11      lwu generator       variable    FALSE</span></span>
-<span><span class="co">#&gt; 12      gam    object              1    FALSE</span></span>
-<span><span class="co">#&gt; 13       bs generator              5     TRUE</span></span>
+<span><span class="co">#&gt;          name      type nbasis_default is_alias</span></span>
+<span><span class="co">#&gt; 1       spmg1    object              1    FALSE</span></span>
+<span><span class="co">#&gt; 2       spmg2    object              2    FALSE</span></span>
+<span><span class="co">#&gt; 3       spmg3    object              3    FALSE</span></span>
+<span><span class="co">#&gt; 4       spmgq    object              2    FALSE</span></span>
+<span><span class="co">#&gt; 5       gamma    object              1    FALSE</span></span>
+<span><span class="co">#&gt; 6    gaussian    object              1    FALSE</span></span>
+<span><span class="co">#&gt; 7     bspline generator              5    FALSE</span></span>
+<span><span class="co">#&gt; 8        tent generator              5    FALSE</span></span>
+<span><span class="co">#&gt; 9     fourier generator              5    FALSE</span></span>
+<span><span class="co">#&gt; 10   daguerre generator              3    FALSE</span></span>
+<span><span class="co">#&gt; 11        fir generator             12    FALSE</span></span>
+<span><span class="co">#&gt; 12        lwu generator              1    FALSE</span></span>
+<span><span class="co">#&gt; 13        gam    object              1     TRUE</span></span>
+<span><span class="co">#&gt; 14         bs generator              5     TRUE</span></span>
+<span><span class="co">#&gt; 15 quadrature    object              2     TRUE</span></span>
 <span></span>
 <span><span class="co"># Get detailed descriptions</span></span>
 <span><span class="fu">list_available_hrfs</span><span class="op">(</span>details <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="co">#&gt;        name      type nbasis_default is_alias                description</span></span>
-<span><span class="co">#&gt; 1     spmg1    object              1    FALSE        spmg1 HRF (object) </span></span>
-<span><span class="co">#&gt; 2     spmg2    object              2    FALSE        spmg2 HRF (object) </span></span>
-<span><span class="co">#&gt; 3     spmg3    object              3    FALSE        spmg3 HRF (object) </span></span>
-<span><span class="co">#&gt; 4     gamma    object              1    FALSE        gamma HRF (object) </span></span>
-<span><span class="co">#&gt; 5  gaussian    object              1    FALSE     gaussian HRF (object) </span></span>
-<span><span class="co">#&gt; 6   bspline generator              5    FALSE   bspline HRF (generator) </span></span>
-<span><span class="co">#&gt; 7      tent generator              5    FALSE      tent HRF (generator) </span></span>
-<span><span class="co">#&gt; 8   fourier generator              5    FALSE   fourier HRF (generator) </span></span>
-<span><span class="co">#&gt; 9  daguerre generator              3    FALSE  daguerre HRF (generator) </span></span>
-<span><span class="co">#&gt; 10      fir generator             12    FALSE       fir HRF (generator) </span></span>
-<span><span class="co">#&gt; 11      lwu generator       variable    FALSE       lwu HRF (generator) </span></span>
-<span><span class="co">#&gt; 12      gam    object              1    FALSE          gam HRF (object) </span></span>
-<span><span class="co">#&gt; 13       bs generator              5     TRUE bs HRF (generator) (alias)</span></span></code></pre></div>
+<span><span class="co">#&gt;          name      type nbasis_default is_alias                     description</span></span>
+<span><span class="co">#&gt; 1       spmg1    object              1    FALSE             spmg1 HRF (object) </span></span>
+<span><span class="co">#&gt; 2       spmg2    object              2    FALSE             spmg2 HRF (object) </span></span>
+<span><span class="co">#&gt; 3       spmg3    object              3    FALSE             spmg3 HRF (object) </span></span>
+<span><span class="co">#&gt; 4       spmgq    object              2    FALSE             spmgq HRF (object) </span></span>
+<span><span class="co">#&gt; 5       gamma    object              1    FALSE             gamma HRF (object) </span></span>
+<span><span class="co">#&gt; 6    gaussian    object              1    FALSE          gaussian HRF (object) </span></span>
+<span><span class="co">#&gt; 7     bspline generator              5    FALSE        bspline HRF (generator) </span></span>
+<span><span class="co">#&gt; 8        tent generator              5    FALSE           tent HRF (generator) </span></span>
+<span><span class="co">#&gt; 9     fourier generator              5    FALSE        fourier HRF (generator) </span></span>
+<span><span class="co">#&gt; 10   daguerre generator              3    FALSE       daguerre HRF (generator) </span></span>
+<span><span class="co">#&gt; 11        fir generator             12    FALSE            fir HRF (generator) </span></span>
+<span><span class="co">#&gt; 12        lwu generator              1    FALSE            lwu HRF (generator) </span></span>
+<span><span class="co">#&gt; 13        gam    object              1     TRUE        gam HRF (object) (alias)</span></span>
+<span><span class="co">#&gt; 14         bs generator              5     TRUE      bs HRF (generator) (alias)</span></span>
+<span><span class="co">#&gt; 15 quadrature    object              2     TRUE quadrature HRF (object) (alias)</span></span></code></pre></div>
 <p>For more details and examples of different HRF types, refer to the
 documentation for <code><a href="../reference/hrf.html">hrf()</a></code> and the HRF-related vignettes in
 the <code>fmrihrf</code> package.</p>

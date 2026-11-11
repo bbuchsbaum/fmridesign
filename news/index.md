@@ -124,10 +124,8 @@
   is an event with its own onset, duration and amplitude, and its value
   is no longer held until the next sample (which filled the following
   pause). It is passed to
-  [`fmrihrf::feature_regressor()`](https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html)
-  and needs an fmrihrf whose
-  [`feature_regressor()`](https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html)
-  has a `durations` argument; otherwise an error says so. Without
+  [`fmrihrf::feature_regressor()`](https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html),
+  available in the minimum required fmrihrf version (0.5.0). Without
   `durations` nothing changes.
 - [`feature()`](https://bbuchsbaum.github.io/fmridesign/reference/feature.md)
   gains `band` and `subband` to label a term’s columns for banded
@@ -403,9 +401,13 @@
 
 ### Packaging and internal changes
 
-- The `Remotes:` field is gone: fmridesign builds and is checked against
-  the CRAN release of fmrihrf (\>= 0.4.0). `feature(durations = )` needs
-  a later fmrihrf and says so when it is missing.
+- The minimum fmrihrf version is now 0.5.0, so event-timed
+  `feature(durations = )` terms are supported by every compatible
+  install. Their integration and validation tests run without
+  capability-based skips. The `Remotes:` field remains absent.
+- Contrast tests always use their self-contained synthetic fixture
+  instead of loading an undeclared local fmrireg installation when one
+  is present.
 - stringr and tidyr are no longer used; Matrix moves to Suggests (only
   the tests use it); ggplot2 (\>= 3.4.0), grid and grDevices are
   declared. The vignettes no longer attach packages they do not use, and

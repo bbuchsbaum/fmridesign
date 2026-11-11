@@ -126,8 +126,8 @@ the name of <code>x</code> is used.</p></dd>
 <dd><p>Optional event durations in seconds, only valid with
 <code>times</code>: a single number, a vector with one entry per sample, or a list
 of those with one element per run (parallel to <code>times</code>). <code>NULL</code> (default)
-keeps the zero-order hold. Requires a version of fmrihrf whose
-<code><a href="https://bbuchsbaum.github.io/fmrihrf/reference/feature_regressor.html" class="external-link">feature_regressor()</a></code> has a <code>durations</code> argument.</p></dd>
+keeps the zero-order hold. Event durations are supported by fmrihrf
+(&gt;= 0.5.0), the minimum required version.</p></dd>
 
 
 <dt id="arg-band">band<a class="anchor" aria-label="anchor" href="#arg-band"></a></dt>
