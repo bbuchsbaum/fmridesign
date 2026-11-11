@@ -85,9 +85,8 @@
   number, a vector, or a per-run list parallel to `times`), each sample is an
   event with its own onset, duration and amplitude, and its value is no
   longer held until the next sample (which filled the following pause). It
-  is passed to `fmrihrf::feature_regressor()` and needs an fmrihrf whose
-  `feature_regressor()` has a `durations` argument; otherwise an error says
-  so. Without `durations` nothing changes.
+  is passed to `fmrihrf::feature_regressor()`, available in the minimum
+  required fmrihrf version (0.5.0). Without `durations` nothing changes.
 - `feature()` gains `band` and `subband` to label a term's columns for banded
   (grouped) models. `design_colmap()` has two new columns, `band` and
   `subband`, for every term type: other terms are a band of their own (their
@@ -260,9 +259,10 @@
 
 ## Packaging and internal changes
 
-- The `Remotes:` field is gone: fmridesign builds and is checked against the
-  CRAN release of fmrihrf (>= 0.4.0). `feature(durations = )` needs a later
-  fmrihrf and says so when it is missing.
+- The minimum fmrihrf version is now 0.5.0, so event-timed
+  `feature(durations = )` terms are supported by every compatible install.
+  Their integration and validation tests run without capability-based skips.
+  The `Remotes:` field remains absent.
 - stringr and tidyr are no longer used; Matrix moves to Suggests (only the
   tests use it); ggplot2 (>= 3.4.0), grid and grDevices are declared. The
   vignettes no longer attach packages they do not use, and call plotly only

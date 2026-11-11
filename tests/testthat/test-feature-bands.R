@@ -1,10 +1,9 @@
-skip_if_not(
-  exists("feature_regressor", asNamespace("fmrihrf"), inherits = FALSE),
-  "fmrihrf::feature_regressor is required"
-)
-has_durations <- "durations" %in% names(formals(fmrihrf::feature_regressor))
-
 local_edition(3)
+
+test_that("the minimum fmrihrf version supports event-timed features", {
+  expect_true(utils::packageVersion("fmrihrf") >= "0.5.0")
+  expect_true("durations" %in% names(formals(fmrihrf::feature_regressor)))
+})
 
 # A mixed model: one categorical hrf() term and a 3-column, 2-basis feature
 # term whose columns fall into two sub-bands. The series covers the run.
@@ -32,7 +31,6 @@ phon_cols <- c("phon_stop_b01", "phon_stop_b02", "phon_nasal_b01",
 # --- durations ---------------------------------------------------------------
 
 test_that("durations pass through to an event-timed feature_regressor", {
-  skip_if_not(has_durations, "fmrihrf::feature_regressor() lacks `durations`")
   onsets <- c(1, 4.5, 4.5, 30)
   durs <- c(0.4, 2, 0, 1)
   surprisal <- c(2, 7, 4, 3)
@@ -60,7 +58,6 @@ test_that("durations pass through to an event-timed feature_regressor", {
 })
 
 test_that("an event-timed feature is not held across a pause", {
-  skip_if_not(has_durations, "fmrihrf::feature_regressor() lacks `durations`")
   onsets <- c(0, 40)
   sframe <- fmrihrf::sampling_frame(blocklens = 60, TR = 1)
   build <- function(...) {
@@ -79,7 +76,6 @@ test_that("an event-timed feature is not held across a pause", {
 })
 
 test_that("durations accept a scalar and a per-run list", {
-  skip_if_not(has_durations, "fmrihrf::feature_regressor() lacks `durations`")
   sframe2 <- fmrihrf::sampling_frame(blocklens = c(30, 30), TR = 1)
   x <- list(c(1, 2, 3), c(4, 5))
   times <- list(c(1, 5, 9), c(2, 6))
@@ -107,7 +103,6 @@ test_that("durations accept a scalar and a per-run list", {
 })
 
 test_that("durations validation", {
-  skip_if_not(has_durations, "fmrihrf::feature_regressor() lacks `durations`")
   sframe <- fmrihrf::sampling_frame(blocklens = 30, TR = 1)
   sframe2 <- fmrihrf::sampling_frame(blocklens = c(30, 30), TR = 1)
   x <- c(1, 2, 3)
