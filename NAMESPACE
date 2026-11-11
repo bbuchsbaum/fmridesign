@@ -261,6 +261,7 @@ export(oneway_contrast)
 export(onsets)
 export(pair_contrast)
 export(pairwise_contrasts)
+export(per_basis_contrasts)
 export(plot_contrasts)
 export(poly_contrast)
 export(register_basis)
@@ -289,50 +290,66 @@ import(assertthat)
 import(cli)
 import(fmrihrf)
 importFrom(assertthat,assert_that)
-importFrom(dplyr,bind_cols)
-importFrom(dplyr,mutate)
-importFrom(dplyr,tibble)
-importFrom(fmrihrf,HRF)
-importFrom(fmrihrf,as_hrf)
-importFrom(fmrihrf,blockids)
-importFrom(fmrihrf,blocklens)
-importFrom(fmrihrf,durations)
-importFrom(fmrihrf,evaluate)
-importFrom(fmrihrf,feature_regressor)
-importFrom(fmrihrf,gen_hrf)
-importFrom(fmrihrf,global_onsets)
-importFrom(fmrihrf,hrf_spmg1)
-importFrom(fmrihrf,nbasis)
-importFrom(fmrihrf,onsets)
-importFrom(fmrihrf,regressor)
-importFrom(fmrihrf,samples)
-importFrom(fmrihrf,sampling_frame)
-importFrom(ggplot2,aes)
-importFrom(ggplot2,facet_grid)
-importFrom(ggplot2,facet_wrap)
-importFrom(ggplot2,geom_line)
-importFrom(ggplot2,geom_vline)
-importFrom(ggplot2,ggplot)
-importFrom(ggplot2,labs)
-importFrom(purrr,compact)
-importFrom(purrr,map)
-importFrom(purrr,map_lgl)
-importFrom(purrr,set_names)
-importFrom(rlang,"%||%")
-importFrom(rlang,":=")
-importFrom(rlang,.data)
+importFrom(dplyr,
+  bind_cols,
+  mutate,
+  tibble
+)
+importFrom(fmrihrf,
+  HRF,
+  as_hrf,
+  blockids,
+  blocklens,
+  durations,
+  evaluate,
+  feature_regressor,
+  gen_hrf,
+  global_onsets,
+  hrf_spmg1,
+  nbasis,
+  onsets,
+  regressor,
+  samples,
+  sampling_frame
+)
+importFrom(ggplot2,
+  aes,
+  facet_grid,
+  facet_wrap,
+  geom_line,
+  geom_vline,
+  ggplot,
+  labs
+)
+importFrom(purrr,
+  compact,
+  map,
+  map_lgl,
+  set_names
+)
+importFrom(rlang,
+  "%||%",
+  ":=",
+  .data
+)
 importFrom(splines,bs)
-importFrom(stats,as.formula)
-importFrom(stats,cor)
-importFrom(stats,formula)
-importFrom(stats,model.matrix)
-importFrom(stats,poly)
-importFrom(stats,predict)
-importFrom(stats,reformulate)
-importFrom(stats,terms)
-importFrom(stats,var)
-importFrom(tibble,as_tibble)
-importFrom(tibble,tibble)
-importFrom(utils,capture.output)
-importFrom(utils,combn)
-importFrom(utils,head)
+importFrom(stats,
+  as.formula,
+  cor,
+  formula,
+  model.matrix,
+  poly,
+  predict,
+  reformulate,
+  terms,
+  var
+)
+importFrom(tibble,
+  as_tibble,
+  tibble
+)
+importFrom(utils,
+  capture.output,
+  combn,
+  head
+)

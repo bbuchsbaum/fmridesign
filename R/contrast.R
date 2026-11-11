@@ -134,9 +134,8 @@
   nbasis <- .term_nbasis(term)
   no_filter <- is.null(basis_spec) || identical(basis_spec, "all")
 
-  # Nothing to do without a multi-basis HRF, or without a basis selection or
-  # basis weights
-  if (nbasis <= 1 || (no_filter && is.null(basis_weights_spec))) {
+  # Nothing to do without a multi-basis HRF
+  if (nbasis <= 1) {
     if (nbasis <= 1 && !no_filter) {
       warning(sprintf("Contrast '%s': basis filtering requested but term has no multi-basis HRF (nbasis = %d). Ignoring basis filter.",
                       contrast_name, nbasis), call. = FALSE)
@@ -170,13 +169,22 @@
                   nbasis = nbasis, contrast_name = contrast_name)
   }
 
+  # Contrasts that summed to zero before basis selection should still do so
+  # afterwards; unit-style contrasts (sum 1) are not held to that.
+  was_zero_sum <- abs(colSums(weights_mat)) <= .CONTRAST_TOLERANCE * nbasis
+
   # Zero out weights for non-selected basis functions
   keep_mask <- rownames(weights_mat) %in% filtered_condnames
   weights_mat[!keep_mask, ] <- 0
 
-  # Apply basis_weights if specified
-  if (!is.null(basis_weights_spec)) {
-    num_selected_bases <- if (no_filter) nbasis else length(basis_spec)
+  # Weight the selected basis functions. The default is their average, so a
+  # contrast has the same scale whatever the number of basis functions
+  # selected (and the same scale as column_contrast()).
+  num_selected_bases <- if (no_filter) nbasis else length(basis_spec)
+  if (is.null(basis_weights_spec)) {
+    basis_weights_spec <- rep(1 / num_selected_bases, num_selected_bases)
+  }
+  if (num_selected_bases > 0L) {
 
     # Validate length
     if (length(basis_weights_spec) != num_selected_bases) {
@@ -224,7 +232,7 @@
   }
 
   # Validate sum-to-zero for each contrast column (only for non-zero filtered weights)
-  for (col_idx in seq_len(ncol(weights_mat))) {
+  for (col_idx in which(was_zero_sum)) {
     nonzero_weights <- weights_mat[keep_mask, col_idx]
     if (length(nonzero_weights) > 0 && abs(sum(nonzero_weights)) > .CONTRAST_TOLERANCE) {
       warning(sprintf("Contrast '%s' (column %d): Weights do not sum to zero after basis filtering (sum = %.6f).",
@@ -391,9 +399,12 @@ contrast <- function(form, name, where=NULL) {
 #' @param A A formula selecting the cells to average. A logical expression
 #'   (e.g. `~ cond == "A"`) selects the matching cells; a bare factor name
 #'   (e.g. `~ cond`) selects every cell. For a multi-basis HRF the weights are
-#'   repeated on every basis function of the selected cells.
+#'   averaged over the basis functions of the selected cells (see `basis`).
 #' @param name A character string specifying the name of the contrast.
 #' @param where An optional formula specifying the subset of conditions to apply the contrast to.
+#' @param basis,basis_weights Which basis functions of a multi-basis HRF to
+#'   use and how to weight them; see [pair_contrast()]. For example
+#'   `basis = 4` gives the selected cells' response in the fourth FIR bin.
 #'
 #' @return A unit_contrast_spec object containing the contrast that sums to 1.
 #'
@@ -405,11 +416,13 @@ contrast <- function(form, name, where=NULL) {
 #' con2 <- unit_contrast(~ Face, name="Face_early", where = ~ block <= 3)
 #'
 #' @export
-unit_contrast <- function(A, name, where=NULL) {
+unit_contrast <- function(A, name, where = NULL, basis = NULL, basis_weights = NULL) {
   .check_formula_arg(A, "A")
   .check_name_arg(name)
   .check_where_arg(where)
-  structure(list(A = A, B = NULL, where = where, name = name),
+  .check_basis_args(basis, basis_weights)
+  structure(list(A = A, B = NULL, where = where, basis = basis,
+                 basis_weights = basis_weights, name = name),
             class = c("unit_contrast_spec", "contrast_spec", "list"))
 }
 
@@ -585,6 +598,50 @@ sliding_window_contrasts <- function(levels, facname, window_size = 2, where = N
 }
 
 
+#' One Contrast per Basis Function
+#'
+#' @description
+#' Turn a contrast into a set of contrasts, one for each basis function of a
+#' multi-basis HRF. With an FIR basis this gives the contrast's time course,
+#' one contrast per time bin.
+#'
+#' @param con A contrast specification that has a `basis` argument:
+#'   [pair_contrast()], [unit_contrast()], [oneway_contrast()] or
+#'   [poly_contrast()].
+#' @param basis Integer vector of basis-function indices, e.g. `1:8` for an
+#'   HRF with eight basis functions.
+#'
+#' @return A [contrast_set()] with one copy of `con` per index, restricted to
+#'   that basis function and named `<name>_b01`, `<name>_b02`, ...
+#'
+#' @examples
+#' # A - B in each of the 8 bins of an FIR basis
+#' per_basis_contrasts(
+#'   pair_contrast(~ cond == "A", ~ cond == "B", name = "AvB"),
+#'   basis = 1:8
+#' )
+#'
+#' @seealso [pair_contrast()] for averaging over or weighting basis functions.
+#' @export
+per_basis_contrasts <- function(con, basis) {
+  if (!inherits(con, "contrast_spec") || !"basis" %in% names(con)) {
+    stop("`con` must be a contrast specification with a `basis` argument ",
+         "(pair_contrast(), unit_contrast(), oneway_contrast() or poly_contrast()).",
+         call. = FALSE)
+  }
+  if (!is.numeric(basis) || length(basis) == 0L || anyNA(basis) ||
+      any(basis < 1) || any(basis != round(basis))) {
+    stop("`basis` must be a vector of positive integer basis indices.", call. = FALSE)
+  }
+  basis <- unique(as.integer(basis))
+  specs <- lapply(basis, function(k) {
+    con$basis <- k
+    con["basis_weights"] <- list(NULL)
+    con$name <- sprintf("%s_b%02d", con$name, k)
+    con
+  })
+  do.call(contrast_set, specs)
+}
 
 
 #' Pair Contrast
@@ -601,6 +658,9 @@ sliding_window_contrasts <- function(levels, facname, window_size = 2, where = N
 #'   which basis function indices to include (e.g., `1`, `2:3`, `c(1,3)`), or `"all"`.
 #'   Only relevant when the HRF uses multiple basis functions (e.g., bspline, FIR, Fourier).
 #'   Basis indices are 1-based (1 = first basis function, 2 = second, etc.).
+#'   The contrast is the average over the selected basis functions, so its
+#'   scale does not depend on how many are selected. See
+#'   [per_basis_contrasts()] for one contrast per basis function.
 #' @param basis_weights NULL (default: equal weights), or a numeric vector of weights to apply
 #'   to the selected basis functions. Must have one weight per selected basis function (all of
 #'   them when `basis` is NULL or `"all"`) and will
@@ -1114,9 +1174,10 @@ contrast_weights.unit_contrast_spec <- function(x, term,...) {
       }
   }
 
-  # Replicate across all basis functions of a multi-basis HRF
+  # Spread over the (selected) basis functions of a multi-basis HRF
   .expanded_contrast(x, term, weights_out,
-                     c("unit_contrast", "cell_contrast", "contrast", "list"))
+                     c("unit_contrast", "cell_contrast", "contrast", "list"),
+                     basis_spec = x$basis, basis_weights = x$basis_weights)
 }
 
 

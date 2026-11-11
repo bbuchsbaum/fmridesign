@@ -460,10 +460,10 @@ fir_model <- event_model(
 colnames(design_matrix(fir_model))
 ```
 
-By default a contrast uses every bin with weight 1. `basis` keeps only some
-bins, for example the window around the response peak, and `basis_weights`
-weights them (the weights are rescaled to sum to 1, so `rep(1, k)` averages
-over the selected bins):
+By default a contrast is the average over all bins. `basis` keeps only some
+bins, for example the window around the response peak, and averages over
+those; `basis_weights` replaces the plain average with a weighted one (the
+weights are rescaled to sum to 1):
 
 ```{r fir_basis_select}
 fir_term <- fir_model$terms[[1]]
@@ -473,24 +473,24 @@ AvB <- function(...) contrast_weights(
 
 round(rbind(
   all_bins   = AvB(),
-  peak_sum   = AvB(basis = 3:5),
-  peak_mean  = AvB(basis = 3:5, basis_weights = rep(1, 3)),
-  peak_shape = AvB(basis_weights = c(0, 1, 2, 3, 3, 2, 1, 0))
+  peak       = AvB(basis = 3:5),
+  peak_shape = suppressWarnings(AvB(basis_weights = c(0, 1, 2, 3, 3, 2, 1, 0)))
 ), 3)
 ```
 
-Note the scale: without `basis_weights` the selected bins are summed, so
-`peak_sum` is three times `peak_mean`. Both give the same t statistic, but if
-you take contrast estimates to a group analysis, or compare models with
-different numbers of bins, use the averaged form.
+Because the selected bins are averaged, every row is on the same scale: the
+contrast estimate is a mean A-minus-B difference whatever the number of bins,
+so estimates from different windows, or from models with different numbers
+of bins, are comparable.
 
-The A-minus-B time course is one contrast per bin. There is no single
-constructor for that, but a contrast set built in a loop does it:
+The A-minus-B time course is one contrast per bin. `per_basis_contrasts()`
+turns a contrast into that set:
 
 ```{r fir_per_bin}
-per_bin <- do.call(contrast_set, lapply(1:8, function(k) {
-  pair_contrast(~ cond == "A", ~ cond == "B", name = sprintf("AvB_bin%d", k), basis = k)
-}))
+per_bin <- per_basis_contrasts(
+  pair_contrast(~ cond == "A", ~ cond == "B", name = "AvB"),
+  basis = 1:8
+)
 fir_model_tc <- event_model(
   onset ~ hrf(cond, basis = "fir", nbasis = 8, contrasts = per_bin),
   data = fir_events, block = ~ block, sampling_frame = sframe
@@ -506,14 +506,20 @@ which tests all bins jointly (one row per column, one column per bin):
 dim(Fcontrasts(fir_model)[[1]])
 ```
 
-`unit_contrast()` has no `basis` argument, so for one condition in a subset of
-bins (e.g. "A's response at 6-12 s", bins 3 and 4) select the columns with `column_contrast()`;
-the matched columns are averaged:
+`unit_contrast()` takes `basis` too, for one condition against baseline in a
+subset of bins (e.g. A's response at 6-12 s, bins 3 and 4).
+`column_contrast()` reaches the same columns by regular expression, which is
+useful for patterns the constructors do not cover:
 
 ```{r fir_column}
-round(contrast_weights(
+by_basis <- contrast_weights(
+  unit_contrast(~ cond == "A", name = "A_6to12s", basis = 3:4), fir_term
+)$weights[, 1]
+by_regex <- contrast_weights(
   column_contrast(pattern_A = "cond\\.A_b0[34]$", name = "A_6to12s"), fir_term
-)$weights[, 1], 2)
+)$weights[, 1]
+round(by_basis, 2)
+all.equal(by_basis, by_regex)
 ```
 
 ### Canonical plus derivative: amplitude and latency
