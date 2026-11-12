@@ -7,8 +7,10 @@ The post-publication checks use a fresh library installed only from CRAN,
 including fmrihrf 0.5.0 installed from source. The published source archive
 has SHA-256:
 `3a65c79fc2e0c91697f1dbbc9a6b12d07ec6dfd19677226547eb9567aa2f9e10`.
-Cross-platform CI and current builder checks remain to be run before
-submission; update these notes with their results.
+Cross-platform checks completed successfully on 2026-11-11. The same
+validated source archive passed win-builder R-devel on 2026-11-12 with
+0 errors, 0 warnings, and 1 incoming-feasibility note, explained below.
+No CRAN submission has been made.
 
 ## Resubmission
 
@@ -41,7 +43,9 @@ Changes since 0.6.0 that concern CRAN policy:
 
 ## R CMD check results
 
-Post-publication check against the fresh CRAN library:
+### Local full check
+
+Post-publication check against the fresh CRAN library on 2026-11-11:
 
 0 errors | 0 warnings | 3 notes
 
@@ -55,7 +59,52 @@ PDF manual passed. A first check also found the Git worktree pointer file
 in the source archive; `.Rbuildignore` now excludes it and the final check
 confirms that the package has no hidden-file note.
 
-## Test environment
+### Hosted cross-platform checks
+
+All five GitHub Actions checks on commit
+`5b3161401b1cd73992435bf9fdba1026228c36d9` completed on 2026-11-11 with:
+
+0 errors | 0 warnings | 0 notes
+
+* Windows x86_64, R 4.6.2 (release).
+* macOS arm64, R 4.6.2 (release).
+* Linux x86_64, R 4.6.2 (release).
+* Linux x86_64, R 4.5.3 (oldrel-1).
+* Linux x86_64, R-devel (2026-11-10 r90874).
+
+Each check ran 3,641 passing test assertions, with no failures or test
+warnings and the one existing AFNI-export skip. Examples, including
+`--run-donttest`, and vignette rebuilding passed on all five platforms.
+The checks used `--no-manual --as-cran`; the action disables incoming CRAN
+checks. The PDF manual was checked separately by the local full check.
+
+Logs: <https://github.com/bbuchsbaum/fmridesign/actions/runs/43070723725>.
+
+### win-builder R-devel
+
+Checked on 2026-11-12 with R-devel (2026-11-10 r90874 ucrt),
+x86_64-w64-mingw32, Windows Server 2022 x64:
+
+0 errors | 0 warnings | 1 note
+
+The incoming-feasibility note reports a new submission and flags these
+words in DESCRIPTION:
+
+* Friston and Lindquist are the authors of the cited methods.
+* HRF means hemodynamic response function; "hemodynamic" and "trialwise"
+  are intentional technical terms.
+* "et al." is used in the method citation.
+
+Installation, package tests, examples, vignette rebuilding, and both the
+PDF and HTML manual checks passed.
+
+Log: <https://win-builder.r-project.org/48j6Rq7DLjm5/00check.log>.
+
+The checked `fmridesign_0.7.0.tar.gz` is the same post-publication candidate
+used for the local full check, with SHA-256:
+`446f67fd853efa7ed2a9099403943f7726bb49dde09a88fa6e758f2706c4dca3`.
+
+## Local test environment
 
 * macOS 27.2 (aarch64-apple-darwin20), R 4.5.1, `R CMD check --as-cran`
 * Published CRAN fmrihrf 0.5.0, installed from source in a fresh library
